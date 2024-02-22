@@ -285,10 +285,10 @@ var mouse = {
 }
 //defined when game starts
 // these are what each event listener will do
+var tx = ty = 0
 function keydown(event){
     event.preventDefault()
     event.stopPropagation()
-    let tx = ty = 0
     //inventory
     switch(event.key.toLowerCase()){
         case " ":
@@ -331,37 +331,26 @@ function keydown(event){
             })
             break
     }
-
-    if (player.x + tx >= borders.R 
-    || player.x + tx <= borders.L){
-        tx = 0
-    }
-    if (player.y + ty >= borders.U 
-    || player.y + ty <= borders.D){
-        ty = 0
-    }
-    player.dx = tx
-    player.dy = ty
 }
 function keyup(event){
     event.preventDefault()
     event.stopPropagation()
     switch(event.key.toLowerCase()){
         case " ":
-            player.dx = 0
-            player.dy = 0
+            tx = 0
+            ty = 0
             break
         case "w":
-            player.dy = 0
+            ty = 0
             break
         case "a":
-            player.dx = 0
+            tx = 0
             break
         case "s":
-            player.dy = 0
+            ty = 0
             break
         case "d":
-            player.dx = 0 
+            tx = 0 
             break
     }
 }
@@ -384,6 +373,7 @@ function mousedown(e){
 //request data to update canv
 var updateAgain = false
 function gameLoop(){
+
     socket.emit("requestUpdateDataFromServer", {
         id: player.id,
         x:player.x,
@@ -417,6 +407,16 @@ function startGame(){
     gameLoopInt = setInterval(()=>{
         if(player){
         if(player.health > 0){   
+            if (player.x + tx >= borders.R 
+            || player.x + tx <= borders.L){
+                tx = 0
+            }
+            if (player.y + ty >= borders.U 
+            || player.y + ty <= borders.D){
+                ty = 0
+            }
+            player.dx = tx
+            player.dy = ty
             player.x += player.dx
             player.y += player.dy
             player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
