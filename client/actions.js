@@ -134,7 +134,6 @@ function updateCanv(info){
             ctx.restore()
         }
 
-        //console.log(player.inventory)
         //eat!
         if(player && item.type=="pickable" 
         && Math.abs(item.x - player.x) < entitySize/2
@@ -234,9 +233,7 @@ function shadow(){
     ctx.restore()
 }
 function drawAttackCursor(){
-    console.log(mouse.x, mouse.y)
     if(mouse.x**2 + mouse.y**2 <= player.hitRange ** 2){
-        console.log("in range", player.x - mouse.x, player.y - mouse.y)
         let rangeCursorX = mouse.x + ginfo.width/2
         let rangeCursorY = mouse.y + ginfo.height/2
         gctx.fillStyle = "rgba(0,0,0,0.2)"
@@ -276,35 +273,6 @@ function drawInventory(){
     
 }
 
-/*
-function wallCheck(xinc, yinc, x, y){
-    for(let w in walls){
-        let wall = walls[w]
-        //console.log(wall)
-        let borderRadius = 0
-        if(y+entitySize-borderRadius > wall.y 
-        && y-entitySize+borderRadius < wall.y+wall.height){
-            if((xinc > 0 && wall.x+wall.width > x+xinc+entitySize 
-            && x+xinc+entitySize > wall.x) || 
-            (xinc < 0 && wall.x+wall.width > x+xinc-entitySize 
-            && x+xinc-entitySize > wall.x)) {
-                //console.log("a")
-                xinc = 0
-            }
-        }
-        if(x+entitySize-borderRadius > wall.x 
-        && x-entitySize+borderRadius < wall.x+wall.width){
-            if((yinc > 0 && wall.y+wall.height > y+yinc+entitySize 
-            && y+yinc+entitySize > wall.y) ||
-            (yinc < 0 && wall.y+wall.height > y+yinc-entitySize 
-            && y+yinc-entitySize > wall.y)) {
-                //console.log("b")
-                yinc = 0
-            }
-        }
-    }
-    return [xinc, yinc]
-}*/
 /** @MOVEMENT_CONTROLS */
 //KEYS
 var keyDown = false
@@ -414,13 +382,7 @@ function mousedown(e){
 /** @update */
 //request data to update canv
 var updateAgain = false
-function gameLoop(){    
-    if(player.health > 0){   
-        player.x += player.dx
-        player.y += player.dy
-        player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
-        socket.emit("updatePlayer", player)  
-    } 
+function gameLoop(){
     socket.emit("requestUpdateDataFromServer", {
         id: player.id,
         x:player.x,
@@ -443,16 +405,22 @@ function startGame(){
     
     //ask server for starting data and create new ID
     var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
-    console.log("Selected value:", selectedValue);
     socket.emit("askForStartData", {
         username: document.getElementById("username").value,
         img:selectedValue
     })
     //start game loop
     gameLoopInt = setInterval(()=>{
+        if(player){
+        if(player.health > 0){   
+            player.x += player.dx
+            player.y += player.dy
+            player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
+            socket.emit("updatePlayer", player)  
+        } 
         //dont update if (1) player is not existant or (2) last frame's update wasnt fully completed
         if(player.health <= 0) socket.emit("toldGameOver", player.id)
-        if(player && updateAgain) {gameLoop()}
+        if(player && updateAgain) {gameLoop()}}
     }, fps)
 }
 function exitGame(){
