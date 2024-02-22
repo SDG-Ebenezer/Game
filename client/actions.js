@@ -163,7 +163,9 @@ function updateCanv(info){
 //UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER
 socket.on("sendUpdateDataToClient", (info)=>{
     //dont send data if dead
-    if(player.health > 0) player = info.player 
+    if(player.health > 0) {
+        player = info.player
+    }
     updateCanv(info.updateContent)
 })
 
@@ -286,41 +288,24 @@ var mouse = {
 function keydown(event){
     event.preventDefault()
     event.stopPropagation()
-    let key = event.key
-    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key) && !pressedKeys.includes(key)) {
-        pressedKeys.push(key)
-        keyDown = true
-    }
-    let tx = 0
-    let ty = 0
-    /*
-    if(key == " "){
-        
-    } else{
-        pressedKeys.forEach((pkey)=>{
-            if(pkey == "w" || pkey == "arrowup") 
-            else if(pkey == "a" || pkey == "arrowleft") 
-            else if(pkey == "s" || pkey == "arrowdown") 
-            else if(pkey == "d" || pkey == "arrowright") 
-        })
-    }*/
+    let tx = ty = 0
     //inventory
     switch(event.key.toLowerCase()){
         case " ":
-            player.dx = -Math.cos(player.rotation) * player.speed
-            player.dy = -Math.sin(player.rotation) * player.speed
+            tx = -Math.cos(player.rotation) * player.speed
+            ty = -Math.sin(player.rotation) * player.speed
             break
         case "w":
-            player.dy = -player.speed
+            ty = -player.speed
             break
         case "a":
-            player.dx = -player.speed
+            tx = -player.speed
             break
         case "s":
-            player.dy = player.speed
+            ty = player.speed
             break
         case "d":
-            player.dx = player.speed
+            tx = player.speed
             break
         case "1":
             player.invSelected = 1 - 1
@@ -346,8 +331,21 @@ function keydown(event){
             })
             break
     }
+
+    if (player.x + tx >= borders.R 
+    || player.x + tx <= borders.L){
+        tx = 0
+    }
+    if (player.y + ty >= borders.U 
+    || player.y + ty <= borders.D){
+        ty = 0
+    }
+    player.dx = tx
+    player.dy = ty
 }
 function keyup(event){
+    event.preventDefault()
+    event.stopPropagation()
     switch(event.key.toLowerCase()){
         case " ":
             player.dx = 0
@@ -389,7 +387,10 @@ function gameLoop(){
     socket.emit("requestUpdateDataFromServer", {
         id: player.id,
         x:player.x,
-        y:player.y
+        y:player.y,
+        //make sure on the same page.
+        dx:player.dx,
+        dy:player.dy
     }) //gives data to draw  
     updateAgain = false       
 }
