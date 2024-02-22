@@ -286,49 +286,25 @@ var mouse = {
 function keydown(event){
     event.preventDefault()
     event.stopPropagation()
-    let key = event.key.toLowerCase()
-    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key) && !pressedKeys.includes(key)) {
-        pressedKeys.push(key)
-        keyDown = true
-    }
-    let tx = 0
-    let ty = 0
-    if(key == " "){
-            tx = -Math.cos(player.rotation) * player.speed
-            ty = -Math.sin(player.rotation) * player.speed
-    } else{
-        pressedKeys.forEach((pkey)=>{
-            if(pkey == "w" || pkey == "arrowup") ty -= player.speed
-            else if(pkey == "a" || pkey == "arrowleft") tx -= player.speed
-            else if(pkey == "s" || pkey == "arrowdown") ty += player.speed
-            else if(pkey == "d" || pkey == "arrowright") tx += player.speed
-        })
-    }
-    player.dx += tx
-    player.dy += ty
-
-    //KEEP PLAYER WITHIN borders
-    if(player.dx < 0 && player.x+player.dx <= borders.L) {
-        player.dx = 0
-        player.x = borders.L
-    }
-    else if(player.dx > 0 && player.x+player.dx >= borders.R) {
-        player.dx = 0
-        player.x = borders.R
-    }
-
-    if(player.dy < 0 && player.y+player.dy <= borders.D) {
-        player.dy = 0
-        player.y = borders.D
-    }        
-    else if(player.dy > 0 && player.y+player.dy >= borders.U) {
-        player.dy = 0
-        player.y = borders.U
-    }
-    
 
     //inventory
-    switch(event.key){
+    switch(event.key.toLowerCase()){
+        case " ":
+            player.dx = -Math.cos(player.rotation) * player.speed
+            player.dy = -Math.sin(player.rotation) * player.speed
+            break
+        case "w":
+            player.dy = -player.speed
+            break
+        case "a":
+            player.dx = -player.speed
+            break
+        case "s":
+            player.dy = player.speed
+            break
+        case "d":
+            player.dx = player.speed
+            break
         case "1":
             player.invSelected = 1 - 1
             break
@@ -353,20 +329,24 @@ function keydown(event){
             })
             break
     }
-}
-function keyup(event){
-    let key = event.key.toLowerCase();
-    let i = pressedKeys.indexOf(key);
-    if (i > -1) {
-        pressedKeys.splice(i, 1);
-        if (pressedKeys.length == 0) {
-            keyDown = false;
-        }
+
+    //KEEP PLAYER WITHIN borders
+    if(player.dx < 0 && player.x+player.dx <= borders.L) {
+        player.dx = 0
+        player.x = borders.L
+    }
+    else if(player.dx > 0 && player.x+player.dx >= borders.R) {
+        player.dx = 0
+        player.x = borders.R
     }
 
-    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
-        player.dx = 0;
-        player.dy = 0;
+    if(player.dy < 0 && player.y+player.dy <= borders.D) {
+        player.dy = 0
+        player.y = borders.D
+    }        
+    else if(player.dy > 0 && player.y+player.dy >= borders.U) {
+        player.dy = 0
+        player.y = borders.U
     }
 }
 
@@ -404,7 +384,6 @@ function startGame(){
     document.getElementById("gameOver").style.display = "none"
     //adjust:
     window.addEventListener("keydown", keydown)
-    window.addEventListener("keyup", keyup)
     window.addEventListener("mousemove", mousemove)
     window.addEventListener("mousedown", mousedown)
     
@@ -423,7 +402,7 @@ function startGame(){
             player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
             socket.emit("updatePlayer", player)  
         } 
-        if(player && updateAgain) {gameLoop()}}
+        if(updateAgain) {gameLoop()}}
     }, 10) //fps)
 }
 function exitGame(){
@@ -431,7 +410,6 @@ function exitGame(){
     clearInterval(gameLoopInt) 
     //remove all event listeners
     removeEventListener("keydown", keydown)
-    removeEventListener("keyup", keyup)
     removeEventListener("mousemove", mousemove)
     removeEventListener("mousedown", mousedown)
     //make home screen visible again
