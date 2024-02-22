@@ -372,15 +372,6 @@ function mousedown(e){
 /** @update */
 //request data to update canv
 var updateAgain = false
-function gameLoop(){
-
-    socket.emit("requestUpdateDataFromServer", {
-        id: player.id,
-        x:player.x,
-        y:player.y,
-    }) //gives data to draw  
-    updateAgain = false       
-}
 var gameLoopInt
 function startGame(){
     //set these:
@@ -402,22 +393,29 @@ function startGame(){
     })
     //start game loop
     gameLoopInt = setInterval(()=>{
-        if(player){
-        if(player.health > 0){   
-            if (player.x + tx >= borders.R 
-            || player.x + tx <= borders.L){
-                tx = 0
-            }
-            if (player.y + ty >= borders.U 
-            || player.y + ty <= borders.D){
-                ty = 0
-            }
-            player.x += tx
-            player.y += ty
-            player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
-            socket.emit("updatePlayer", player)  
-        } 
-        if(player && updateAgain) {gameLoop()}}
+        if(player && updateAgain) {
+            if(player.health > 0){   
+                if (player.x + tx >= borders.R 
+                || player.x + tx <= borders.L){
+                    tx = 0
+                }
+                if (player.y + ty >= borders.U 
+                || player.y + ty <= borders.D){
+                    ty = 0
+                }
+                player.x += tx
+                player.y += ty
+                player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
+                socket.emit("updatePlayer", player)  
+            } 
+            socket.emit("requestUpdateDataFromServer", {
+                id: player.id,
+                x:player.x,
+                y:player.y,
+            }) //gives data to draw  
+            updateAgain = false  
+        }
+        
     }, 10) //fps)
 }
 function exitGame(){
