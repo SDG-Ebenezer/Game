@@ -399,9 +399,6 @@ io.sockets.on("connection", (socket)=>{
             }
         })
         //if in range 
-        if(entities[data.id]){
-        entities[data.id].dx = data.dx
-        entities[data.id].dy = data.dy}
         socket.emit("sendUpdateDataToClient", {
             updateContent:updateContent,
             player:entities[data.id]
