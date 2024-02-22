@@ -81,15 +81,18 @@ function updateCanv(info){
                     images[pic] = new Image()
                     images[pic].src = pic
                 }
-                ctx.fillStyle= "red"
                 let x= -item.width/2
                 let y= -item.height/2
                 let holdingIconSize = 50
                 ctx.translate(x,y)
                 ctx.rotate(-45/57.1)
-                ctx.fillRect(0,0,10,10)
+                if(false){ //debug
+                    ctx.fillStyle= "red"
+                    ctx.fillRect(0,0,10,10)
+                    ctx.strokeRect(-25,-25,holdingIconSize,holdingIconSize)
+                }
                 ctx.drawImage(images[pic],-25,-25,holdingIconSize,holdingIconSize)
-                ctx.strokeRect(-25,-25,holdingIconSize,holdingIconSize)
+                
             }
         }
         ctx.restore() 
@@ -154,6 +157,7 @@ function updateCanv(info){
         speedBar()
         shadow()
         drawInventory()
+        drawAttackCursor()
     }
     updateAgain = true//allow update
 }
@@ -228,6 +232,21 @@ function shadow(){
     ctx.fill(); 
     ctx.closePath();
     ctx.restore()
+}
+function drawAttackCursor(){
+    console.log(mouse.x, mouse.y)
+    if(mouse.x**2 + mouse.y**2 <= player.hitRange ** 2){
+        console.log("in range", player.x - mouse.x, player.y - mouse.y)
+        let rangeCursorX = mouse.x + ginfo.width/2
+        let rangeCursorY = mouse.y + ginfo.height/2
+        gctx.fillStyle = "rgba(0,0,0,0.2)"
+        gctx.strokeStyle = "rgba(0,0,0,0.5)"
+        gctx.lineWidth = 5
+        gctx.beginPath()
+        gctx.arc(rangeCursorX, rangeCursorY, 20, 0, 2 * Math.PI)
+        gctx.fill()
+        gctx.stroke()
+    }
 }
 /** */
 var invSize = 75
@@ -356,6 +375,14 @@ function keydown(event){
             break   
         case "5":
             player.invSelected = 5 - 1
+            break
+        case "Q":
+        case "q":
+            socket.emit("drop", {
+                playerInvI:player.invSelected,
+                x:player.x - Math.cos(player.rotation) * entitySize * 2,
+                y:player.y - Math.sin(player.rotation) * entitySize * 2,
+            })
             break
     }
 }
