@@ -25,7 +25,7 @@ function createID(){
 var pickables = {} //stuff, like XP, berries, etc.
 const holdableItems = {
     "Hand":{
-        name:"hand",
+        name:"Hand",
         pic:false,
         durability:1,
         reducedHealth:0, // cost per hit
@@ -33,7 +33,7 @@ const holdableItems = {
         generationProbability:0 //out of 100
     },
     "Iron_Sword":{
-        name:"Iron Sword",
+        name:"Iron_Sword",
         pic:"/imgs/Sword.png",
         durability:30,
         reducedHealth:1, // cost per hit
@@ -41,7 +41,7 @@ const holdableItems = {
         generationProbability:50 //out of 100
     },
     "Gold_Sword":{
-        name:"Gold Sword",
+        name:"Gold_Sword",
         pic:"/imgs/Sword2.png",
         durability:20,
         reducedHealth:1, // cost per hit
@@ -49,7 +49,7 @@ const holdableItems = {
         generationProbability:30 //out of 100
     },
     "Diamond_Sword":{
-        name:"Diamond Sword",
+        name:"Diamond_Sword",
         pic:"/imgs/Sword3.png",
         durability:60,
         reducedHealth:1, // cost per hit
@@ -57,7 +57,7 @@ const holdableItems = {
         generationProbability:10 //out of 100
     },
     "Plasma_Sword":{
-        name:"Plasma Sword",
+        name:"Plasma_Sword",
         pic:"/imgs/Sword4.png",
         durability:100,
         reducedHealth:1, // cost per hit
@@ -123,6 +123,7 @@ class Player extends Entity{
             holdableItems["Hand"],
         ];
         this.invSelected = 0
+        this.hitRange = 100
     }
 }
 class Enemy extends Entity{
@@ -271,7 +272,7 @@ class Pickable{
 
 /** @default_pickables */
 var pickablesID = 0
-pickables["-1"] = new Pickable("-1",-mapSize/2 + 100, -mapSize/2 + 100, "Sword", null, "Iron_Sword")
+//pickables["-1"] = new Pickable("-1",-mapSize/2 + 100, -mapSize/2 + 100, "Sword", null, "Iron_Sword")
 
 /** @spawn_enemies */
 let currEnemyID = 0
@@ -298,7 +299,7 @@ setInterval(()=>{
         }
     }
 
-    if(random(1,10)==1){
+    if(random(1000,1)==1){
         pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "XP", "/imgs/Berry.png")
         pickablesID ++
     }
@@ -417,37 +418,66 @@ io.sockets.on("connection", (socket)=>{
         let player = entities[id]
         if(item.kind == "XP"){
             player.xp ++
+            delete pickables[item.id]
         }
         else if(item.kind == "Sword"){
             let inv = player.inventory
             for(let i in inv){
-                if(inv[i].name == "hand") {
+                if(inv[i].name == "Hand") {
                     player.inventory[i] = holdableItems[item.holdableItemsCorr]
+                    delete pickables[item.id]
                     break
                 }
             }
-            console.log(entities[id].inventory)
         }
-        delete pickables[item.id]
+    })
+
+    //player drop item
+    socket.on("drop", (data)=>{
+        let player = entities[id]
+        let x = data.x
+        let y = data.y
+        //see if out of boundaries
+        if (data.x <= BORDERS.L){
+            x = BORDERS.L
+        } else if(data.x >= BORDERS.R){
+            x = BORDERS.R
+        }
+        if (data.y <= BORDERS.D){
+            y = BORDERS.D
+        } else if(data.y >= BORDERS.U){
+            y = BORDERS.U
+        }
+
+        if(player.inventory[player.invSelected].name != "Hand"){
+            pickables[pickablesID] = new Pickable(pickablesID, x, y, "Sword", null, player.inventory[player.invSelected].name)
+            entities[id].inventory[player.invSelected] = holdableItems["Hand"]
+            pickablesID++
+        }
     })
 
     //deal damage?
     socket.on("mousedown", function(data){
+        let player = entities[id]
         for(let e in entities){     
-            let entity = entities[e]       
-            if(entity.id != id
-            && Math.abs(entity.x - data.x) < entitySize
-            && Math.abs(entity.y - data.y) < entitySize){
-                console.log("DAMAGE")
-                entity.health -= data.damage
+            let entity = entities[e]             
+            if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange){
+                if(entity.id != id
+                && Math.abs(entity.x - data.x) < entitySize
+                && Math.abs(entity.y - data.y) < entitySize){
+                    console.log("DAMAGE")
+                    entity.health -= data.damage
+                }
             }
         }
         for(let e in enemies){     
-            let enemy = enemies[e]       
-            if(Math.abs(enemy.x - data.x) < entitySize
-            && Math.abs(enemy.y - data.y) < entitySize){
-                console.log("DAMAGE ENEMY")
-                enemy.health -= data.damage
+            let enemy = enemies[e] 
+            if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange){      
+                if(Math.abs(enemy.x - data.x) < entitySize
+                && Math.abs(enemy.y - data.y) < entitySize){
+                    console.log("DAMAGE ENEMY")
+                    enemy.health -= data.damage
+                }
             }
         }
     })
