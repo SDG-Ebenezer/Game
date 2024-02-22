@@ -1,0 +1,135 @@
+*{
+    padding: none;
+    overflow: hidden;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+canvas{
+    left:0;
+    top:0;
+    position: absolute
+}
+button{
+    cursor:pointer;
+}
+#startGameBtn{
+    color:white;
+    background-color: rgb(31, 119, 31);
+    font-size: 40px;
+    border:5px solid;
+    border-left-color:rgb(34, 123, 34);
+    border-top-color:rgb(34, 123, 34);
+    border-right-color:rgb(12, 73, 12);
+    border-bottom-color:rgb(12, 73, 12);
+    padding-top:7px;
+    padding-bottom:7px;
+    padding-left: 100px;
+    padding-right: 100px;
+    margin:0;
+    position:absolute;
+    top:65%;
+    left:50%;
+    transform: translate(-50%, -35%);
+}
+#startGameBtn:hover{
+    color:white;
+    background-color: rgb(20, 96, 20);
+    border-right-color:rgb(34, 123, 34);
+    border-bottom-color:rgb(34, 123, 34);
+    border-left-color:rgb(12, 73, 12);
+    border-top-color:rgb(12, 73, 12);
+    padding-top:9px;
+    padding-bottom:5px;
+}
+#exitGameBtn{
+    top:0;
+    left:0;
+    margin:0;
+    position:absolute;
+    border:none;
+    background-color:#90c0f3;
+    padding:10px;
+    display:none;
+}
+
+.text_input{
+    border:none;
+    padding:10px;
+    font-size: 20px;
+}
+
+.image-options {
+    margin:0;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap:-5px;
+    /*flex-direction: column;*/
+}
+.skins_imgs{
+    width: 50px;
+    height: 50px;
+    padding:20px;
+    border: 2px solid #ccc;
+    rotate:calc(90deg);
+    transition: border-color 0.3s ease;
+    cursor: pointer;
+}
+
+input[type="radio"] {
+    display:none;
+}
+input[type="radio"]:checked + img {
+    border-color: #007bff; /* Highlight the selected image */
+}
+.new_label {
+    position:fixed;
+    background-color: #007bff;
+    color: white;
+    padding: 5px;
+    font-size: 14px;
+}
+
+
+#canv{background-color: rgb(33, 48, 33);}
+#info_canv{background-color: none;}
+
+#preGame_Stuff{
+    background-color: rgb(33, 48, 33);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    position:fixed;
+}
+#username{
+    margin:0;
+    position:absolute;
+    top:40%;
+    left:50%;
+    transform: translate(-50%, -60%);
+}
+
+#gameOver {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.661);
+    display: none;
+    z-index: 1;
+}
+#gameOverText {
+    background-color: none;
+    color: white;
+    font-size: 15vw; /* Adjust as needed */
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
