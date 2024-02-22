@@ -8,9 +8,9 @@ app.get("/", function(req, res){
 app.use("/imgs", express.static(__dirname + "/client/imgs"));
 app.use("/client", express.static(__dirname + "/client"))
 
-const port = "1111" //server port
-serv.listen(port)
-console.log("Online @ " +port)
+const PORT = process.env.PORT || 1111 //server PORT
+serv.listen(PORT)
+console.log("Online @ " +PORT)
 
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 //CREATE NEW IDs
