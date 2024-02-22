@@ -407,11 +407,6 @@ io.sockets.on("connection", (socket)=>{
         }
     })
 
-    socket.on("toldGameOver", (id)=>{
-        socket.emit("gameOver")
-        delete entities[id]
-    })
-
     //player eat/pick up, etc.!
     socket.on("eat", (data)=>{
         let item = data.what
