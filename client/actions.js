@@ -286,7 +286,24 @@ var mouse = {
 function keydown(event){
     event.preventDefault()
     event.stopPropagation()
-
+    let key = event.key
+    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key) && !pressedKeys.includes(key)) {
+        pressedKeys.push(key)
+        keyDown = true
+    }
+    let tx = 0
+    let ty = 0
+    /*
+    if(key == " "){
+        
+    } else{
+        pressedKeys.forEach((pkey)=>{
+            if(pkey == "w" || pkey == "arrowup") 
+            else if(pkey == "a" || pkey == "arrowleft") 
+            else if(pkey == "s" || pkey == "arrowdown") 
+            else if(pkey == "d" || pkey == "arrowright") 
+        })
+    }*/
     //inventory
     switch(event.key.toLowerCase()){
         case " ":
@@ -329,24 +346,25 @@ function keydown(event){
             })
             break
     }
-
-    //KEEP PLAYER WITHIN borders
-    if(player.dx < 0 && player.x+player.dx <= borders.L) {
-        player.dx = 0
-        player.x = borders.L
-    }
-    else if(player.dx > 0 && player.x+player.dx >= borders.R) {
-        player.dx = 0
-        player.x = borders.R
-    }
-
-    if(player.dy < 0 && player.y+player.dy <= borders.D) {
-        player.dy = 0
-        player.y = borders.D
-    }        
-    else if(player.dy > 0 && player.y+player.dy >= borders.U) {
-        player.dy = 0
-        player.y = borders.U
+}
+function keyup(event){
+    switch(event.key.toLowerCase()){
+        case " ":
+            player.dx = 0
+            player.dy = 0
+            break
+        case "w":
+            player.dy = 0
+            break
+        case "a":
+            player.dx = 0
+            break
+        case "s":
+            player.dy = 0
+            break
+        case "d":
+            player.dx = 0 
+            break
     }
 }
 
@@ -384,6 +402,7 @@ function startGame(){
     document.getElementById("gameOver").style.display = "none"
     //adjust:
     window.addEventListener("keydown", keydown)
+    window.addEventListener("keyup", keyup)
     window.addEventListener("mousemove", mousemove)
     window.addEventListener("mousedown", mousedown)
     
@@ -402,7 +421,7 @@ function startGame(){
             player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
             socket.emit("updatePlayer", player)  
         } 
-        if(updateAgain) {gameLoop()}}
+        if(player && updateAgain) {gameLoop()}}
     }, 10) //fps)
 }
 function exitGame(){
@@ -410,6 +429,7 @@ function exitGame(){
     clearInterval(gameLoopInt) 
     //remove all event listeners
     removeEventListener("keydown", keydown)
+    removeEventListener("keyup", keyup)
     removeEventListener("mousemove", mousemove)
     removeEventListener("mousedown", mousedown)
     //make home screen visible again

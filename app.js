@@ -370,6 +370,10 @@ io.sockets.on("connection", (socket)=>{
                 //console.log(player.id, entities)
                 entities[player.id].x = player.x
                 entities[player.id].y = player.y
+
+                entities[player.id].dx = player.dx
+                entities[player.id].dy = player.dy
+                
                 entities[player.id].rotation = player.rotation
                 entities[player.id].invSelected = player.invSelected
                 entities[player.id].speed = player.speed
