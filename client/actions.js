@@ -355,16 +355,21 @@ function keydown(event){
     }
 }
 function keyup(event){
-    let i = pressedKeys.indexOf(event.key.toLowerCase())
+    let key = event.key.toLowerCase();
+    let i = pressedKeys.indexOf(key);
     if (i > -1) {
-        pressedKeys.splice(i, 1)
+        pressedKeys.splice(i, 1);
         if (pressedKeys.length == 0) {
-            keyDown = false
+            keyDown = false;
         }
     }
-    player.dx = 0
-    player.dy = 0
+
+    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        player.dx = 0;
+        player.dy = 0;
+    }
 }
+
 function mousemove(e){
     // calculate the mouse position relative to the canvas center
     mouse.x = e.clientX - canvas.width / 2
@@ -418,12 +423,11 @@ function startGame(){
             player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
             socket.emit("updatePlayer", player)  
         } 
-        //dont update if (1) player is not existant or (2) last frame's update wasnt fully completed
-        if(player.health <= 0) socket.emit("toldGameOver", player.id)
         if(player && updateAgain) {gameLoop()}}
-    }, fps)
+    }, 10) //fps)
 }
 function exitGame(){
+    document.getElementById("gameOver").style.display = "none"
     clearInterval(gameLoopInt) 
     //remove all event listeners
     removeEventListener("keydown", keydown)
@@ -433,8 +437,6 @@ function exitGame(){
     //make home screen visible again
     document.getElementById("startGameBtn").style.display = "block"
     document.getElementById("preGame_Stuff").style.display = "block"
-
-    document.getElementById("gameOver").style.display = "none"
 }
 
 //show game over screen if dead
