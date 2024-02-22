@@ -95,8 +95,6 @@ class Entity {
         this.id = createID(); 
         this.x = x;
         this.y = y;
-        this.dx = 0;
-        this.dy = 0;
         this.type = type;
         this.rotation = 0;
         this.health = health; //current health
@@ -132,6 +130,9 @@ class Enemy extends Entity{
         this.detectRange = detectRange
         this.damage = damage
         this.targetPlayer
+
+        this.dx = 0;
+        this.dy = 0;
         
         this.justAttacked = false
         this.cooldownTime = 0 //s
@@ -370,10 +371,6 @@ io.sockets.on("connection", (socket)=>{
                 //console.log(player.id, entities)
                 entities[player.id].x = player.x
                 entities[player.id].y = player.y
-
-                entities[player.id].dx = player.dx
-                entities[player.id].dy = player.dy
-
                 entities[player.id].rotation = player.rotation
                 entities[player.id].invSelected = player.invSelected
                 entities[player.id].speed = player.speed

@@ -378,9 +378,6 @@ function gameLoop(){
         id: player.id,
         x:player.x,
         y:player.y,
-        //make sure on the same page.
-        dx:player.dx,
-        dy:player.dy
     }) //gives data to draw  
     updateAgain = false       
 }
@@ -415,10 +412,8 @@ function startGame(){
             || player.y + ty <= borders.D){
                 ty = 0
             }
-            player.dx = tx
-            player.dy = ty
-            player.x += player.dx
-            player.y += player.dy
+            player.x += tx
+            player.y += ty
             player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
             socket.emit("updatePlayer", player)  
         } 
