@@ -519,6 +519,9 @@ io.sockets.on("connection", (socket)=>{
                     && Math.abs(entity.x - data.x) < entitySize
                     && Math.abs(entity.y - data.y) < entitySize){
                         entity.health -= data.damage
+                        if(entity.health <= 0){
+                            console.log(entity.username, entity.id, "was slain by", player.username, player.id)
+                        }
                         didDamage = true // turn to true
                     }
                 }
