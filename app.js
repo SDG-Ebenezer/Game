@@ -315,7 +315,7 @@ function spawnLord(){
 var amountOfBerries = 0
 setInterval(()=>{
     if(enemyCount < 10){
-        if(random(1000, 1) = 1){
+        if(random(1000, 1) == 1){
             if(random(10,1)==1) spawnLord()
             else spawnNormal()
         }
