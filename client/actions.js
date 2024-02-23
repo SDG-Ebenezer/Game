@@ -48,7 +48,6 @@ socket.on("sendStartData", (data)=>{
 
     canPlay = true
     updateAgain = true
-    console.log(player)
 })
 //DRAWING FUNCTION
 function updateCanv(info){
@@ -413,7 +412,6 @@ function startGame(){
     })
     //start game loop
     gameLoopInt = setInterval(()=>{
-        console.log(canPlay)
         if(player && updateAgain && canPlay) {
             if(player.health > 0){   
                 if (player.x + tx >= borders.R 
