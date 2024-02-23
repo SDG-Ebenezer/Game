@@ -1,3 +1,4 @@
+const { spawn } = require("child_process")
 var express = require("express")
 var app = express()
 var serv = require("http").Server(app)
@@ -26,41 +27,46 @@ var pickables = {} //stuff, like XP, berries, etc.
 const holdableItems = {
     "Hand":{
         name:"Hand",
+        kind:"Hand",
         pic:false,
-        durability:1,
-        reducedHealth:0, // cost per hit
+        durability:Infinity,
+        maxDurability:Infinity,
         damage:5,
         generationProbability:0 //out of 100
     },
     "Iron_Sword":{
         name:"Iron_Sword",
+        kind:"Sword",
         pic:"/imgs/Sword.png",
         durability:30,
-        reducedHealth:1, // cost per hit
+        maxDurability:30,
         damage:25,
         generationProbability:50 //out of 100
     },
     "Gold_Sword":{
         name:"Gold_Sword",
+        kind:"Sword",
         pic:"/imgs/Sword2.png",
         durability:20,
-        reducedHealth:1, // cost per hit
+        maxDurability:20,
         damage:50,
         generationProbability:30 //out of 100
     },
     "Diamond_Sword":{
         name:"Diamond_Sword",
+        kind:"Sword",
         pic:"/imgs/Sword3.png",
         durability:60,
-        reducedHealth:1, // cost per hit
+        maxDurability:60,
         damage:30,
         generationProbability:10 //out of 100
     },
     "Plasma_Sword":{
         name:"Plasma_Sword",
+        kind:"Sword",
         pic:"/imgs/Sword4.png",
         durability:100,
-        reducedHealth:1, // cost per hit
+        maxDurability:100,
         damage:100,
         generationProbability:1 //out of 100
     }
@@ -114,11 +120,11 @@ class Player extends Entity{
         this.username = (username == "")?"Happy":username;
         this.xp = 0;
         this.inventory = [
-            holdableItems["Iron_Sword"],
-            holdableItems["Hand"],
-            holdableItems["Hand"],
-            holdableItems["Hand"],
-            holdableItems["Hand"],
+            {...holdableItems["Iron_Sword"]},
+            {...holdableItems["Hand"]},
+            {...holdableItems["Hand"]},
+            {...holdableItems["Hand"]},
+            {...holdableItems["Hand"]},
         ];
         this.invSelected = 0
         this.hitRange = 100
@@ -258,7 +264,7 @@ class Wall {
 }
 
 class Pickable{
-    constructor(id, x,y,kind,imgSrc,hold=null,rotation=0){
+    constructor(id, x,y,kind,imgSrc,hold=null,rotation=0,durability=1){
         this.id = id
         this.x = x
         this.y = y
@@ -266,30 +272,61 @@ class Pickable{
         this.type = "pickable"
         this.imgSrc = hold?holdableItems[hold].pic:imgSrc
         this.width = this.height = 50
-        this.rotation = rotation
         this.holdableItemsCorr = hold
+        this.rotation = rotation
+        this.durability = durability
     }
 }
 
 /** @default_pickables */
 var pickablesID = 0
-//pickables["-1"] = new Pickable("-1",-mapSize/2 + 100, -mapSize/2 + 100, "Sword", null, "Iron_Sword")
+//drop everything after death
+function dropAll(id){
+    let player = entities[id]
+    if(player){
+    player.inventory.forEach(slot=>{
+        if(slot.name != "Hand"){
+            let scatterRange = entitySize * 4 // area of scattering items
+            let x = random(player.x + scatterRange, player.x - scatterRange)
+            let y = random(player.y + scatterRange, player.y - scatterRange)
+            if (x >= BORDERS.R || x <= BORDERS.L){x = 0}
+            if (y >= BORDERS.U || y <= BORDERS.D){y = 0}
+            pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.kind,null,slot.name,0,slot.durability)
+            pickablesID ++
+        }
+    })}
+}
 
 /** @spawn_enemies */
 let currEnemyID = 0
-for(;currEnemyID < 5; currEnemyID++){
+let enemyCount = 0
+function spawnNormal(){
     enemies[currEnemyID] = new Enemy("Normal", "/imgs/Enemy.png", 5, 200, 50, 1)
+    currEnemyID++
+    enemyCount++
 }
-enemies[currEnemyID] = new Enemy("Lord", "/imgs/Enemy_Lord.png", 20, 500, 100, 1/2)
-
+function spawnLord(){
+    enemies[currEnemyID] = new Enemy("Lord", "/imgs/Enemy_Lord.png", 20, 500, 100, 1/2)
+    currEnemyID++
+    enemyCount++
+}
 /** @game_loop */
 //server "game loop"
+var amountOfBerries = 0
 setInterval(()=>{
-    //console.log(enemies)
+    if(enemyCount < 10){
+        if(random(10,1)==1) spawnLord()
+        else spawnNormal()
+    }
     for(let e in enemies){
-        //console.log(enemies[e])
         enemies[e].move()
-        if(enemies[e].health <= 0) delete enemies[e]
+        if(enemies[e].health <= 0) {
+            enemyCount -= 1
+            if(random(10, 1) == 1){
+                pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, "Sword", null, "Iron_Sword",0,holdableItems["Iron_Sword"].durability)
+            }
+            delete enemies[e]
+        }
     }
 
     //players regenerate
@@ -300,8 +337,14 @@ setInterval(()=>{
         }
     }
 
-    if(random(1000,1)==1){
-        pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "XP", "/imgs/Berry.png")
+    if(random(1000,1)==1 && amountOfBerries < mapSize/entitySize){
+        if(random(10, 1) == 1){
+            pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "Sword", null, "Gold_Sword",0,holdableItems["Gold_Sword"].durability)
+        }
+        else{
+            pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "XP", "/imgs/Berry.png")
+            amountOfBerries ++
+        }
         pickablesID ++
     }
 }, fps)
@@ -377,7 +420,6 @@ io.sockets.on("connection", (socket)=>{
             }
         } catch(err){
             console.log("Strange player spotted by the ID of ", player.id)
-            //delete entities
         }
     })
     //give data if requested
@@ -404,6 +446,7 @@ io.sockets.on("connection", (socket)=>{
         //only if player exists and is alive
         if(entities[data.id] && entities[data.id].health <= 0) {
             socket.emit("gameOver")
+            dropAll(data.id)
             delete entities[data.id]
         }
     })
@@ -414,13 +457,15 @@ io.sockets.on("connection", (socket)=>{
         let player = entities[id]
         if(item.kind == "XP"){
             player.xp ++
+            amountOfBerries ++
             delete pickables[item.id]
         }
         else if(item.kind == "Sword"){
             let inv = player.inventory
             for(let i in inv){
                 if(inv[i].name == "Hand") {
-                    player.inventory[i] = holdableItems[item.holdableItemsCorr]
+                    player.inventory[i] = {...holdableItems[item.holdableItemsCorr]}
+                    player.inventory[i].durability = item.durability
                     delete pickables[item.id]
                     break
                 }
@@ -444,25 +489,31 @@ io.sockets.on("connection", (socket)=>{
         } else if(data.y >= BORDERS.U){
             y = BORDERS.U
         }
-
-        if(player.inventory[player.invSelected].name != "Hand"){
-            pickables[pickablesID] = new Pickable(pickablesID, x, y, "Sword", null, player.inventory[player.invSelected].name)
-            entities[id].inventory[player.invSelected] = holdableItems["Hand"]
+        let item = player.inventory[data.playerInvI]
+        if(item.name != "Hand"){
+            pickables[pickablesID] = new Pickable(pickablesID, x, y, item.kind, null, item.name,0,item.durability)
+            entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             pickablesID++
         }
+    })
+
+    //BREAK TOOL 
+    socket.on("breakTool", function(invSelected){
+        entities[id].inventory[invSelected] = {...holdableItems["Hand"]}
     })
 
     //deal damage?
     socket.on("mousedown", function(data){
         let player = entities[id]
+        let didDamage = false
         for(let e in entities){     
             let entity = entities[e]             
             if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange){
                 if(entity.id != id
                 && Math.abs(entity.x - data.x) < entitySize
                 && Math.abs(entity.y - data.y) < entitySize){
-                    console.log("DAMAGE")
                     entity.health -= data.damage
+                    didDamage = true // turn to true
                 }
             }
         }
@@ -471,10 +522,13 @@ io.sockets.on("connection", (socket)=>{
             if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange){      
                 if(Math.abs(enemy.x - data.x) < entitySize
                 && Math.abs(enemy.y - data.y) < entitySize){
-                    console.log("DAMAGE ENEMY")
                     enemy.health -= data.damage
+                    didDamage = true // turn to true
                 }
             }
+        }
+        if(didDamage && data.tool.name != "Hand"){
+            entities[id].inventory[data.invSelected].durability -= 1
         }
     })
 
@@ -482,10 +536,12 @@ io.sockets.on("connection", (socket)=>{
     socket.on('disconnect', function() {
         try{
             console.log(`${entities[id].username} ${id} disconnected`)
+            dropAll(id)
             delete entities[id]
         }
         catch(err){
             console.log("A suspicious looking player left...")
+            dropAll(id)
             delete entities[undefined]
         }
     })

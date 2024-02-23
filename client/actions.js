@@ -251,8 +251,9 @@ function drawAttackCursor(){
 var invSize = 75
 function drawInventory(){
     let i = 0
-    ctx.fillStyle = "#000000aa"
-    ctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
+    gctx.fillStyle = "#000000aa"
+    gctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
+    gctx.save()
     for(let invSpot in player.inventory){
         let each = player.inventory[invSpot]
         gctx.lineWidth = 10;
@@ -266,8 +267,20 @@ function drawInventory(){
             }
             gctx.drawImage(images[each.pic], i * invSize, 0, invSize, invSize)
         }
-        i++ 
+        if(each.durability < each.maxDurability){
+            let w = invSize
+            let h = 5
+            let x = i * invSize
+            let y = invSize - h*3
+            gctx.fillStyle = "black"
+            gctx.fillRect(x, y, w, h)
+            gctx.fillStyle = "rgb(0,235,0)"
+            gctx.fillRect(x, y, w * (each.durability/each.maxDurability), h)
+            if(each.durability <= 0) socket.emit("breakTool", player.invSelected)
+        }  
+        i++ //x 
     }
+    gctx.restore()
     //selected
     gctx.lineWidth = 15;
     gctx.strokeStyle = "white"
@@ -363,7 +376,9 @@ function mousemove(e){
 function mousedown(e){
     if(player.health > 0){
     socket.emit("mousedown", {
+        tool:player.inventory[player.invSelected], // could be hand!
         damage:player.inventory[player.invSelected].damage,
+        invSelected: player.invSelected,
         x:mouse.x + player.x, 
         y:mouse.y + player.y
     })}
