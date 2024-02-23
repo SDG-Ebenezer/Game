@@ -460,3 +460,16 @@ socket.on("gameOver", ()=>{
     document.getElementById("exitGameBtn").style.display = "block"
     document.getElementById("gameOver").style.display = "block"
 })
+
+function showHelp(){
+    let help = document.getElementById("help")
+    let helpBtn = document.getElementById("helpBtn")
+    if (help.style.display == "block"){
+        help.style.display = "none"
+        helpBtn.innerHTML = "HELP"
+    }
+    else{
+        help.style.display = "block"
+        helpBtn.innerHTML = "<b>X</b>"
+    }
+}
