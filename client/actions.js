@@ -22,6 +22,7 @@ var socket = io()
 //player
 var entitySize
 var player;
+var currInvSlot = 0
 
 //w_vars (Wait Variables)
 var images = {} //loads images as needed
@@ -276,7 +277,7 @@ function drawInventory(){
             gctx.fillRect(x, y, w, h)
             gctx.fillStyle = "rgb(0,235,0)"
             gctx.fillRect(x, y, w * (each.durability/each.maxDurability), h)
-            if(each.durability <= 0) socket.emit("breakTool", player.invSelected)
+            if(each.durability <= 0) socket.emit("breakTool", currInvSlot)
         }  
         i++ //x 
     }
@@ -284,7 +285,7 @@ function drawInventory(){
     //selected
     gctx.lineWidth = 15;
     gctx.strokeStyle = "white"
-    gctx.strokeRect(player.invSelected * invSize, 0, invSize, invSize)
+    gctx.strokeRect(currInvSlot * invSize, 0, invSize, invSize)
     
 }
 
@@ -321,24 +322,24 @@ function keydown(event){
             tx = player.speed
             break
         case "1":
-            player.invSelected = 1 - 1
+            currInvSlot = 1 - 1
             break
         case "2":
-            player.invSelected = 2 - 1
+            currInvSlot = 2 - 1
             break
         case "3":
-            player.invSelected = 3 - 1
+            currInvSlot = 3 - 1
             break
         case "4":
-            player.invSelected = 4 - 1
+            currInvSlot = 4 - 1
             break   
         case "5":
-            player.invSelected = 5 - 1
+            currInvSlot = 5 - 1
             break
         case "Q":
         case "q":
             socket.emit("drop", {
-                playerInvI:player.invSelected,
+                playerInvI:currInvSlot,
                 x:player.x - Math.cos(player.rotation) * entitySize * 2,
                 y:player.y - Math.sin(player.rotation) * entitySize * 2,
             })
@@ -376,9 +377,9 @@ function mousemove(e){
 function mousedown(e){
     if(player.health > 0){
     socket.emit("mousedown", {
-        tool:player.inventory[player.invSelected], // could be hand!
-        damage:player.inventory[player.invSelected].damage,
-        invSelected: player.invSelected,
+        tool:player.inventory[currInvSlot], // could be hand!
+        damage:player.inventory[currInvSlot].damage,
+        invSelected: currInvSlot,
         x:mouse.x + player.x, 
         y:mouse.y + player.y
     })}
@@ -420,6 +421,7 @@ function startGame(){
                 }
                 player.x += tx
                 player.y += ty
+                player.invSelected = currInvSlot
                 player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
                 socket.emit("updatePlayer", player)  
             } 

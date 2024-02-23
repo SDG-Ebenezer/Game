@@ -476,7 +476,6 @@ io.sockets.on("connection", (socket)=>{
     //player drop item
     socket.on("drop", (data)=>{
         let player = entities[id]
-        player.invSelected = data.playerInvI // update now! why not?
         let x = data.x
         let y = data.y
         //see if out of boundaries
