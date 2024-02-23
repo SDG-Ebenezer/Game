@@ -393,6 +393,9 @@ function mousedown(e){
 var updateAgain = false
 var gameLoopInt
 function startGame(){
+    //reset or set these:
+    tx = ty = invSelected = 0
+
     //set these:
     document.getElementById("exitGameBtn").style.display = "none"
     document.getElementById("preGame_Stuff").style.display = "none"

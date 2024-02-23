@@ -73,7 +73,7 @@ const holdableItems = {
 }
 
 var ids = [] //player ids
-const mapSize = 2048
+const mapSize = 4096
 var BORDERS = {
     "L" : -mapSize/2, 
     "U" : mapSize/2, 
@@ -315,8 +315,10 @@ function spawnLord(){
 var amountOfBerries = 0
 setInterval(()=>{
     if(enemyCount < 10){
-        if(random(10,1)==1) spawnLord()
-        else spawnNormal()
+        if(random(1000, 1) = 1){
+            if(random(10,1)==1) spawnLord()
+            else spawnNormal()
+        }
     }
     for(let e in enemies){
         enemies[e].move()
@@ -352,7 +354,7 @@ setInterval(()=>{
 //ADD TREES
 var trees = {} 
 var treesID = 0
-for(let i = 0; i < 100; i ++){
+for(let i = 0; i < 1000; i ++){
     let newTree = new Tree(treesID)
     trees[treesID] = newTree
     treesID++
