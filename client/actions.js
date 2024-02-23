@@ -32,6 +32,7 @@ var mapSize //defined soon!
 var fps
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
+var canPlay = false
 socket.on("sendStartData", (data)=>{
     borders = data.bordersObj
     walls = data.structuresObj
@@ -44,13 +45,16 @@ socket.on("sendStartData", (data)=>{
     var pimg = new Image()
     pimg.src = player.imgSrc
     images[player.imgSrc] = pimg 
+
+    canPlay = true
     updateAgain = true
+    console.log(player)
 })
 //DRAWING FUNCTION
 function updateCanv(info){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save();
-    ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y);
+    if(player) ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y);
     //draw!
     info.forEach(item=>{
         ctx.save()
@@ -151,7 +155,7 @@ function updateCanv(info){
     //game data
     gctx.clearRect(0, 0, ginfo.width, ginfo.height)
     //dont show if player dead
-    if(player.health > 0){
+    if(player && player.health > 0){
         updateHealth()
         updateXPBar()
         speedBar()
@@ -409,7 +413,8 @@ function startGame(){
     })
     //start game loop
     gameLoopInt = setInterval(()=>{
-        if(player && updateAgain) {
+        console.log(canPlay)
+        if(player && updateAgain && canPlay) {
             if(player.health > 0){   
                 if (player.x + tx >= borders.R 
                 || player.x + tx <= borders.L){
@@ -433,9 +438,10 @@ function startGame(){
             updateAgain = false  
         }
         
-    }, 10) //fps)
+    }, 1) //fps)
 }
 function exitGame(){
+    canPlay = false // turn off
     document.getElementById("gameOver").style.display = "none"
     clearInterval(gameLoopInt) 
     //remove all event listeners

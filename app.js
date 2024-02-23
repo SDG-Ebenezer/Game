@@ -286,7 +286,7 @@ function dropAll(id){
     if(player){
     player.inventory.forEach(slot=>{
         if(slot.name != "Hand"){
-            let scatterRange = entitySize * 4 // area of scattering items
+            let scatterRange = entitySize * 2 // area of scattering items
             let x = random(player.x + scatterRange, player.x - scatterRange)
             let y = random(player.y + scatterRange, player.y - scatterRange)
             if (x >= BORDERS.R || x <= BORDERS.L){x = 0}
@@ -394,6 +394,9 @@ io.sockets.on("connection", (socket)=>{
     //
     socket.on("askForStartData", function(data){
         let player = new Player(data.username, `/imgs/${data.img}.png`)
+        
+        id = player.id
+        entities[id] = player //add player to pool
         socket.emit("sendStartData", {
             bordersObj:BORDERS,
             structuresObj: structures,
@@ -402,8 +405,6 @@ io.sockets.on("connection", (socket)=>{
             entitySize:entitySize,
             fps:fps
         })
-        id = player.id
-        entities[id] = player //add player to pool
         console.log("Player ", player.username, player.id, "joined the server.")
     })  
 
@@ -455,19 +456,21 @@ io.sockets.on("connection", (socket)=>{
     socket.on("eat", (data)=>{
         let item = data.what
         let player = entities[id]
-        if(item.kind == "XP"){
-            player.xp ++
-            amountOfBerries ++
-            delete pickables[item.id]
-        }
-        else if(item.kind == "Sword"){
-            let inv = player.inventory
-            for(let i in inv){
-                if(inv[i].name == "Hand") {
-                    player.inventory[i] = {...holdableItems[item.holdableItemsCorr]}
-                    player.inventory[i].durability = item.durability
-                    delete pickables[item.id]
-                    break
+        if(player){
+            if(item.kind == "XP"){
+                player.xp ++
+                amountOfBerries ++
+                delete pickables[item.id]
+            }
+            else if(item.kind == "Sword"){
+                let inv = player.inventory
+                for(let i in inv){
+                    if(inv[i].name == "Hand") {
+                        player.inventory[i] = {...holdableItems[item.holdableItemsCorr]}
+                        player.inventory[i].durability = item.durability
+                        delete pickables[item.id]
+                        break
+                    }
                 }
             }
         }
@@ -505,30 +508,32 @@ io.sockets.on("connection", (socket)=>{
     //deal damage?
     socket.on("mousedown", function(data){
         let player = entities[id]
-        let didDamage = false
-        for(let e in entities){     
-            let entity = entities[e]             
-            if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange){
-                if(entity.id != id
-                && Math.abs(entity.x - data.x) < entitySize
-                && Math.abs(entity.y - data.y) < entitySize){
-                    entity.health -= data.damage
-                    didDamage = true // turn to true
+        if(player){
+            let didDamage = false
+            for(let e in entities){     
+                let entity = entities[e]             
+                if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange){
+                    if(entity.id != id
+                    && Math.abs(entity.x - data.x) < entitySize
+                    && Math.abs(entity.y - data.y) < entitySize){
+                        entity.health -= data.damage
+                        didDamage = true // turn to true
+                    }
                 }
             }
-        }
-        for(let e in enemies){     
-            let enemy = enemies[e] 
-            if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange){      
-                if(Math.abs(enemy.x - data.x) < entitySize
-                && Math.abs(enemy.y - data.y) < entitySize){
-                    enemy.health -= data.damage
-                    didDamage = true // turn to true
+            for(let e in enemies){     
+                let enemy = enemies[e] 
+                if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange){      
+                    if(Math.abs(enemy.x - data.x) < entitySize
+                    && Math.abs(enemy.y - data.y) < entitySize){
+                        enemy.health -= data.damage
+                        didDamage = true // turn to true
+                    }
                 }
             }
-        }
-        if(didDamage && data.tool.name != "Hand"){
-            entities[id].inventory[data.invSelected].durability -= 1
+            if(didDamage && data.tool.name != "Hand"){
+                entities[id].inventory[data.invSelected].durability -= 1
+            }
         }
     })
 
