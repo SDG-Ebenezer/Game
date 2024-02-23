@@ -131,7 +131,7 @@ class Player extends Entity{
     }
 }
 class Enemy extends Entity{
-    constructor(type, imgSrc, damage, detectRange, reloadTime, speed=1, w=entitySize, h=entitySize, x=random(mapSize/2,-mapSize/2), y=random(mapSize/2,-mapSize/2), health = 100){
+    constructor(type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize, x=random(mapSize/2,-mapSize/2), y=random(mapSize/2,-mapSize/2)){
         super(type, imgSrc, speed, w, h, x, y, health)
         this.detectRange = detectRange
         this.damage = damage
@@ -306,7 +306,7 @@ function spawnNormal(){
     enemyCount++
 }
 function spawnLord(){
-    enemies[currEnemyID] = new Enemy("Lord", "/imgs/Enemy_Lord.png", 20, 500, 100, 1/2)
+    enemies[currEnemyID] = new Enemy("Lord", "/imgs/Enemy_Lord.png", 20, 500, 100, 1/2, 500)
     currEnemyID++
     enemyCount++
 }
