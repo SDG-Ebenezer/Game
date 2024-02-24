@@ -313,15 +313,19 @@ function keydown(event){
             ty = -Math.sin(player.rotation) * player.speed
             break
         case "w":
+        case "arrowup":
             ty = -player.speed
             break
         case "a":
+        case "arrowleft":
             tx = -player.speed
             break
         case "s":
+        case "arrowdown":
             ty = player.speed
             break
         case "d":
+        case "arrowright":
             tx = player.speed
             break
         case "1":
@@ -339,7 +343,6 @@ function keydown(event){
         case "5":
             currInvSlot = 5 - 1
             break
-        case "Q":
         case "q":
             socket.emit("drop", {
                 playerInvI:currInvSlot,
@@ -358,15 +361,19 @@ function keyup(event){
             ty = 0
             break
         case "w":
+        case "arrowup":
             ty = 0
             break
         case "a":
+        case "arrowleft":
             tx = 0
             break
         case "s":
+        case "arrowdown":
             ty = 0
             break
         case "d":
+        case "arrowright":
             tx = 0 
             break
     }
@@ -402,10 +409,10 @@ function startGame(){
     document.getElementById("startGameBtn").style.display = "none"
     document.getElementById("gameOver").style.display = "none"
     //adjust:
-    window.addEventListener("keydown", keydown)
-    window.addEventListener("keyup", keyup)
-    window.addEventListener("mousemove", mousemove)
-    window.addEventListener("mousedown", mousedown)
+    document.addEventListener("keydown", keydown)
+    document.addEventListener("keyup", keyup)
+    document.addEventListener("mousemove", mousemove)
+    document.addEventListener("mousedown", mousedown)
     
     //ask server for starting data and create new ID
     var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
