@@ -393,6 +393,7 @@ var io = require("socket.io")(serv,{})
 io.sockets.on("connection", (socket)=>{
     var id
     console.log("New Socket Connection")
+    socket.emit("allowUpdate") // allow to start
     //
     socket.on("askForStartData", function(data){
         let player = new Player(data.username, `/imgs/${data.img}.png`)
@@ -412,19 +413,20 @@ io.sockets.on("connection", (socket)=>{
 
     //update player (all vital info)
     socket.on("updatePlayer", (player)=>{
-        try{
-            if(player.id) {
-                //console.log(player.id, entities)
-                entities[player.id].x = player.x
-                entities[player.id].y = player.y
-                entities[player.id].rotation = player.rotation
-                entities[player.id].invSelected = player.invSelected
-                entities[player.id].speed = player.speed
-            }
-        } catch(err){
-            console.log("Strange player spotted by the ID of ", player.id)
+        if(entities[player.id]) {
+            //console.log(player.id, entities)
+            entities[player.id].x = player.x
+            entities[player.id].y = player.y
+            entities[player.id].rotation = player.rotation
+            entities[player.id].invSelected = player.invSelected
+            entities[player.id].speed = player.speed
+        } else if(player.id && !entities[player.id]){
+            id = player.id
+            entities[id] = player
+            console.log(entities[id].username, id, "was added to pool")
         }
     })
+
     //give data if requested
     socket.on("requestUpdateDataFromServer", (data)=>{
         let updateContent = [borderRect] //always have the border 

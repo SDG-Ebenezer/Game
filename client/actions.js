@@ -398,6 +398,8 @@ function mousedown(e){
 /** @update */
 //request data to update canv
 var updateAgain = false
+//in some unhappy circumstances, allow update to restart
+socket.on("allowUpdate", ()=>{updateAgain = true})
 var gameLoopInt
 function startGame(){
     //reset or set these:
@@ -423,7 +425,7 @@ function startGame(){
     //start game loop
     gameLoopInt = setInterval(()=>{
         if(player && updateAgain && canPlay) {
-            if(player.health > 0){   
+            if(player.health > 0){ 
                 if (player.x + tx >= borders.R 
                 || player.x + tx <= borders.L){
                     tx = 0
@@ -446,7 +448,7 @@ function startGame(){
             updateAgain = false  
         }
         
-    }, 1) //fps)
+    }, 0.01) //fps)
 }
 function exitGame(){
     canPlay = false // turn off
