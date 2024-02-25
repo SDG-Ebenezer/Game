@@ -220,7 +220,12 @@ class Enemy extends Entity{
         this.rotation = Math.atan2(this.yInc, this.xInc) + Math.PI
         // Check for damage
         if(distanceToPlayer < entitySize/2 && !this.justAttacked){
-            entities[this.targetPlayer.id].health -= this.damage
+            let player = entities[this.targetPlayer.id] 
+            player.health -= this.damage
+            //death message
+            if(player.health <= 0){
+                console.log(player.username, player.id, "was slain by a monster")
+            }
             this.justAttacked = true
         }
         /*
