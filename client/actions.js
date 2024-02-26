@@ -253,7 +253,6 @@ function drawAttackCursor(){
 }
 //draw leaderboard and player count
 function playerCountAndLeaderboard(pc, leaderboard){
-    console.log(leaderboard)
     gctx.fillStyle = 'white'
     let fontSize = 15
     let padding = 10

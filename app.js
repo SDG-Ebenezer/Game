@@ -529,6 +529,7 @@ io.sockets.on("connection", (socket)=>{
                     && Math.abs(entity.y - data.y) < entitySize){
                         entity.health -= data.damage
                         if(entity.health <= 0){
+                            player.xp += Math.round(entity.xp * 3/4) // give player xp
                             console.log(entity.username, entity.id, "was slain by", player.username, player.id)
                         }
                         didDamage = true // turn to true
@@ -541,6 +542,11 @@ io.sockets.on("connection", (socket)=>{
                     if(Math.abs(enemy.x - data.x) < entitySize
                     && Math.abs(enemy.y - data.y) < entitySize){
                         enemy.health -= data.damage
+                        if(enemy.health <= 0){
+                            //give player xp for killed
+                            if(enemy.type == "Lord") player.xp += 100
+                            else if(enemy.type == "Normal") player.xp += 50
+                        }
                         didDamage = true // turn to true
                     }
                 }
