@@ -50,7 +50,7 @@ socket.on("sendStartData", (data)=>{
     updateAgain = true
 })
 //DRAWING FUNCTION
-function updateCanv(info){
+function updateCanv(info, serverPlayerCount, leaderboard){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save();
     if(player) ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y);
@@ -161,6 +161,7 @@ function updateCanv(info){
         shadow()
         drawInventory()
         drawAttackCursor()
+        playerCountAndLeaderboard(serverPlayerCount, leaderboard)
     }
     updateAgain = true//allow update
 }
@@ -170,7 +171,7 @@ socket.on("sendUpdateDataToClient", (info)=>{
     if(player.health > 0) {
         player = info.player
     }
-    updateCanv(info.updateContent)
+    updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard)
 })
 
 /** @GAME_DETAILS */
@@ -217,8 +218,7 @@ function speedBar(){
             //gctx.clearRect(0, 0, ginfo.width, ginfo.height)
             player.speed = 5 //[yS%^]
         }
-    }
-    
+    }    
 }
 /** @SHADOW */
 function shadow(){
@@ -251,6 +251,41 @@ function drawAttackCursor(){
         gctx.stroke()
     }
 }
+//draw leaderboard and player count
+function playerCountAndLeaderboard(pc, leaderboard){
+    console.log(leaderboard)
+    gctx.fillStyle = 'white'
+    let fontSize = 15
+    let padding = 10
+    let x = canvas.width * 3/4
+    let y = fontSize + 100  // Increased the initial y position for more space
+
+    gctx.font = `20px Verdana`
+    gctx.fillText("Leaderboard", x, y - padding)
+
+    y += fontSize + padding // Adjusted y position for the first leaderboard entry
+
+    gctx.font = `${fontSize}px Verdana`
+    for (let i = 0; i < 5; i++) {
+        gctx.fillStyle = "#000000aa"
+        gctx.fillRect(x, y - fontSize - padding, canvas.width-x, fontSize + 2 * padding) // Adjusted the height of the rectangle
+
+        if (leaderboard[i]) {
+            let text = `${leaderboard[i][1]} XP  ${leaderboard[i][0]}` // Swapped the order of name and XP for better readability
+            gctx.fillStyle = "white"
+            gctx.fillText(text, x + padding, y - padding) // Adjusted x position for better alignment
+        }
+        y += fontSize + 2 * padding // Increased the vertical space between leaderboard entries
+    }
+    let text = `Players in server: ${pc}`
+    fontSize = 10
+    gctx.fillStyle = 'white'
+    gctx.font = `${fontSize}px Verdana`
+    gctx.fillText(text, x, y-padding)
+}
+//shows the player where he is
+function drawMap(){}
+
 /** */
 var invSize = 75
 function drawInventory(){

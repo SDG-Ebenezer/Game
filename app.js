@@ -450,7 +450,9 @@ io.sockets.on("connection", (socket)=>{
         //if in range 
         socket.emit("sendUpdateDataToClient", {
             updateContent:updateContent,
-            player:entities[data.id]
+            player:entities[data.id],
+            serverPlayerCount: Object.keys(entities).length,
+            leaderboard: Object.values(entities).sort((a, b) => b.xp - a.xp).slice(0, 5).map(player => [player.username, player.xp])
         })
         
         //only if player exists and is alive
@@ -557,7 +559,7 @@ io.sockets.on("connection", (socket)=>{
             delete entities[id]
         }
         catch(err){
-            console.log("A suspicious looking player left...")
+            console.log("A player left the server and closed the tab...", id)
             dropAll(id)
             delete entities[undefined]
         }
