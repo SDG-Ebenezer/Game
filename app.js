@@ -452,7 +452,10 @@ io.sockets.on("connection", (socket)=>{
             updateContent:updateContent,
             player:entities[data.id],
             serverPlayerCount: Object.keys(entities).length,
-            leaderboard: Object.values(entities).sort((a, b) => b.xp - a.xp).slice(0, 5).map(player => [player.username, player.xp])
+            leaderboard: Object.values(entities)
+            .sort((a, b) => b.xp - a.xp)
+            .slice(0, 5)
+            .map(player => ({ username: player.username, xp: player.xp, id: player.id })),          
         })
         
         //only if player exists and is alive

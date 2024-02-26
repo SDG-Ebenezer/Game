@@ -270,8 +270,9 @@ function playerCountAndLeaderboard(pc, leaderboard){
         gctx.fillRect(x, y - fontSize - padding, canvas.width-x, fontSize + 2 * padding) // Adjusted the height of the rectangle
 
         if (leaderboard[i]) {
-            let text = `${leaderboard[i][1]} XP  ${leaderboard[i][0]}` // Swapped the order of name and XP for better readability
-            gctx.fillStyle = "white"
+            let text = `${leaderboard[i].xp} XP  ${leaderboard[i].username}` // Swapped the order of name and XP for better readability
+            if(leaderboard[i].id == player.id) gctx.fillStyle = "gold"
+            else gctx.fillStyle = "white"
             gctx.fillText(text, x + padding, y - padding) // Adjusted x position for better alignment
         }
         y += fontSize + 2 * padding // Increased the vertical space between leaderboard entries
