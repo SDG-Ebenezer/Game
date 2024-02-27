@@ -287,7 +287,7 @@ function gMap(){
     gctx.fillStyle = "#000000aa"
     gctx.fillRect(x,y,size+pIcSize,size+pIcSize)
     gctx.lineWidth = 2.5
-    gctx.strokeStyleStyle = "#ffffffaa"
+    gctx.strokeStyle = "#ffffffaa"
     gctx.strokeRect(x,y,size+pIcSize,size+pIcSize)
     gctx.save()
     gctx.translate(x+size/2,y+size/2)
