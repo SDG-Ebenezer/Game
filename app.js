@@ -410,8 +410,7 @@ io.sockets.on("connection", (socket)=>{
             structuresObj: structures,
             player:player,
             mapSize:mapSize,
-            entitySize:entitySize,
-            fps:fps
+            entitySize:entitySize
         })
         console.log("Player ", player.username, player.id, "joined the server.")
     })  

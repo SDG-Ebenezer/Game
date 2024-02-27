@@ -29,7 +29,6 @@ var images = {} //loads images as needed
 var borders = {}
 var walls = {}
 var mapSize //defined soon!
-var fps
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
@@ -39,7 +38,6 @@ socket.on("sendStartData", (data)=>{
     player = data.player
     mapSize = data.mapSize
     entitySize = data.entitySize
-    fps = data.fps
 
     //player img
     var pimg = new Image()
@@ -155,13 +153,14 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     gctx.clearRect(0, 0, ginfo.width, ginfo.height)
     //dont show if player dead
     if(player && player.health > 0){
-        updateHealth()
-        updateXPBar()
-        speedBar()
-        shadow()
+        gHealth()
+        gXP()
+        gSpeedBar()
+        gShadow()
         drawInventory()
-        drawAttackCursor()
-        playerCountAndLeaderboard(serverPlayerCount, leaderboard)
+        gAttackCursor()
+        gLeaderboardData(serverPlayerCount, leaderboard)
+        gMap()
     }
     updateAgain = true//allow update
 }
@@ -175,10 +174,10 @@ socket.on("sendUpdateDataToClient", (info)=>{
 })
 
 /** @GAME_DETAILS */
-//update the health bar
-function updateHealth(){
+var gBarHeight = canvas.height * 40/847
+function gHealth(){
     let width = canvas.width
-    let height = 40
+    let height = gBarHeight
     gctx.fillStyle = 'black'
     gctx.fillRect(0, canvas.height-height, width, height)
     gctx.fillStyle = "rgb(120, 210, 156)"
@@ -187,24 +186,22 @@ function updateHealth(){
     gctx.font = `20px Verdana`
     gctx.fillText (`HEALTH ${Math.round(player.health)}`, 0, canvas.height-10)
 }
-//read the function name ;P
 var xpImg = new Image()
 xpImg.src = "/imgs/XP.png"
-function updateXPBar(){
+function gXP(){
     let padding = 5
-    let size = 40
+    let size = gBarHeight
     gctx.drawImage(xpImg, padding, canvas.height-size * 3 - padding, size, size)
     gctx.fillStyle = 'white'
     gctx.font = `30px Verdana`
     gctx.fillText (`XP ${player.xp}`, size + padding, canvas.height-size * 3 - padding + size)
 }
-//update the speed bar
 var speedTime = 0
-function speedBar(){
+function gSpeedBar(){
     if(speedTime > 0){ //formerly showSBar, but no longer needed
         player.speed = 10 //[yS%^++]
         let width = canvas.width - 15
-        let height = 40
+        let height = gBarHeight
         gctx.fillStyle = 'black'
         gctx.fillRect(0, canvas.height-height * 2, width, height - 15)
         gctx.fillStyle = "rgb(146, 236, 246)"
@@ -220,8 +217,7 @@ function speedBar(){
         }
     }    
 }
-/** @SHADOW */
-function shadow(){
+function gShadow(){
     let radius = canvas.width > canvas.height ? canvas.width : canvas.height
     let startAngle = Math.PI / 4
     let endAngle = -startAngle
@@ -238,7 +234,7 @@ function shadow(){
     ctx.closePath();
     ctx.restore()
 }
-function drawAttackCursor(){
+function gAttackCursor(){
     if(mouse.x**2 + mouse.y**2 <= player.hitRange ** 2){
         let rangeCursorX = mouse.x + ginfo.width/2
         let rangeCursorY = mouse.y + ginfo.height/2
@@ -251,8 +247,7 @@ function drawAttackCursor(){
         gctx.stroke()
     }
 }
-//draw leaderboard and player count
-function playerCountAndLeaderboard(pc, leaderboard){
+function gLeaderboardData(pc, leaderboard){
     gctx.fillStyle = 'white'
     let fontSize = 15
     let padding = 10
@@ -283,8 +278,23 @@ function playerCountAndLeaderboard(pc, leaderboard){
     gctx.font = `${fontSize}px Verdana`
     gctx.fillText(text, x, y-padding)
 }
-//shows the player where he is
-function drawMap(){}
+function gMap(){
+    let pIcSize = 10 //player icon size
+    let size = canvas.height * 100/847 //added pIcSize to balance out offset
+    let sf = size/mapSize //scale factor
+    let x = 0
+    let y = canvas.height - gBarHeight * 3.5 - size
+    gctx.fillStyle = "#000000aa"
+    gctx.fillRect(x,y,size+pIcSize,size+pIcSize)
+    gctx.lineWidth = 2.5
+    gctx.strokeStyleStyle = "#ffffffaa"
+    gctx.strokeRect(x,y,size+pIcSize,size+pIcSize)
+    gctx.save()
+    gctx.translate(x+size/2,y+size/2)
+    gctx.fillStyle = "red"
+    gctx.fillRect(player.x*sf,player.y*sf,pIcSize,pIcSize)
+    gctx.restore()
+}
 
 /** */
 var invSize = 75
@@ -483,7 +493,7 @@ function startGame(){
             updateAgain = false  
         }
         
-    }, 0.01) //fps)
+    }, 0.01)
 }
 function exitGame(){
     canPlay = false // turn off
