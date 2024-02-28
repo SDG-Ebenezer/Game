@@ -347,6 +347,9 @@ setInterval(()=>{
     if(random(1000,1)==1 && amountOfBerries < mapSize/entitySize){
         if(random(10, 1) == 1){
             pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "Sword", null, "Gold_Sword",0,holdableItems["Gold_Sword"].durability)
+        } else if(random(5, 1) == 1){
+            pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "Speed", "/imgs/SP.png")
+            amountOfBerries ++
         }
         else{
             pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "XP", "/imgs/Berry.png")
@@ -471,11 +474,15 @@ io.sockets.on("connection", (socket)=>{
         let player = entities[id]
         if(player){
             if(item.kind == "XP"){
-                player.xp ++
-                amountOfBerries ++
+                player.xp += random(10, 1)
+                amountOfBerries -= 1
                 delete pickables[item.id]
-            }
-            else if(item.kind == "Sword"){
+            } else if(item.kind == "Speed"){
+                player.xp += random(10, 1)
+                amountOfBerries -= 1
+                socket.emit("speed")
+                delete pickables[item.id]
+            } else if(item.kind == "Sword"){
                 let inv = player.inventory
                 for(let i in inv){
                     if(inv[i].name == "Hand") {
@@ -563,12 +570,12 @@ io.sockets.on("connection", (socket)=>{
     socket.on('disconnect', function() {
         try{
             console.log(`${entities[id].username} ${id} disconnected`)
-            dropAll(id)
+            //dropAll(id)
             delete entities[id]
         }
         catch(err){
             console.log("A player left the server and closed the tab...", id)
-            dropAll(id)
+            //dropAll(id)
             delete entities[undefined]
         }
     })

@@ -15,6 +15,7 @@ window.addEventListener("resize", ()=>{
     canvas.height = window.innerHeight
     ginfo.width = window.innerWidth
     ginfo.height = window.innerHeight
+    if(player) invSize = 75*5<canvas.width?75:canvas.width/5 //only if player exists
 })
 
 var socket = io()
@@ -178,13 +179,14 @@ var gBarHeight = canvas.height * 40/847
 function gHealth(){
     let width = canvas.width
     let height = gBarHeight
+    let fontSize = gBarHeight * 0.5
     gctx.fillStyle = 'black'
     gctx.fillRect(0, canvas.height-height, width, height)
     gctx.fillStyle = "rgb(120, 210, 156)"
     gctx.fillRect(0, canvas.height-height, width * (player.health/player.maxHealth), height)
     gctx.fillStyle = 'black'
-    gctx.font = `20px Verdana`
-    gctx.fillText (`HEALTH ${Math.round(player.health)}`, 0, canvas.height-10)
+    gctx.font = `${fontSize}px Verdana`
+    gctx.fillText (`HEALTH ${Math.round(player.health)}`, 0, canvas.height-height+fontSize)
 }
 var xpImg = new Image()
 xpImg.src = "/imgs/XP.png"
@@ -193,10 +195,11 @@ function gXP(){
     let size = gBarHeight
     gctx.drawImage(xpImg, padding, canvas.height-size * 3 - padding, size, size)
     gctx.fillStyle = 'white'
-    gctx.font = `30px Verdana`
+    gctx.font = `${gBarHeight * 3/4}px Verdana`
     gctx.fillText (`XP ${player.xp}`, size + padding, canvas.height-size * 3 - padding + size)
 }
 var speedTime = 0
+socket.on("speed", ()=>{speedTime+=100})
 function gSpeedBar(){
     if(speedTime > 0){ //formerly showSBar, but no longer needed
         player.speed = 10 //[yS%^++]
@@ -297,7 +300,14 @@ function gMap(){
 }
 
 /** */
-var invSize = 75
+//       /\
+//      / |\
+//     /  | \
+//    /   .  \
+//   /________\
+// "invSize" also updated in the canvas resize 
+var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
+var invY = 0
 function drawInventory(){
     let i = 0
     gctx.fillStyle = "#000000aa"
@@ -305,16 +315,16 @@ function drawInventory(){
     gctx.save()
     for(let invSpot in player.inventory){
         let each = player.inventory[invSpot]
-        gctx.lineWidth = 10;
+        gctx.lineWidth = invSize * 10/75;
         gctx.strokeStyle = "gray"
-        gctx.strokeRect(i * invSize, 0, invSize, invSize)
+        gctx.strokeRect(i * invSize, invY, invSize, invSize)
         //draw pic
         if(each.pic){
             if(!images[each.pic]){
                 images[each.pic] = new Image()
                 images[each.pic].src = each.pic
             }
-            gctx.drawImage(images[each.pic], i * invSize, 0, invSize, invSize)
+            gctx.drawImage(images[each.pic], i * invSize, invY, invSize, invSize)
         }
         if(each.durability < each.maxDurability){
             let w = invSize
@@ -331,9 +341,9 @@ function drawInventory(){
     }
     gctx.restore()
     //selected
-    gctx.lineWidth = 15;
+    gctx.lineWidth = invSize * 10/75;
     gctx.strokeStyle = "white"
-    gctx.strokeRect(currInvSlot * invSize, 0, invSize, invSize)
+    gctx.strokeRect(currInvSlot * invSize, invY, invSize, invSize)
     
 }
 
@@ -438,6 +448,26 @@ function mousedown(e){
         x:mouse.x + player.x, 
         y:mouse.y + player.y
     })}
+    for(let i = 0; i < player.inventory.length; i++){
+        let x = i * invSize
+        let y = invY
+        if(x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize){
+            currInvSlot = i
+            i += player.inventory.length
+        }
+    }
+}
+
+var touching = false
+function touchstart(e){
+    tx = -Math.cos(player.rotation) * player.speed
+    ty = -Math.sin(player.rotation) * player.speed
+    touching = true
+}
+function touchend(e){
+    tx = 0
+    ty = 0
+    touching = false
 }
 
 /** @update */
@@ -455,11 +485,15 @@ function startGame(){
     document.getElementById("preGame_Stuff").style.display = "none"
     document.getElementById("startGameBtn").style.display = "none"
     document.getElementById("gameOver").style.display = "none"
-    //adjust:
+    
+    //begin listening
     document.addEventListener("keydown", keydown)
     document.addEventListener("keyup", keyup)
     document.addEventListener("mousemove", mousemove)
     document.addEventListener("mousedown", mousedown)
+    //for mobile
+    document.addEventListener("touchstart", touchstart)
+    document.addEventListener("touchend", touchend)
     
     //ask server for starting data and create new ID
     var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
@@ -504,6 +538,8 @@ function exitGame(){
     removeEventListener("keyup", keyup)
     removeEventListener("mousemove", mousemove)
     removeEventListener("mousedown", mousedown)
+    removeEventListener("touchstart", touchstart)
+    removeEventListener("touchend", touchend)
     //make home screen visible again
     document.getElementById("startGameBtn").style.display = "block"
     document.getElementById("preGame_Stuff").style.display = "block"
