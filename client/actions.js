@@ -528,13 +528,15 @@ function startGame(){
     //start game loop
     let aVar = true
     gameLoopInt = setInterval(()=>{
+        //cooldown
         if(attackAgain == false && aVar){
             aVar = false
             setTimeout(()=>{
                 attackAgain = true
                 aVar = true
-            }, 1000) //cooldown
+            }, 100) // 10ms cooldown
         }
+        //player update
         if(player && updateAgain && canPlay) {
             if(player.health > 0){ 
                 //check if in border
