@@ -7,11 +7,11 @@
     <title>Game</title>
 </head>
 <body>
-    <div>
+    <div class="no_selection">
         <canvas id="canv"></canvas>
         <canvas id="info_canv"></canvas>
     </div>
-    <div id="preGame_Stuff">
+    <div id="preGame_Stuff" class="no_selection">
         <input id="username" class="text_input" placeholder="Username..." maxlength="25">
         <div class="image-options" id="skins-image-options">
             <!--NOTE: input values are actual titles (.png) of the image's skins-->
@@ -34,8 +34,10 @@
     <div id="gameOver">
         <h1 id="gameOverText">GAME OVER</h1>
     </div>
-    <button onclick="startGame()" id="startGameBtn">Play</button>
-    <button onclick="exitGame()" id="exitGameBtn">Exit</button>
+    <div class="no_selection">
+        <button onclick="startGame()" id="startGameBtn">Play</button>
+        <button onclick="exitGame()" id="exitGameBtn">Exit</button>
+    </div>
     
     <!--Help Btn -->
     <button onclick="showHelp()" id="helpBtn">HELP</button> 

@@ -191,3 +191,11 @@ input[type="radio"]:checked + img {
 .rot90deg {
     transform: rotate(270deg);
 }
+
+.no_selection {
+    user-select: none; /* standard syntax */
+    -webkit-user-select: none; /* webkit (Safari, Chrome) browsers */
+    -moz-user-select: none; /* Mozilla browsers */
+    -khtml-user-select: none; /* Webkit (Konqueror) browsers */
+    -ms-user-select: none; /* IE10+ */
+}

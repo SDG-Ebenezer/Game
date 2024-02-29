@@ -24,12 +24,14 @@ var socket = io()
 var entitySize
 var player;
 var currInvSlot = 0
+var attackAgain = true
 
 //w_vars (Wait Variables)
 var images = {} //loads images as needed
 var borders = {}
 var walls = {}
 var mapSize //defined soon!
+var wallsList = []
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
@@ -171,6 +173,7 @@ socket.on("sendUpdateDataToClient", (info)=>{
     if(player.health > 0) {
         player = info.player
     }
+    wallsList = info.walls
     updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard)
 })
 
@@ -440,14 +443,16 @@ function mousemove(e){
     mouse.y = e.clientY - canvas.height / 2
 }
 function mousedown(e){
-    if(player.health > 0){
-    socket.emit("mousedown", {
-        tool:player.inventory[currInvSlot], // could be hand!
-        damage:player.inventory[currInvSlot].damage,
-        invSelected: currInvSlot,
-        x:mouse.x + player.x, 
-        y:mouse.y + player.y
-    })}
+    if(player.health > 0 && attackAgain){
+        attackAgain = false
+        socket.emit("mousedown", {
+            tool:player.inventory[currInvSlot], // could be hand!
+            damage:player.inventory[currInvSlot].damage,
+            invSelected: currInvSlot,
+            x:mouse.x + player.x, 
+            y:mouse.y + player.y
+        })
+    }
     for(let i = 0; i < player.inventory.length; i++){
         let x = i * invSize
         let y = invY
@@ -469,6 +474,27 @@ function touchend(e){
     ty = 0
     touching = false
 }
+//Function also in APP js file~! But different
+//HIT WALLS?
+function checkCollision(walls, playerX, playerY, tx, ty) {
+    let newX = playerX + tx;
+    let newY = playerY + ty;
+    for (let wall of walls) {
+        let wallX = wall.x - wall.width/2
+        let wallY = wall.y - wall.height/2
+        if (newX >= wallX &&
+            newX <= wallX + wall.width &&
+            wallY <= playerY && playerY <= wallY + wall.height) {
+            tx = 0;
+        }
+        if (newY >= wallY &&
+            newY <= wallY + wall.height &&
+            wallX <= playerX && playerX <= wallX + wall.width) {
+            ty = 0;
+        }
+    }
+    return { tx: tx, ty: ty };
+}
 
 /** @update */
 //request data to update canv
@@ -479,13 +505,11 @@ var gameLoopInt
 function startGame(){
     //reset or set these:
     tx = ty = invSelected = 0
-
     //set these:
     document.getElementById("exitGameBtn").style.display = "none"
     document.getElementById("preGame_Stuff").style.display = "none"
     document.getElementById("startGameBtn").style.display = "none"
     document.getElementById("gameOver").style.display = "none"
-    
     //begin listening
     document.addEventListener("keydown", keydown)
     document.addEventListener("keyup", keyup)
@@ -502,9 +526,18 @@ function startGame(){
         img:selectedValue
     })
     //start game loop
+    let aVar = true
     gameLoopInt = setInterval(()=>{
+        if(attackAgain == false && aVar){
+            aVar = false
+            setTimeout(()=>{
+                attackAgain = true
+                aVar = true
+            }, 1000) //cooldown
+        }
         if(player && updateAgain && canPlay) {
             if(player.health > 0){ 
+                //check if in border
                 if (player.x + tx >= borders.R 
                 || player.x + tx <= borders.L){
                     tx = 0
@@ -513,6 +546,12 @@ function startGame(){
                 || player.y + ty <= borders.D){
                     ty = 0
                 }
+
+                //check if hit wall
+                let newCoords = checkCollision(wallsList,player.x, player.y, tx, ty)
+                tx = newCoords.tx
+                ty = newCoords.ty
+
                 player.x += tx
                 player.y += ty
                 player.invSelected = currInvSlot
