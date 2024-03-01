@@ -202,23 +202,29 @@ function gXP(){
     gctx.fillText (`XP ${player.xp}`, size + padding, canvas.height-size * 3 - padding + size)
 }
 var speedTime = 0
+var speedTimeMax = 100
 socket.on("speed", ()=>{speedTime+=100})
 function gSpeedBar(){
-    if(speedTime > 0){ //formerly showSBar, but no longer needed
+    if(speedTime > 0){ 
+        //just making sure...
+        if(speedTime > speedTimeMax) {speedTime = speedTimeMax}
+        //set
         player.speed = 10 //[yS%^++]
+        //now...
         let width = canvas.width - 15
         let height = gBarHeight
         gctx.fillStyle = 'black'
         gctx.fillRect(0, canvas.height-height * 2, width, height - 15)
+        //
         gctx.fillStyle = "rgb(146, 236, 246)"
-        gctx.fillRect(0, canvas.height-height * 2, width * (speedTime/100), height - 15) //[###]
+        gctx.fillRect(0, canvas.height-height * 2, width * (speedTime/speedTimeMax), height - 15) //[###]
+        //
         gctx.fillStyle = 'white'
         gctx.font = `10px Verdana`
         gctx.fillText(`SPEED: ${Math.round(speedTime)}`, 0, canvas.height-height * 2+height-2 - 15)
-        // NOTE: Deletes 1 segment per second our of speedTime
+        // 
         speedTime -= 0.1
         if(speedTime <= 0){
-            //gctx.clearRect(0, 0, ginfo.width, ginfo.height)
             player.speed = 5 //[yS%^]
         }
     }    
@@ -574,22 +580,24 @@ function exitGame(){
     canPlay = false // turn off
     document.getElementById("gameOver").style.display = "none"
     clearInterval(gameLoopInt) 
-    //remove all event listeners
-    removeEventListener("keydown", keydown)
-    removeEventListener("keyup", keyup)
-    removeEventListener("mousemove", mousemove)
-    removeEventListener("mousedown", mousedown)
-    removeEventListener("touchstart", touchstart)
-    removeEventListener("touchend", touchend)
     //make home screen visible again
     document.getElementById("startGameBtn").style.display = "block"
     document.getElementById("preGame_Stuff").style.display = "block"
+    document.getElementById("exitGameBtn").style.display = "none"
 }
 
 //show game over screen if dead
 socket.on("gameOver", ()=>{
+    //remove all event listeners
+    document.removeEventListener("keydown", keydown)
+    document.removeEventListener("keyup", keyup)
+    document.removeEventListener("mousemove", mousemove)
+    document.removeEventListener("mousedown", mousedown)
+    document.removeEventListener("touchstart", touchstart)
+    document.removeEventListener("touchend", touchend)
     document.getElementById("exitGameBtn").style.display = "block"
     document.getElementById("gameOver").style.display = "block"
+    speedTime = 0 //reset speed!!
 })
 
 function showHelp(){

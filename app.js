@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 1111 //server PORT
 serv.listen(PORT)
 console.log("Online @ " +PORT)
 
+//RANDOM
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 //CREATE NEW IDs
 function createID(){
@@ -22,7 +23,6 @@ function createID(){
     ids.push(id) //keep track of all ids
     return id
 }
-
 var pickables = {} //stuff, like XP, berries, etc.
 const holdableItems = {
     "Hand":{
@@ -89,8 +89,167 @@ var borderRect = {
     isRect:true,
     color:"rgb(34, 60, 33)"
 }
-
 var fps = 1000/60 //
+
+/** @STRUCTURES *****/
+class Wall {
+   constructor(wall, structureID, wallImgSize) {
+       this.x = wall.relX;
+       this.y = wall.relY;
+       this.id = `WALL${structureID}`;
+       this.imgSrc = random(5,1)==5?"/imgs/Mossy%20Wall.png":"/imgs/Wall.png";
+       this.width = wallImgSize;
+       this.height = wallImgSize;
+   }
+}
+var structures = {}
+var structureID = 0
+var structureW = random(10, 6); // width
+var structureH = structureW; // height (making it a square)
+var structureBlueprint = []
+var wallSize = 100
+var wallImgSize = wallSize * 1.15
+for(let r = 0; r < structureW; r++){
+   structureBlueprint.push([])
+   for(let c = 0; c < structureH; c++){
+       structureBlueprint[r].push({
+           isWall: random(1,0)==1?true:false,
+           relX: r*wallSize,
+           relY: c*wallSize})
+   }
+}
+for(let r = 0; r < structureW; r++){
+   for(let c = 0; c < structureH; c++){
+       let wall = structureBlueprint[r][c];
+       wall.x -= structureBlueprint.length/2
+       if(wall.isWall){
+           structures[structureID] = new Wall(wall, structureID, wallImgSize)
+           structureID++;
+       }
+   }
+}
+/** @SPAWN_FINDER */
+//FIND A SPAWNING LOCATION
+/**
+ * SPAWN CANNOT BE ON A WALL! OTHERWISE ENTITY CANNOT
+ * MOVE! 
+ */
+function findSpawn(size = 0) {
+    let s = size;
+    let x, y;
+    let doNotPass = true;
+    while (doNotPass) {
+        doNotPass = false; // be optimistic, you know?
+        x = random(mapSize / 2 - s / 2, -mapSize / 2);
+        y = random(mapSize / 2 - s / 2, -mapSize / 2);
+        for (let sKey in structures) {
+            let st = structures[sKey];
+            let p = 3; // padding
+            // Check for overlap
+            if (
+                x + s > st.x - p &&
+                x - s < st.x + st.width + p &&
+                y + s > st.y - p &&
+                y - s < st.y + st.height + p
+            ) {
+                doNotPass = true; // aww
+                break
+            }
+        }
+    }
+    return { x: x, y: y };
+}
+
+//Generate WALLS
+var numOfRandomWalls = 10
+for(let i = 0; i < numOfRandomWalls; i++){
+    let a = findSpawn(wallSize)
+    let nC = { relX: a.x, relY: a.y }
+    structures[structureID] = new Wall(nC, structureID, wallImgSize)
+    structureID++
+}
+//Function also in PLAYER js file~! But different
+//HIT WALLS?
+function checkCollision(walls, playerX, playerY, tx, ty) {
+    let newX = playerX + tx;
+    let newY = playerY + ty;
+    for(let w in walls){
+        let wall = walls[w]
+        let wallX = wall.x - wall.width/2
+        let wallY = wall.y - wall.height/2
+        if (newX >= wallX &&
+            newX <= wallX + wall.width &&
+            wallY <= playerY && playerY <= wallY + wall.height) {
+            tx = 0;
+        }
+        if (newY >= wallY &&
+            newY <= wallY + wall.height &&
+            wallX <= playerX && playerX <= wallX + wall.width) {
+            ty = 0;
+        }
+    }
+    return { tx: tx, ty: ty };
+}
+
+/** @TREES *****/
+class Tree {
+    constructor(treesID, size=random(125,100)) {
+        let thing = {
+            x:random(mapSize/2,-mapSize/2),
+            y:random(mapSize/2,-mapSize/2)
+        }
+        this.x = thing.x;
+        this.y = thing.y;
+        this.id = `TREE${treesID}`;
+        this.isCircle = true;
+        this.color = "rgb(0, 95, 0, 0.3)";
+        this.size = size
+    }
+}
+var trees = {}
+var treesID = 0
+for(let i = 0; i < 1000; i ++){
+   let newTree = new Tree(treesID)
+   trees[treesID] = newTree
+   treesID++
+}
+
+/** @PICKABLES *****/
+class Pickable{
+   constructor(id, x,y,kind,imgSrc,hold=null,rotation=0,durability=1){
+       this.id = id
+       this.x = x
+       this.y = y
+       this.kind = kind //
+       this.type = "pickable"
+       this.imgSrc = hold?holdableItems[hold].pic:imgSrc
+       this.width = this.height = 50
+       this.holdableItemsCorr = hold
+       this.rotation = rotation
+       this.durability = durability
+   }
+}
+var pickablesID = 0
+//drop everything after death
+function dropAll(id){
+    let player = entities[id]
+    if(player){
+        player.inventory.forEach(slot=>{
+            if(slot.name != "Hand"){
+                let scatterRange = entitySize * 2 // area of scattering items
+                let x = random(player.x + scatterRange, player.x - scatterRange)
+                let y = random(player.y + scatterRange, player.y - scatterRange)
+                if (x >= BORDERS.R || x <= BORDERS.L){x = 0}
+                if (y >= BORDERS.U || y <= BORDERS.D){y = 0}
+                pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.kind,null,slot.name,0,slot.durability)
+                pickablesID ++
+            }
+        })
+    }
+}
+
+
+/** @ENTITIES *****/
 const entitySize = 75
 var entities = {} //players info
 var enemies = {} //monsters info
@@ -114,7 +273,7 @@ class Entity {
     }
 }
 class Player extends Entity{
-    constructor(username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, x=random(mapSize/2,-mapSize/2), y=random(mapSize/2,-mapSize/2), health = 100){
+    constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, health = 100){
         super(type, imgSrc, speed, w, h, x, y, health)
         this.username = (username == "")?"Happy":username;
         this.xp = 0;
@@ -130,7 +289,7 @@ class Player extends Entity{
     }
 }
 class Enemy extends Entity{
-    constructor(type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize, x=random(mapSize/2,-mapSize/2), y=random(mapSize/2,-mapSize/2)){
+    constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize){
         super(type, imgSrc, speed, w, h, x, y, health)
         this.detectRange = detectRange
         this.damage = damage
@@ -248,95 +407,18 @@ class Enemy extends Entity{
         }*/
     }
 }
-//Function also in PLAYER js file~! But different
-//HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty) {
-    let newX = playerX + tx;
-    let newY = playerY + ty;
-    for(let w in walls){
-        let wall = walls[w]
-        let wallX = wall.x - wall.width/2
-        let wallY = wall.y - wall.height/2
-        if (newX >= wallX &&
-            newX <= wallX + wall.width &&
-            wallY <= playerY && playerY <= wallY + wall.height) {
-            tx = 0;
-        }
-        if (newY >= wallY &&
-            newY <= wallY + wall.height &&
-            wallX <= playerX && playerX <= wallX + wall.width) {
-            ty = 0;
-        }
-    }
-    return { tx: tx, ty: ty };
-}
-
-class Tree {
-   constructor(treesID) {
-       this.x = random(mapSize/2, -mapSize/2);
-       this.y = random(mapSize/2, -mapSize/2);
-       this.id = `TREE${treesID}`;
-       this.isCircle = true;
-       this.color = "rgb(0, 95, 0, 0.3)";
-       this.size = random(125,100);
-   }
-}
-class Wall {
-   constructor(wall, structureID, wallImgSize) {
-       this.x = wall.relX;
-       this.y = wall.relY;
-       this.id = `WALL${structureID}`;
-       this.imgSrc = "/imgs/Wall.png";
-       this.width = wallImgSize;
-       this.height = wallImgSize;
-   }
-}
-
-class Pickable{
-   constructor(id, x,y,kind,imgSrc,hold=null,rotation=0,durability=1){
-       this.id = id
-       this.x = x
-       this.y = y
-       this.kind = kind //
-       this.type = "pickable"
-       this.imgSrc = hold?holdableItems[hold].pic:imgSrc
-       this.width = this.height = 50
-       this.holdableItemsCorr = hold
-       this.rotation = rotation
-       this.durability = durability
-   }
-}
-
-/** @default_pickables */
-var pickablesID = 0
-//drop everything after death
-function dropAll(id){
-    let player = entities[id]
-    if(player){
-        player.inventory.forEach(slot=>{
-            if(slot.name != "Hand"){
-                let scatterRange = entitySize * 2 // area of scattering items
-                let x = random(player.x + scatterRange, player.x - scatterRange)
-                let y = random(player.y + scatterRange, player.y - scatterRange)
-                if (x >= BORDERS.R || x <= BORDERS.L){x = 0}
-                if (y >= BORDERS.U || y <= BORDERS.D){y = 0}
-                pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.kind,null,slot.name,0,slot.durability)
-                pickablesID ++
-            }
-        })
-    }
-}
-
 /** @spawn_enemies */
 let currEnemyID = 0
 let enemyCount = 0
 function spawnNormal(){
-    enemies[currEnemyID] = new Enemy("Normal", "/imgs/Enemy.png", 5, 400, 50, 1)
+    let nC = findSpawn(entitySize)
+    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 1)
     currEnemyID++
     enemyCount++
 }
 function spawnLord(){
-    enemies[currEnemyID] = new Enemy("Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 1/2, 500)
+    let nC = findSpawn(entitySize)
+    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 1/2, 500)
     currEnemyID++
     enemyCount++
 }
@@ -344,84 +426,48 @@ function spawnLord(){
 //server "game loop"
 var amountOfBerries = 0
 setInterval(()=>{
-   if(enemyCount < 10){
-       if(random(1000, 1) == 1){
-           if(random(10,1)==1) spawnLord()
-           else spawnNormal()
-       }
-   }
-   for(let e in enemies){
-       enemies[e].move()
-       if(enemies[e].health <= 0) {
-           enemyCount -= 1
-           if(random(10, 1) == 1){
-               pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, "Sword", null, "Iron_Sword",0,holdableItems["Iron_Sword"].durability)
-           }
-           delete enemies[e]
-       }
-   }
+    if(enemyCount < 10){
+        if(random(1000, 1) == 1){
+            if(random(10,1)==1) spawnLord()
+            else spawnNormal()
+        }
+    }
+    for(let e in enemies){
+        enemies[e].move()
+        if(enemies[e].health <= 0) {
+            enemyCount -= 1
+            if(random(10, 1) == 1){
+                pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, "Sword", null, "Iron_Sword",0,holdableItems["Iron_Sword"].durability)
+            }
+            delete enemies[e]
+        }
+    }
 
-   //players regenerate
-   for(let e in entities){
-       let entity = entities[e]
-       if(entity.health < entity.maxHealth){
-           entities[entity.id].health += 0.01
-       }
-   }
+    //players regenerate
+    for(let e in entities){
+        let entity = entities[e]
+        if(entity.health < entity.maxHealth){
+            entities[entity.id].health += 0.01
+        }
+    }
 
-   if(random(1000,1)==1 && amountOfBerries < mapSize/entitySize){
-       if(random(10, 1) == 1){
-           pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "Sword", null, "Gold_Sword",0,holdableItems["Gold_Sword"].durability)
-       } else if(random(5, 1) == 1){
-           pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "Speed", "/imgs/SP.png")
-           amountOfBerries ++
-       }
-       else{
-           pickables[pickablesID] = new Pickable(pickablesID, random(mapSize/2,-mapSize/2), random(mapSize/2,-mapSize/2), "XP", "/imgs/Berry.png")
-           amountOfBerries ++
-       }
-       pickablesID ++
-   }
+    if(random(1000,1)==1 && amountOfBerries < mapSize/entitySize){
+        let spawnLocation = findSpawn()
+        if(random(10, 1) == 1){
+            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Sword", null, "Gold_Sword",0,holdableItems["Gold_Sword"].durability)
+        } else if(random(5, 1) == 1){
+            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Speed", "/imgs/SP.png")
+            amountOfBerries ++
+        }
+        else{
+            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "XP", "/imgs/Berry.png")
+            amountOfBerries ++
+        }
+        pickablesID ++
+    }
 }, fps)
 
-//ADD TREES
-var trees = {}
-var treesID = 0
-for(let i = 0; i < 1000; i ++){
-   let newTree = new Tree(treesID)
-   trees[treesID] = newTree
-   treesID++
-}
-
-//ADD STRUCTURES
-var structures = {}
-var structureID = 0
-var structureW = random(4,2)
-var structureH = random(4,2)
-var structureBlueprint = []
-var wallSize = 100
-var wallImgSize = wallSize * 1.35
-for(let r = 0; r < structureW; r++){
-   structureBlueprint.push([])
-   for(let c = 0; c < structureH; c++){
-       structureBlueprint[r].push({
-           isWall: random(1,0)==1?true:false,
-           relX: r*wallSize,
-           relY: c*wallSize})
-   }
-}
-for(let r = 0; r < structureW; r++){
-   for(let c = 0; c < structureH; c++){
-       let wall = structureBlueprint[r][c];
-       if(wall.isWall){
-           structures[structureID] = new Wall(wall, structureID, wallImgSize)
-           structureID++;
-       }
-   }
-}
-
-
-//SOCKET HANDLER
+/** @SOCKET *****/
 //what to do when a player connects
 var io = require("socket.io")(serv,{})
 io.sockets.on("connection", (socket)=>{
@@ -430,7 +476,8 @@ io.sockets.on("connection", (socket)=>{
     socket.emit("allowUpdate") // allow to start
     //
     socket.on("askForStartData", function(data){
-        let player = new Player(data.username, `/imgs/${data.img}.png`)
+        let nC = findSpawn(entitySize)
+        let player = new Player(nC.x, nC.y, data.username, `/imgs/${data.img}.png`)
         
         id = player.id
         entities[id] = player //add player to pool
