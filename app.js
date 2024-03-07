@@ -55,7 +55,7 @@ const holdableItems = {
         pic:"/imgs/Sword2.png",
         durability:20,
         maxDurability:20,
-        damage:50,
+        damage:30,
         generationProbability:30, //out of 100
         rotation:-45/57.1,
         stackSize:1,
@@ -79,7 +79,7 @@ const holdableItems = {
         pic:"/imgs/Sword4.png",
         durability:100,
         maxDurability:100,
-        damage:100,
+        damage:50,
         generationProbability:1, //out of 100
         rotation:-45/57.1,
         stackSize:1,
