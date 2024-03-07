@@ -467,7 +467,7 @@ function spawnLord(){
 /** @Arrows */
 var arrows = {}
 class Arrow{
-    constructor(x, y, dir, flightDuration, speed=5){
+    constructor(x, y, dir, flightDuration, speed=15){
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
@@ -478,6 +478,8 @@ class Arrow{
         this.imgSrc = "/imgs/Arrow.png"
         this.width = 50
         this.height = 50
+
+        this.damage = 20
     }
 }
 
@@ -564,6 +566,8 @@ setInterval(()=>{
 
         //no hitty walls
         let nC = checkCollision(structures, arrow.x, arrow.y, arrow.speed * Math.cos(arrow.direction), arrow.speed * Math.sin(arrow.direction)) //check new coordinates
+        //no going outta bounds
+        if (!(arrow.x + nC.tx > BORDERS.L && arrow.x + nC.tx < BORDERS.R && arrow.y + nC.ty > BORDERS.D && arrow.y + nC.ty < BORDERS.U)){nC = {tx: 0, ty: 0}}
         //if it stopped, just drop 
         if(nC.tx == 0 || nC.ty == 0) {
             //drop arrow if hits
@@ -587,7 +591,7 @@ setInterval(()=>{
                 && arrow.y < entity.y + entity.height-entitySize/2) {
                     console.log("Deal damage")
                     delete arrows[key]
-                    entity.health -= 5
+                    entity.health -= arrow.damage
                     break
                 }
             }
@@ -749,6 +753,7 @@ io.sockets.on("connection", (socket)=>{
     socket.on("mousedown", function(data){
         let player = entities[id]
         if(player){
+            //shoot arrow
             if (player.inventory[player.invSelected].name === "Bow") {
                 // Check for arrow in inventory
                 let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
@@ -757,7 +762,7 @@ io.sockets.on("connection", (socket)=>{
                 if (canShoot) {
                     let arrowDirection = player.rotation + Math.PI;
                     
-                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection, 50);
+                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection, 200);
             
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
@@ -775,7 +780,8 @@ io.sockets.on("connection", (socket)=>{
                     //damage bow
                     player.inventory[player.invSelected].durability -= 1
                 }
-            }            
+            }   
+            //melee attack         
             else{
                 let didDamage = false
                 for(let e in entities){    
