@@ -80,7 +80,16 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         }
         //draw held item
         if(item.inventory){
-            let pic = item.inventory[item.invSelected].pic
+            let heldItem = item.inventory[item.invSelected]
+            let pic;
+            //if held is a bow, make it loaded if has arrow (the picture)
+            if(heldItem.name == "Bow"){
+                item.inventory.forEach(invSlot=>{
+                    if(invSlot.name == "Arrow"){pic = heldItem.loadedBowPic}
+                })
+                if(!pic){pic = heldItem.pic}
+            } else pic = heldItem.pic
+            //when pic is defined...(hand has no pic)
             if(pic){//hand's pic is false, so...
                 if(!images[pic]){
                     images[pic] = new Image()
@@ -90,7 +99,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 let y= -item.height/2
                 let holdingIconSize = 50
                 ctx.translate(x,y)
-                ctx.rotate(-45/57.1)
+                ctx.rotate(heldItem.rotation)
                 if(false){ //debug
                     ctx.fillStyle= "red"
                     ctx.fillRect(0,0,10,10)
@@ -346,6 +355,14 @@ function drawInventory(){
             gctx.fillRect(x, y, w * (each.durability/each.maxDurability), h)
             if(each.durability <= 0) socket.emit("breakTool", currInvSlot)
         }  
+
+        //if stackable give it a number to show how many you have
+        if(each.maxStackSize > 1){
+            ctx.font = `15px Arial`;
+            ctx.fillStyle = "white";
+            ctx.fillText(each.stackSize, i * invSize + invSize * 0.75, invSize -15); //minus fontSize
+        }
+
         i++ //x 
     }
     gctx.restore()
