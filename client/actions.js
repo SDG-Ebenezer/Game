@@ -133,13 +133,13 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.translate(item.x, item.y)
             let username = item.username;
             let width = ctx.measureText(username).width
-            let x = -entitySize/2 - width/2;
+            let x = - width/2;
             let y = entitySize;
             let fontSize = 24;
 
             // Draw background
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.fillRect(x - 5, y - fontSize + 5, width * fontSize * 0.1 + 10, fontSize + 10);
+            ctx.fillRect(x - 5, y - fontSize + 5, width * 1.5 + 10, fontSize + 10);
 
             // Draw text
             ctx.font = `${fontSize}px Arial`;
