@@ -104,7 +104,7 @@ const holdableItems = {
         loadedBowPic:"/imgs/Bow_And_Arrow.png",
         durability:20,
         maxDurability:20,
-        damage:0,
+        damage:5,
         generationProbability:10, //out of 100
         rotation:270/57.1,
         stackSize:1,
@@ -467,7 +467,7 @@ function spawnLord(){
 /** @Arrows */
 var arrows = {}
 class Arrow{
-    constructor(x, y, dir, flightDuration, speed=15){
+    constructor(x, y, dir, flightDuration=50, speed=15){
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
@@ -762,7 +762,7 @@ io.sockets.on("connection", (socket)=>{
                 if (canShoot) {
                     let arrowDirection = player.rotation + Math.PI;
                     
-                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection, 200);
+                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection);
             
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
