@@ -466,7 +466,17 @@ function mousemove(e){
     mouse.y = e.clientY - canvas.height / 2
 }
 function mousedown(e){
-    if(player.health > 0 && attackAgain){
+    let clickedInv = false
+    for(let i = 0; i < player.inventory.length; i++){
+        let x = i * invSize
+        let y = invY
+        if(x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize){
+            currInvSlot = i
+            i += player.inventory.length
+            clickedInv = true
+        }
+    }
+    if(player.health > 0 && attackAgain && !clickedInv){
         attackAgain = false
         socket.emit("mousedown", {
             tool:player.inventory[currInvSlot], // could be hand!
@@ -476,14 +486,7 @@ function mousedown(e){
             y:mouse.y + player.y
         })
     }
-    for(let i = 0; i < player.inventory.length; i++){
-        let x = i * invSize
-        let y = invY
-        if(x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize){
-            currInvSlot = i
-            i += player.inventory.length
-        }
-    }
+    
 }
 
 var touching = false

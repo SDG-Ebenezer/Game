@@ -552,16 +552,19 @@ setInterval(()=>{
     //update arrows
     for(let key in arrows){
         let arrow = arrows[key]
+
+        //CAN NEVER! go out of world and drop
+        if(!(arrow.x > BORDERS.L && arrow.x < BORDERS.R && arrow.y > BORDERS.D && arrow.y < BORDERS.U)) {
+            console.log("Yo out buddy", arrow.x > BORDERS.L && arrow.x < BORDERS.R, arrow.y > BORDERS.D && arrow.y < BORDERS.U)
+            delete arrows[key] //!!
+            break;
+        }
+
         //if no more flight length
         if(arrow.duration <= 0) {
-            //cannot go out of world and drop
-            if(!(arrow.x > BORDERS.L && arrow.x < BORDERS.R && arrow.y > BORDERS.D && arrow.y < BORDERS.U)) {
-                delete arrows[key] //!!
-            } else { //if still in border
-                pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].kind, arrow.rotation ,holdableItems["Arrow"].durability)
-                pickablesID ++
-                delete arrows[key] //!!
-            }
+            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].kind, arrow.rotation ,holdableItems["Arrow"].durability)
+            pickablesID ++
+            delete arrows[key] //!!
         } else {arrow.duration -= 1} //update
 
         //no hitty walls
@@ -589,7 +592,6 @@ setInterval(()=>{
                 && arrow.x < entity.x + entity.width-entitySize/2
                 && arrow.y > entity.y -entitySize/2
                 && arrow.y < entity.y + entity.height-entitySize/2) {
-                    console.log("Deal damage")
                     delete arrows[key]
                     entity.health -= arrow.damage
                     break
