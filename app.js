@@ -1,5 +1,7 @@
 const { spawn } = require("child_process")
+const { log } = require("console")
 var express = require("express")
+const { Socket } = require("socket.io")
 var app = express()
 var serv = require("http").Server(app)
 
@@ -27,7 +29,7 @@ var pickables = {} //stuff, like XP, berries, etc.
 const holdableItems = {
     "Hand":{
         name:"Hand",
-        kind:"Hand",
+        class:"Hand",
         pic:false,
         durability:Infinity,
         maxDurability:Infinity,
@@ -35,11 +37,12 @@ const holdableItems = {
         generationProbability:0, //out of 100
         rotation:0,
         stackSize:0,
-        maxStackSize:0
+        maxStackSize:0,
+        cost: Infinity, //market value
     },
-    "Iron_Sword":{
-        name:"Iron_Sword",
-        kind:"Sword",
+    "Iron Sword":{
+        name:"Iron Sword",
+        class:"Sword",
         pic:"/imgs/Sword.png",
         durability:30,
         maxDurability:30,
@@ -47,11 +50,12 @@ const holdableItems = {
         generationProbability:50, //out of 100
         rotation:-45/57.1,
         stackSize:1,
-        maxStackSize:1
+        maxStackSize:1,
+        cost: 500, //market value
     },
-    "Gold_Sword":{
-        name:"Gold_Sword",
-        kind:"Sword",
+    "Gold Sword":{
+        name:"Gold Sword",
+        class:"Sword",
         pic:"/imgs/Sword2.png",
         durability:20,
         maxDurability:20,
@@ -59,23 +63,25 @@ const holdableItems = {
         generationProbability:30, //out of 100
         rotation:-45/57.1,
         stackSize:1,
-        maxStackSize:1
+        maxStackSize:1,
+        cost: 1000, //market value
     },
-    "Diamond_Sword":{
-        name:"Diamond_Sword",
-        kind:"Sword",
+    "Diamond Sword":{
+        name:"Diamond Sword",
+        class:"Sword",
         pic:"/imgs/Sword3.png",
         durability:60,
         maxDurability:60,
-        damage:30,
+        damage:40,
         generationProbability:10, //out of 100
         rotation:-45/57.1,
         stackSize:1,
-        maxStackSize:1
+        maxStackSize:1,
+        cost: 1500, //market value
     },
-    "Plasma_Sword":{
-        name:"Plasma_Sword",
-        kind:"Sword",
+    "Plasma Sword":{
+        name:"Plasma Sword",
+        class:"Sword",
         pic:"/imgs/Sword4.png",
         durability:100,
         maxDurability:100,
@@ -83,11 +89,12 @@ const holdableItems = {
         generationProbability:1, //out of 100
         rotation:-45/57.1,
         stackSize:1,
-        maxStackSize:1
+        maxStackSize:1,
+        cost: 10_000, //market value
     },
     "Arrow":{
         name:"Arrow",
-        kind:"Arrow",
+        class:"Arrow",
         pic:"/imgs/Arrow.png",
         durability:Infinity,
         maxDurability:Infinity,
@@ -95,20 +102,22 @@ const holdableItems = {
         generationProbability:75, //out of 100
         rotation:0,
         stackSize:1, //start out stack Size
-        maxStackSize:64
+        maxStackSize:64,
+        cost: 50, //market value
     },
     "Bow":{
         name:"Bow",
-        kind:"Bow",
+        class:"Bow",
         pic:"/imgs/Bow.png",
         loadedBowPic:"/imgs/Bow_And_Arrow.png",
-        durability:20,
-        maxDurability:20,
+        durability:100,
+        maxDurability:100,
         damage:5,
         generationProbability:10, //out of 100
         rotation:270/57.1,
         stackSize:1,
-        maxStackSize:1
+        maxStackSize:1,
+        cost: 1500, //market value
     }
 }
 
@@ -133,14 +142,14 @@ var fps = 1000/60 //
 
 /** @STRUCTURES *****/
 class Wall {
-   constructor(wall, structureID, wallImgSize) {
-       this.x = wall.relX;
-       this.y = wall.relY;
-       this.id = `WALL${structureID}`;
-       this.imgSrc = random(5,1)==5?"/imgs/Mossy%20Wall.png":"/imgs/Wall.png";
-       this.width = wallImgSize;
-       this.height = wallImgSize;
-   }
+    constructor(wall, structureID, wallImgSize) {
+        this.x = wall.relX;
+        this.y = wall.relY;
+        this.id = `WALL${structureID}`;
+        this.imgSrc = random(5,1)==5?"/imgs/Mossy%20Wall.png":"/imgs/Wall.png";
+        this.width = wallImgSize;
+        this.height = wallImgSize;
+    }
 }
 var structures = {}
 var structureID = 0
@@ -169,12 +178,7 @@ for(let r = 0; r < structureW; r++){
    }
 }
 /** @SPAWN_FINDER */
-//FIND A SPAWNING LOCATION
-/**
- * SPAWN CANNOT BE ON A WALL! OTHERWISE ENTITY CANNOT
- * MOVE! 
- */
-function findSpawn(size = 0) {
+function findSpawn(size=0) {
     let s = size;
     let x, y;
     let doNotPass = true;
@@ -182,25 +186,29 @@ function findSpawn(size = 0) {
         doNotPass = false; // be optimistic, you know?
         x = random(mapSize / 2 - s / 2, -mapSize / 2);
         y = random(mapSize / 2 - s / 2, -mapSize / 2);
-        for (let sKey in structures) {
-            let st = structures[sKey];
-            let p = 3; // padding
-            // Check for overlap
-            if (
-                x + s > st.x - p &&
-                x - s < st.x + st.width + p &&
-                y + s > st.y - p &&
-                y - s < st.y + st.height + p
-            ) {
-                doNotPass = true; // aww
-                break
+        //cannot spawn on structures or markets 
+        let li1 = [structures, markets]
+        li1.forEach(obj=>{
+            for (let sKey in obj) {
+                let st = obj[sKey];
+                let p = 3; // padding
+                // Check for overlap
+                if (
+                    x + s > st.x - p &&
+                    x - s < st.x + st.width + p &&
+                    y + s > st.y - p &&
+                    y - s < st.y + st.height + p
+                ) {
+                    doNotPass = true; // aww
+                    break
+                }
             }
-        }
+        })
     }
     return { x: x, y: y };
 }
 
-//Generate WALLS
+/** @WALL_GENERATOR ********** */
 var numOfRandomWalls = 10
 for(let i = 0; i < numOfRandomWalls; i++){
     let a = findSpawn(wallSize)
@@ -231,6 +239,27 @@ function checkCollision(walls, playerX, playerY, tx, ty) {
     return { tx: tx, ty: ty };
 }
 
+/** @MARKET *****/
+var markets = {} //multiple market places
+var marketID = 0
+var marketSize = 200
+class Market{
+    constructor(x, y, ID, imgSize=marketSize) {
+        this.x = x;
+        this.y = y;
+        this.id = ID;
+        this.imgSrc = "/imgs/Market.png";
+        this.width = imgSize;
+        this.height = imgSize;
+    }
+}
+for(let i = 0; i < 3; i ++){
+    let coords = findSpawn(marketSize)
+    let newMarket = new Market(coords.x, coords.y, marketID)
+    markets[marketID] = newMarket
+    marketID++
+}
+
 /** @TREES *****/
 class Tree {
     constructor(treesID, size=random(125,100)) {
@@ -248,6 +277,7 @@ class Tree {
 }
 var trees = {}
 var treesID = 0
+//Generate 1000 trees in the world...
 for(let i = 0; i < 1000; i ++){
    let newTree = new Tree(treesID)
    trees[treesID] = newTree
@@ -256,11 +286,11 @@ for(let i = 0; i < 1000; i ++){
 
 /** @PICKABLES *****/
 class Pickable{
-   constructor(id,x,y,kind,imgSrc,hold=null,rotation=0,durability=1,stackSize=1){
+   constructor(id,x,y,name,imgSrc,hold=null,rotation=0,durability=1,stackSize=1){
        this.id = id
        this.x = x
        this.y = y
-       this.kind = kind //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
+       this.name = name //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
        this.type = "pickable"
        this.imgSrc = hold?holdableItems[hold].pic:imgSrc
        this.width = this.height = 50
@@ -282,7 +312,7 @@ function dropAll(id){
                 let y = random(player.y + scatterRange, player.y - scatterRange)
                 if (x >= BORDERS.R || x <= BORDERS.L){x = 0}
                 if (y >= BORDERS.U || y <= BORDERS.D){y = 0}
-                pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.kind,null,slot.name,0,slot.durability,slot.stackSize)
+                pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.name,null,slot.name,0,slot.durability,slot.stackSize)
                 pickablesID ++
             }
         })
@@ -317,9 +347,10 @@ class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, health = 100){
         super(type, imgSrc, speed, w, h, x, y, health)
         this.username = (username == "")?"Happy":username;
-        this.xp = 0;
+        this.xp = 0
+        this.kills = 0
         this.inventory = [
-            {...holdableItems["Iron_Sword"]},
+            {...holdableItems["Iron Sword"]},
             {...holdableItems["Bow"]},
             {...holdableItems["Arrow"]},
             {...holdableItems["Hand"]},
@@ -332,6 +363,7 @@ class Player extends Entity{
 class Enemy extends Entity{
     constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize){
         super(type, imgSrc, speed, w, h, x, y, health)
+        this.username = "BOT_Enemy"
         this.detectRange = detectRange
         this.damage = damage
         this.targetPlayer
@@ -340,6 +372,13 @@ class Enemy extends Entity{
         this.justAttacked = false
         this.cooldownTime = 0 //s
         this.cooldownDuration = reloadTime //ms
+        this.lootTable = [
+            {...holdableItems["Iron Sword"]}, 
+            {...holdableItems["Gold Sword"]}, 
+            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
+            {...holdableItems["Bow"]}, 
+        ]
+        this.xp = type=="Lord"?100:50
     }
     findTargetPlayer(){
         let minDist = Infinity;
@@ -429,26 +468,15 @@ class Enemy extends Entity{
             }
             this.justAttacked = true
         }
-        /*
-        if (distanceToPlayer < entitySize) {
-            if(this.hit == null) {
-                this.hit = setInterval(() => {
-                        this.targetPlayer.health -= this.damage // DAMAGE
-                        if(this.targetPlayer.health <= 0) {
-                            clearInterval(this.hit)
-                            this.hit = null
-                            console.log(this.targetPlayer.id)
-                        }
-                }, 1000/this.hitsPerS); // cooldown
-            }
-        }
-        else{
-            clearInterval(this.hit)
-            this.hit = null
-        }*/
     }
 }
-/** @spawn_enemies */
+function findOutHowMuchXPToGive(xp){
+    let test = Math.round(xp * (3/4))
+    if(test < 25) return 10 //always at least give 50ish
+    else return test
+}
+
+/** @ENEMY_GENERATOR ************* */
 let currEnemyID = 0
 let enemyCount = 0
 function spawnNormal(){
@@ -464,10 +492,10 @@ function spawnLord(){
     enemyCount++
 }
 
-/** @Arrows */
+/** @ARROWS */
 var arrows = {}
 class Arrow{
-    constructor(x, y, dir, flightDuration=50, speed=15){
+    constructor(x, y, dir, whoShot, flightDuration=50, speed=15){
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
@@ -480,17 +508,19 @@ class Arrow{
         this.height = 50
 
         this.damage = 20
+
+        this.whoShot = whoShot
     }
 }
 
-/** @game_loop */
+/** @SERVER_GAME_LOOOOOP ********** */
 //server "game loop"
 var amountOfBerries = 0
 setInterval(()=>{
     //Spawn in enemies (chance of)
     if(enemyCount < 10){
-        if(random(1000, 1) == 1){
-            if(random(10,1)==1) spawnLord()
+        if(random(100, 1) == 1){
+            if(random(10,1) == 1) spawnLord()
             else spawnNormal()
         }
     }
@@ -499,9 +529,13 @@ setInterval(()=>{
         enemies[e].move()
         if(enemies[e].health <= 0) {
             enemyCount -= 1
-            if(random(10, 1) == 1){
+            let pick = random(enemies[e].lootTable.length-1, 0) 
+            //find if percentage beats
+            if(random(100, 1) <= enemies[e].lootTable[pick].generationProbability){
+                let loot = enemies[e].lootTable[pick]
                 //chance if enemy dropping iron sword
-                pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, holdableItems["Iron_Sword"].kind, null, "Iron_Sword",0,holdableItems["Iron_Sword"].durability)
+                pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, null, loot.name, 0, loot.durability, loot.stackSize)
+                pickablesID++
             }
             delete enemies[e]
         }
@@ -539,7 +573,7 @@ setInterval(()=>{
                 pickablesID,
                 spawnLocation.x,
                 spawnLocation.y,
-                holdableItems[randomKey].kind,
+                holdableItems[randomKey].name,
                 null,
                 randomKey,
                 0,
@@ -562,7 +596,7 @@ setInterval(()=>{
 
         //if no more flight length
         if(arrow.duration <= 0) {
-            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].kind, arrow.rotation ,holdableItems["Arrow"].durability)
+            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].name, arrow.rotation ,holdableItems["Arrow"].durability, 1)
             pickablesID ++
             delete arrows[key] //!!
         } else {arrow.duration -= 1} //update
@@ -574,7 +608,7 @@ setInterval(()=>{
         //if it stopped, just drop 
         if(nC.tx == 0 || nC.ty == 0) {
             //drop arrow if hits
-            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].kind, arrow.rotation,holdableItems["Arrow"].durability)
+            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].name, arrow.rotation,holdableItems["Arrow"].durability)
             pickablesID++
             delete arrows[key] //!!
         }
@@ -592,14 +626,29 @@ setInterval(()=>{
                 && arrow.x < entity.x + entity.width-entitySize/2
                 && arrow.y > entity.y -entitySize/2
                 && arrow.y < entity.y + entity.height-entitySize/2) {
-                    delete arrows[key]
                     entity.health -= arrow.damage
+                    let whoShotIt = arrows[key].whoShot.username
+                    let messageLi = [
+                        `${whoShotIt} killed ${entity.username} with an arrow.`,
+                        `${whoShotIt} shot ${entity.username}.`,
+                        `The arrow from ${whoShotIt} found its mark on ${entity.username}.`,
+                        `${entity.username} was sniped from afar by ${whoShotIt} with an arrow.`
+                    ]
+                    let shotArrowDeathMessageWording = messageLi[random(messageLi.length-1, 0)]
+                    if(entity.health <= 0){
+                        let player = entities[arrows[key].whoShot.id]
+                        console.log(shotArrowDeathMessageWording)
+                        player.xp += findOutHowMuchXPToGive(entity.xp)
+                        player.kills ++
+                    }
+                    delete arrows[key]
                     break
                 }
             }
         })
     }
 }, fps)
+
 
 /** @SOCKET *****/
 //what to do when a player connects
@@ -620,7 +669,10 @@ io.sockets.on("connection", (socket)=>{
             structuresObj: structures,
             player:player,
             mapSize:mapSize,
-            entitySize:entitySize
+            entitySize:entitySize,
+            walls: Object.values(structures),
+            markets: Object.values(markets),
+            holdables: holdableItems
         })
         console.log("Player ", player.username, player.id, "joined the server.")
     }) 
@@ -628,7 +680,6 @@ io.sockets.on("connection", (socket)=>{
     //update player (all vital info)
     socket.on("updatePlayer", (player)=>{
         if(entities[player.id]) {
-            //console.log(player.id, entities)
             entities[player.id].x = player.x
             entities[player.id].y = player.y
             entities[player.id].rotation = player.rotation
@@ -638,6 +689,14 @@ io.sockets.on("connection", (socket)=>{
             id = player.id
             entities[id] = player
             console.log(entities[id].username, id, "was added to pool")
+            socket.emit("reupdate", {
+                bordersObj:BORDERS,
+                structuresObj: structures,
+                mapSize:mapSize,
+                entitySize:entitySize,
+                walls: Object.values(structures),
+                markets: Object.values(markets),
+            }) //re updates updated game data.
         }
     })
 
@@ -645,9 +704,9 @@ io.sockets.on("connection", (socket)=>{
     socket.on("requestUpdateDataFromServer", (data)=>{
         let updateContent = [borderRect] //always have the border
         let reach = 500
-        //should we load?
-        let stuffToLoad = [entities, enemies, structures, pickables, arrows, trees]
-        stuffToLoad.forEach(group=>{
+        //should we load? (also order)
+        let updateLi = [markets, entities, enemies, structures, pickables, arrows, trees]
+        updateLi.forEach(group=>{
             for(let i in group){
                 let item = group[i]
                 if(Math.abs(item.x - data.x) < reach
@@ -657,25 +716,15 @@ io.sockets.on("connection", (socket)=>{
             }
         })
 
-        var wallsList = []
-        for(let i in structures) {
-            let item = structures[i]
-            if(Math.abs(item.x - data.x) < reach
-            && Math.abs(item.y - data.y) < reach){
-                wallsList.push(item)
-            }
-        }
-
         //if in range
         socket.emit("sendUpdateDataToClient", {
             updateContent: updateContent,
             player: entities[data.id],
             serverPlayerCount: Object.keys(entities).length,
             leaderboard: Object.values(entities)
-            .sort((a, b) => b.xp - a.xp)
+            .sort((a, b) => b.kills - a.kills)
             .slice(0, 5)
-            .map(player => ({ username: player.username, xp: player.xp, id: player.id })),
-            walls: wallsList        
+            .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })),  
         })
         
         //only if player exists and is alive
@@ -691,31 +740,49 @@ io.sockets.on("connection", (socket)=>{
         let item = data.what
         let player = entities[id]
         if(player){
-            if(item.kind == "XP"){
+            if(item.name == "XP"){
                 player.xp += random(10, 1)
                 amountOfBerries -= 1
                 delete pickables[item.id]
-            } else if(item.kind == "Speed"){
+            } else if(item.name == "Speed"){
                 player.xp += random(10, 1)
                 amountOfBerries -= 1
                 socket.emit("speed")
                 delete pickables[item.id]
             } else {
                 let inv = player.inventory;
+                let taken = false //taken? picked up? etc.??
+                //see if you already have it and group together
                 for (let i in inv) {
                     // Check for stackable item
-                    if (inv[i].name === item.kind && inv[i].stackSize < inv[i].maxStackSize) {
-                        inv[i].stackSize++;
-                        delete pickables[item.id];
-                        break
-                    } else if (inv[i].name === "Hand") {
-                        // Replace with new item
-                        let nItem = { ...holdableItems[item.holdableItemsCorr]}
-                        nItem.stackSize = item.stackSize
-                        player.inventory[i] = nItem;
-                        player.inventory[i].durability = item.durability;
-                        delete pickables[item.id];
-                        break;
+                    if(inv[i].name === item.name 
+                    && inv[i].stackSize < inv[i].maxStackSize) {
+                        if(pickables[item.id].stackSize + inv[i].stackSize > inv[i].maxStackSize){
+                            let increase = inv[i].maxStackSize - (inv[i].stackSize)
+                            inv[i].stackSize += increase //added to inv
+                            pickables[item.id].stackSize -= increase //added to inv
+                            item = pickables[item.id] //update item
+                        }
+                        else{
+                            inv[i].stackSize += pickables[item.id].stackSize
+                            delete pickables[item.id];
+                            taken = true //set to TRUE                   
+                            break;   
+                        } 
+                    } 
+                }
+                //put in hand if not taken
+                if(!taken){
+                    for (let i in inv) {
+                        if (inv[i].name === "Hand") {
+                            // Replace with new item
+                            let nItem = { ...holdableItems[item.holdableItemsCorr]}
+                            nItem.stackSize = item.stackSize
+                            player.inventory[i] = nItem;
+                            player.inventory[i].durability = item.durability;
+                            delete pickables[item.id];
+                            break;
+                        }
                     }
                 }
             }
@@ -740,23 +807,19 @@ io.sockets.on("connection", (socket)=>{
         }
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
-            pickables[pickablesID] = new Pickable(pickablesID, x, y, item.kind, null, item.name, 0, item.durability, item.stackSize)
+            pickables[pickablesID] = new Pickable(pickablesID, x, y, item.name, null, item.name, 0, item.durability, item.stackSize)
             entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             pickablesID++
         }
-    })
-
-    //BREAK TOOL
-    socket.on("breakTool", function(invSelected){
-        entities[id].inventory[invSelected] = {...holdableItems["Hand"]}
     })
 
     //deal damage or other mousedown events O.O 
     socket.on("mousedown", function(data){
         let player = entities[id]
         if(player){
-            //shoot arrow
-            if (player.inventory[player.invSelected].name === "Bow") {
+            let tool = player.inventory[player.invSelected]
+            //shoot arrow IF bow
+            if (tool.name === "Bow") {
                 // Check for arrow in inventory
                 let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
             
@@ -764,7 +827,7 @@ io.sockets.on("connection", (socket)=>{
                 if (canShoot) {
                     let arrowDirection = player.rotation + Math.PI;
                     
-                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection);
+                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection, player);
             
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
@@ -780,22 +843,25 @@ io.sockets.on("connection", (socket)=>{
                     }
 
                     //damage bow
-                    player.inventory[player.invSelected].durability -= 1
+                    tool.durability -= 1
                 }
             }   
             //melee attack         
-            else{
+            else {
                 let didDamage = false
+                let damage = (tool.durability != Infinity)?holdableItems[tool.name].damage:holdableItems["Hand"].damage
                 for(let e in entities){    
                     let entity = entities[e]            
                     if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange){
                         if(entity.id != id
                         && Math.abs(entity.x - data.x) < entitySize
                         && Math.abs(entity.y - data.y) < entitySize){
-                            entity.health -= data.damage
+                            entity.health -= damage
                             if(entity.health <= 0){
-                                player.xp += Math.round(entity.xp * 3/4) // give player xp
+                                player.xp += findOutHowMuchXPToGive(entity.xp) // give player xp
                                 console.log(entity.username, entity.id, "was slain by", player.username, player.id)
+                                
+                                player.kills ++
                             }
                             didDamage = true // turn to true
                         }
@@ -806,21 +872,36 @@ io.sockets.on("connection", (socket)=>{
                     if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange){     
                         if(Math.abs(enemy.x - data.x) < entitySize
                         && Math.abs(enemy.y - data.y) < entitySize){
-                            enemy.health -= data.damage
+                            enemy.health -= damage
                             if(enemy.health <= 0){
                                 //give player xp for killed
-                                if(enemy.type == "Lord") player.xp += 100
-                                else if(enemy.type == "Normal") player.xp += 50
+                                player.xp += findOutHowMuchXPToGive(enemy.xp)
+                                player.kills ++
                             }
                             didDamage = true // turn to true
                         }
                     }
                 }
-                if(didDamage && data.tool.name != "Hand"){
-                    player.inventory[player.invSelected].durability -= 1
+                if(didDamage && tool.durability != Infinity){
+                    tool.durability -= 1 //DAMAGE Tool
                 }
             }
+
+            //BREAK TOOL? Is the tool too weak?
+            if(player.inventory[player.invSelected].durability <= 0 
+            && player.inventory[player.invSelected].durability!=Infinity){
+                player.inventory[player.invSelected] = {...holdableItems["Hand"]}
+            }
         }
+    })
+
+    //buy
+    socket.on("buy", function(data){
+        let player = entities[id]
+        let boughtItem = data.item
+        player.xp -= boughtItem.cost
+        pickables[pickablesID] = new Pickable(pickablesID, player.x, player.y, boughtItem.name, null, boughtItem.name, 0, boughtItem.durability, boughtItem.stackSize)
+        pickablesID ++ 
     })
 
     //disconnect

@@ -55,6 +55,83 @@ button{
     display:none;
 }
 
+
+/* Common styles for market */
+#marketBtnDiv {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+/* Open market button */
+#showMarketBtn {
+    display: none;
+    background-color: #007bffaa;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 200%;
+    cursor: pointer;
+    position: absolute;
+    bottom: 0;
+}
+
+/* Market container */
+#market {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    width:100%;
+    overflow-y: auto; /* Enable vertical scrolling */
+}
+#marketBackground{
+    background-color: #000000cc;
+    display: none;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#marketHeader {
+    color:white;
+    padding-bottom: 10px;
+    align-self: flex-start; 
+    min-height: 100px; 
+}
+/**The one that holds the table*/
+#marketBtnContainerContainer {
+    padding: 10px;
+    margin-top: 10px; /* Add margin between header and table */
+    overflow-y: auto; /* Enable vertical scrolling */
+    max-height: 400px; /* Set the maximum height to enable scrolling */
+    /*position: relative; /* Set position to relative */
+}
+/**The table*/
+#marketBtnContainer {
+    padding: 10px;
+    border:none;
+    border-collapse: collapse;
+    margin: 0 auto;
+}
+.marketBtnImgs img {
+    width: 50px;
+    height: 50px;
+    padding:10px 5px;
+}
+.marketBtnText {
+    color: white;
+    padding:2px 10px;
+    margin-bottom: 10px; /* Add margin between items */
+}
+.buyBtn button{
+    padding: 5px 10px;
+    border:none;
+    color:white;
+}
+
+/**/
 .text_input{
     border:none;
     padding:10px;

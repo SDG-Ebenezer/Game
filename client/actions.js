@@ -16,6 +16,9 @@ window.addEventListener("resize", ()=>{
     ginfo.width = window.innerWidth
     ginfo.height = window.innerHeight
     if(player) invSize = 75*5<canvas.width?75:canvas.width/5 //only if player exists
+    gBarHeight = canvas.height * 40/847
+
+    createMarketBtn(holdables)
 })
 
 var socket = io()
@@ -24,14 +27,19 @@ var socket = io()
 var entitySize
 var player;
 var currInvSlot = 0
-var attackAgain = true
 
 //w_vars (Wait Variables)
 var images = {} //loads images as needed
 var borders = {}
 var walls = {}
+var holdables = {} //all things that you can hold
 var mapSize //defined soon!
 var wallsList = []
+var marketsList = []
+
+var helpOpen = false //
+var marketOpen = false //
+
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
@@ -49,7 +57,24 @@ socket.on("sendStartData", (data)=>{
 
     canPlay = true
     updateAgain = true
+
+    wallsList = data.walls
+    marketsList = data.markets
+    holdables = data.holdables
 })
+socket.on("reupdate", (data)=>{
+    borders = data.bordersObj
+    walls = data.structuresObj
+    mapSize = data.mapSize
+    entitySize = data.entitySize
+    canPlay = true
+    updateAgain = true
+    wallsList = data.walls
+    marketsList = data.markets
+})
+
+
+/** @UPDATE !! */
 //DRAWING FUNCTION
 function updateCanv(info, serverPlayerCount, leaderboard){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -132,8 +157,8 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.save()
             ctx.translate(item.x, item.y)
             let username = item.username;
-            let width = ctx.measureText(username).width
-            let x = - width/2;
+            let width = ctx.measureText(username).width * 1.6 //to fill entire space (width of rect)
+            let x = -width/1.4; //to get aligned with center
             let y = entitySize;
             let fontSize = 24;
 
@@ -171,23 +196,24 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         gShadow()
         drawInventory()
         gAttackCursor()
-        gLeaderboardData(serverPlayerCount, leaderboard)
-        gMap()
+        //close if market is open
+        if(!marketOpen){
+            gLeaderboardData(serverPlayerCount, leaderboard)
+            gMap()
+        }
     }
     updateAgain = true//allow update
 }
 //UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER
 socket.on("sendUpdateDataToClient", (info)=>{
     //dont send data if dead
-    if(player.health > 0) {
-        player = info.player
-    }
-    wallsList = info.walls
+    if(player.health > 0) player = info.player
     updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard)
 })
 
+
 /** @GAME_DETAILS */
-var gBarHeight = canvas.height * 40/847
+var gBarHeight = canvas.height * 40/847 //also in resize
 function gHealth(){
     let width = canvas.width
     let height = gBarHeight
@@ -270,12 +296,12 @@ function gAttackCursor(){
 }
 function gLeaderboardData(pc, leaderboard){
     gctx.fillStyle = 'white'
-    let fontSize = 15
+    let fontSize = (canvas.width/4)/15<15?(canvas.width/4)/15:15
     let padding = 10
-    let x = canvas.width * 3/4
+    let x = canvas.width/4>200?canvas.width-200:canvas.width * 3/4
     let y = fontSize + 100  // Increased the initial y position for more space
 
-    gctx.font = `20px Verdana`
+    gctx.font = `${(canvas.width/4)/10<20?(canvas.width/4)/10:20}px Verdana` //fontSize but "5" bigger (in ratio)
     gctx.fillText("Leaderboard", x, y - padding)
 
     y += fontSize + padding // Adjusted y position for the first leaderboard entry
@@ -286,10 +312,10 @@ function gLeaderboardData(pc, leaderboard){
         gctx.fillRect(x, y - fontSize - padding, canvas.width-x, fontSize + 2 * padding) // Adjusted the height of the rectangle
 
         if (leaderboard[i]) {
-            let text = `${leaderboard[i].xp} XP  ${leaderboard[i].username}` // Swapped the order of name and XP for better readability
+            let text = `${leaderboard[i].kills} Kills  ${leaderboard[i].username}`
             if(leaderboard[i].id == player.id) gctx.fillStyle = "gold"
             else gctx.fillStyle = "white"
-            gctx.fillText(text, x + padding, y - padding) // Adjusted x position for better alignment
+            gctx.fillText(text, x + padding, y - padding)
         }
         y += fontSize + 2 * padding // Increased the vertical space between leaderboard entries
     }
@@ -300,29 +326,43 @@ function gLeaderboardData(pc, leaderboard){
     gctx.fillText(text, x, y-padding)
 }
 function gMap(){
-    let pIcSize = 10 //player icon size
-    let size = canvas.height * 100/847 //added pIcSize to balance out offset
+    let size = canvas.height * 1/6 //added pIcSize to balance out offset
     let sf = size/mapSize //scale factor
+    let pIcSize = (n)=>n*sf
     let x = 0
     let y = canvas.height - gBarHeight * 3.5 - size
+
+    //background
     gctx.fillStyle = "#000000aa"
-    gctx.fillRect(x,y,size+pIcSize,size+pIcSize)
+    gctx.fillRect(x,y,size+pIcSize(player.width),size+pIcSize(player.height))
     gctx.lineWidth = 2.5
     gctx.strokeStyle = "#ffffffaa"
-    gctx.strokeRect(x,y,size+pIcSize,size+pIcSize)
+    gctx.strokeRect(x,y,size+pIcSize(player.width),size+pIcSize(player.height))
+    
+    //structures + markets
+    gctx.save()
+    gctx.translate(x+size/2,y+size/2)
+    //draw markets
+    for(let i in marketsList){
+        let market = marketsList[i]
+        gctx.fillStyle = "#1E90FF"
+        gctx.fillRect(market.x*sf,market.y*sf,pIcSize(market.width),pIcSize(market.height))
+    }
+    //draw walls
+    for(let i in wallsList){
+        let wall = wallsList[i]
+        gctx.fillStyle = "gray"
+        gctx.fillRect(wall.x*sf,wall.y*sf,pIcSize(wall.width),pIcSize(wall.height))
+    }
+    gctx.restore()
+
     gctx.save()
     gctx.translate(x+size/2,y+size/2)
     gctx.fillStyle = "red"
-    gctx.fillRect(player.x*sf,player.y*sf,pIcSize,pIcSize)
+    gctx.fillRect(player.x*sf,player.y*sf,pIcSize(100),pIcSize(100))
     gctx.restore()
 }
 
-/** */
-//       /\
-//      / |\
-//     /  | \
-//    /   .  \
-//   /________\
 // "invSize" also updated in the canvas resize 
 var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
 var invY = 0
@@ -353,14 +393,13 @@ function drawInventory(){
             gctx.fillRect(x, y, w, h)
             gctx.fillStyle = "rgb(0,235,0)"
             gctx.fillRect(x, y, w * (each.durability/each.maxDurability), h)
-            if(each.durability <= 0) socket.emit("breakTool", currInvSlot)
         }  
 
         //if stackable give it a number to show how many you have
         if(each.maxStackSize > 1){
-            ctx.font = `15px Arial`;
-            ctx.fillStyle = "white";
-            ctx.fillText(each.stackSize, i * invSize + invSize * 0.75, invSize -15); //minus fontSize
+            gctx.font = `15px Arial`;
+            gctx.fillStyle = "white";
+            gctx.fillText(each.stackSize, i * invSize + invSize * 0.75, invSize -15); //minus fontSize
         }
 
         i++ //x 
@@ -466,27 +505,27 @@ function mousemove(e){
     mouse.y = e.clientY - canvas.height / 2
 }
 function mousedown(e){
-    let clickedInv = false
-    for(let i = 0; i < player.inventory.length; i++){
-        let x = i * invSize
-        let y = invY
-        if(x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize){
-            currInvSlot = i
-            i += player.inventory.length
-            clickedInv = true
+    //cannot switch inv while help open, cannot attack
+    //also, cannot activate when pressing btns
+    if(!helpOpen 
+    && e.target.tagName.toLowerCase() !== 'button'){ 
+        let clickedInv = false
+        for(let i = 0; i < player.inventory.length; i++){
+            let x = i * invSize
+            let y = invY
+            if(x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize){
+                currInvSlot = i
+                i += player.inventory.length
+                clickedInv = true
+            }
         }
-    }
-    if(player.health > 0 && attackAgain && !clickedInv){
-        attackAgain = false
-        socket.emit("mousedown", {
-            tool:player.inventory[currInvSlot], // could be hand!
-            damage:player.inventory[currInvSlot].damage,
-            invSelected: currInvSlot,
-            x:mouse.x + player.x, 
-            y:mouse.y + player.y
-        })
-    }
-    
+        if(player.health > 0 && !clickedInv){
+            socket.emit("mousedown", {
+                x:mouse.x + player.x, 
+                y:mouse.y + player.y
+            })
+        }
+    }    
 }
 
 var touching = false
@@ -527,41 +566,35 @@ function checkCollision(walls, playerX, playerY, tx, ty) {
 var updateAgain = false
 //in some unhappy circumstances, allow update to restart
 socket.on("allowUpdate", ()=>{updateAgain = true})
-var gameLoopInt
+var gameLoopInt // TO BE THE GAME LOOPA!
+//also contains the game loop
 function startGame(){
-    //reset or set these:
-    tx = ty = invSelected = 0
-    //set these:
-    document.getElementById("exitGameBtn").style.display = "none"
-    document.getElementById("preGame_Stuff").style.display = "none"
-    document.getElementById("startGameBtn").style.display = "none"
-    document.getElementById("gameOver").style.display = "none"
-    //begin listening
-    document.addEventListener("keydown", keydown)
-    document.addEventListener("keyup", keyup)
-    document.addEventListener("mousemove", mousemove)
-    document.addEventListener("mousedown", mousedown)
-    //for mobile
-    document.addEventListener("touchstart", touchstart)
-    document.addEventListener("touchend", touchend)
-    
-    //ask server for starting data and create new ID
-    var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
-    socket.emit("askForStartData", {
-        username: document.getElementById("username").value,
-        img:selectedValue
-    })
+    {
+        //reset or set these:
+        tx = ty = invSelected = 0
+        //set these:
+        document.getElementById("exitGameBtn").style.display = "none"
+        document.getElementById("preGame_Stuff").style.display = "none"
+        document.getElementById("startGameBtn").style.display = "none"
+        document.getElementById("gameOver").style.display = "none"
+        //begin listening
+        document.addEventListener("keydown", keydown)
+        document.addEventListener("keyup", keyup)
+        document.addEventListener("mousemove", mousemove)
+        document.addEventListener("mousedown", mousedown)
+        //for mobile
+        document.addEventListener("touchstart", touchstart)
+        document.addEventListener("touchend", touchend)
+        
+        //ask server for starting data and create new ID
+        var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
+        socket.emit("askForStartData", {
+            username: document.getElementById("username").value,
+            img:selectedValue
+        })
+    }
     //start game loop
-    let aVar = true
     gameLoopInt = setInterval(()=>{
-        //cooldown
-        if(attackAgain == false && aVar){
-            aVar = false
-            setTimeout(()=>{
-                attackAgain = true
-                aVar = true
-            }, 100) // 10ms cooldown
-        }
         //player update
         if(player && updateAgain && canPlay) {
             if(player.health > 0){ 
@@ -585,6 +618,29 @@ function startGame(){
                 player.invSelected = currInvSlot
                 player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
                 socket.emit("updatePlayer", player)  
+
+                let inMarket = false
+                //check if on market
+                for(let m in marketsList){
+                    let market = marketsList[m]
+                    if(player.x > market.x - market.width/2 
+                    && player.x < market.x + market.width/2 
+                    && player.y > market.y - market.height/2 
+                    && player.y < market.y + market.height/2){
+                        inMarket = true
+                        break
+                    }
+                }
+                if(inMarket){
+                    //display market btn
+                    document.getElementById("showMarketBtn").style.display = "block"
+                } else{
+                    //dedisplay market btn
+                    document.getElementById("showMarketBtn").style.display = "none"
+                    document.getElementById("showMarketBtn").innerHTML = "Market"
+                    document.getElementById("market").style.display = "none"
+                    document.getElementById("marketBackground").style.display = "none"
+                }
             } 
             socket.emit("requestUpdateDataFromServer", {
                 id: player.id,
@@ -618,6 +674,9 @@ socket.on("gameOver", ()=>{
     document.getElementById("exitGameBtn").style.display = "block"
     document.getElementById("gameOver").style.display = "block"
     speedTime = 0 //reset speed!!
+    //close dem
+    if(helpOpen) showHelp() 
+    if(marketOpen) openMarket()
 })
 
 function showHelp(){
@@ -626,9 +685,88 @@ function showHelp(){
     if (help.style.display == "block"){
         help.style.display = "none"
         helpBtn.innerHTML = "HELP"
+        helpOpen = false
     }
     else{
         help.style.display = "block"
         helpBtn.innerHTML = "<b>X</b>"
+        helpOpen = true
+    }
+}
+function openMarket(){
+    let market = document.getElementById("market")
+    let marketBackground = document.getElementById("marketBackground")
+    let marketBtn = document.getElementById("showMarketBtn")
+    if (market.style.display != "none"){
+        market.style.display = "none"
+        marketBtn.innerHTML = "Market"
+        marketOpen = false
+        marketBackground.style.display = "none" //background display
+    }
+    else{
+        market.style.display = "flex"
+        marketBackground.style.display = "block" //background display
+        marketBtn.innerHTML = "Close"
+        createMarketBtn(holdables)
+        marketOpen = true
+    }
+}
+function createMarketBtn(items) {
+    var table = document.getElementById("marketBtnContainer"); 
+    table.innerHTML = ''; 
+   // table.style.top = 0
+
+    var market = document.getElementById("market")
+    market.style.top = invSize + 15
+    market.style.height = ginfo.height - ((invSize + 15) + (gBarHeight * 2))
+    let k = 1
+    Object.entries(items).forEach(([key, value]) => {
+        if(value.cost){ //if Infinity then, null.
+            var row = table.insertRow(); 
+            if(k%2==0){
+                row.style.backgroundColor = "#2b2b2b"
+            }else{
+                row.style.backgroundColor = "#444"
+            }
+            var cell1 = row.insertCell();
+            var cell2 = row.insertCell();
+            var cell3 = row.insertCell();
+            var cell4 = row.insertCell();
+
+            var img = document.createElement('img');
+            img.src = value.pic;
+            img.alt = value.name;
+            cell1.appendChild(img);
+            cell1.setAttribute('class', 'marketBtnImgs'); 
+
+            var name = document.createTextNode(value.name);
+            cell2.appendChild(name);
+            cell2.setAttribute('class', 'marketBtnText'); 
+
+            var cost = document.createTextNode(`${value.cost} XP`);
+            cell3.appendChild(cost);
+            cell3.setAttribute('class', 'marketBtnText'); 
+
+            var buyBtn = document.createElement('button');
+            let id = `marketBuyBtnFor${key}`
+            buyBtn.textContent = 'Buy';
+            buyBtn.onclick = function(){buy(value, id)}
+            /*if(player.xp < value.cost){
+                buyBtn.style.backgroundColor = "red"
+            } else{*/
+                buyBtn.style.backgroundColor = "007bff"
+            //}
+            cell4.appendChild(buyBtn);
+            cell4.setAttribute('class', 'buyBtn');
+            cell4.setAttribute('id', id);
+            
+            /***** */
+            k++
+        } 
+    });
+}
+function buy(boughtItem, btnID){
+    if(player.xp >= boughtItem.cost){
+        socket.emit("buy", {item:boughtItem})
     }
 }

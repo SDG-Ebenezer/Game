@@ -9,7 +9,19 @@
 <body>
     <div class="no_selection">
         <canvas id="canv"></canvas>
+        <div id="marketBackground"></div>
         <canvas id="info_canv"></canvas>
+    </div>
+    <!-- MARKET! -->
+    <div id="market">
+        <div id="marketHeader">
+            <h1>Buy:</h1>
+            <p>Collect XP from killing monsters and eating berries!</p>
+        </div>
+        <div id="marketBtnContainerContainer">
+            <table id="marketBtnContainer"></table> 
+        </div>
+        <!-- CONTENT -->
     </div>
     <div id="preGame_Stuff" class="no_selection">
         <input id="username" class="text_input" placeholder="Username..." maxlength="25">
@@ -34,11 +46,14 @@
     <div id="gameOver">
         <h1 id="gameOverText">GAME OVER</h1>
     </div>
+    
     <div class="no_selection">
         <button onclick="startGame()" id="startGameBtn">Play</button>
         <button onclick="exitGame()" id="exitGameBtn">Exit</button>
+        <div id="marketBtnDiv">
+            <button onclick="openMarket()" id="showMarketBtn">Market</button>
+        </div>
     </div>
-    
     <!--Help Btn -->
     <button onclick="showHelp()" id="helpBtn">HELP</button> 
     <!--help -->
