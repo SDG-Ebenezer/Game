@@ -627,15 +627,16 @@ setInterval(()=>{
                 && arrow.y > entity.y -entitySize/2
                 && arrow.y < entity.y + entity.height-entitySize/2) {
                     entity.health -= arrow.damage
-                    let whoShotIt = arrows[key].whoShot.username
-                    let messageLi = [
-                        `${whoShotIt} killed ${entity.username} with an arrow.`,
-                        `${whoShotIt} shot ${entity.username}.`,
-                        `The arrow from ${whoShotIt} found its mark on ${entity.username}.`,
-                        `${entity.username} was sniped from afar by ${whoShotIt} with an arrow.`
-                    ]
-                    let shotArrowDeathMessageWording = messageLi[random(messageLi.length-1, 0)]
                     if(entity.health <= 0){
+                        console.log(arrows[key].whoShot)
+                        let whoShotIt = arrows[key].whoShot.username
+                        let messageLi = [
+                            `${whoShotIt} killed ${entity.username} with an arrow.`,
+                            `${whoShotIt} shot ${entity.username}.`,
+                            `The arrow from ${whoShotIt} found its mark on ${entity.username}.`,
+                            `${entity.username} was sniped from afar by ${whoShotIt} with an arrow.`
+                        ]
+                        let shotArrowDeathMessageWording = messageLi[random(messageLi.length-1, 0)]
                         let player = entities[arrows[key].whoShot.id]
                         console.log(shotArrowDeathMessageWording)
                         player.xp += findOutHowMuchXPToGive(entity.xp)
@@ -882,14 +883,15 @@ io.sockets.on("connection", (socket)=>{
                         }
                     }
                 }
-                if(didDamage && tool.durability != Infinity){
+                if(didDamage && tool.durability != null){
                     tool.durability -= 1 //DAMAGE Tool
                 }
             }
 
             //BREAK TOOL? Is the tool too weak?
             if(player.inventory[player.invSelected].durability <= 0 
-            && player.inventory[player.invSelected].durability!=Infinity){
+            && player.inventory[player.invSelected].durability!=null){
+                console.log(player.inventory[player.invSelected])
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
             }
         }

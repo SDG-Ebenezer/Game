@@ -112,6 +112,7 @@ button{
 #marketBtnContainer {
     padding: 10px;
     border:none;
+    width:80%;
     border-collapse: collapse;
     margin: 0 auto;
 }

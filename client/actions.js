@@ -530,14 +530,18 @@ function mousedown(e){
 
 var touching = false
 function touchstart(e){
-    tx = -Math.cos(player.rotation) * player.speed
-    ty = -Math.sin(player.rotation) * player.speed
-    touching = true
+    if(!marketOpen){
+        tx = -Math.cos(player.rotation) * player.speed
+        ty = -Math.sin(player.rotation) * player.speed
+        touching = true
+    }
 }
 function touchend(e){
-    tx = 0
-    ty = 0
-    touching = false
+    if(!marketOpen){
+        tx = 0
+        ty = 0
+        touching = false
+    }
 }
 //Function also in APP js file~! But different
 //HIT WALLS?
@@ -640,6 +644,7 @@ function startGame(){
                     document.getElementById("showMarketBtn").innerHTML = "Market"
                     document.getElementById("market").style.display = "none"
                     document.getElementById("marketBackground").style.display = "none"
+                    marketOpen = false //
                 }
             } 
             socket.emit("requestUpdateDataFromServer", {
@@ -700,8 +705,8 @@ function openMarket(){
     if (market.style.display != "none"){
         market.style.display = "none"
         marketBtn.innerHTML = "Market"
-        marketOpen = false
         marketBackground.style.display = "none" //background display
+        marketOpen = false
     }
     else{
         market.style.display = "flex"
@@ -718,7 +723,7 @@ function createMarketBtn(items) {
 
     var market = document.getElementById("market")
     market.style.top = invSize + 15
-    market.style.height = ginfo.height - ((invSize + 15) + (gBarHeight * 2))
+    market.style.height = ginfo.height - ((invSize + 15) + (gBarHeight * 3) + 15) //15 for padding
     let k = 1
     Object.entries(items).forEach(([key, value]) => {
         if(value.cost){ //if Infinity then, null.
