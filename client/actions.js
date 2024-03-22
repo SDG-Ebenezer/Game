@@ -373,7 +373,6 @@ var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
 var invY = 0
 var reorder = false; 
 function drawInventory(){
-    console.log(player.inventory)
     let i = 0
     gctx.fillStyle = "#000000aa"
     gctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
