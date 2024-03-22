@@ -507,6 +507,8 @@ function keyup(event){
 var dragStartX = 0;
 var dragStartY = 0;
 var draggedItemIndex = -1;
+var lastEnteredSlot = -1; // Track the last inventory slot entered by the mouse
+
 function mousemove(e) {
     // calculate the mouse position relative to the canvas center
     mouse.x = e.clientX - canvas.width / 2;
@@ -521,14 +523,16 @@ function mousemove(e) {
     let newIndex = Math.floor(mouseX / invSize);
 
     // Check if the mouse cursor has entered a new slot
-    if (newIndex !== draggedItemIndex) {
+    if (newIndex !== lastEnteredSlot && newIndex < player.inventory.length) {
         // Update the position of the dragged item in the inventory
         let removedItem = player.inventory.splice(draggedItemIndex, 1)[0];
         player.inventory.splice(newIndex, 0, removedItem);
         draggedItemIndex = newIndex;
         drawInventory();
+        lastEnteredSlot = newIndex; // Update the last entered slot
     }
 }
+
 function mousedown(e) {
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
@@ -562,12 +566,14 @@ function mousedown(e) {
         dragStartY = mouseY;
         draggedItemIndex = clickedItemIndex;
         draggedItem = player.inventory[clickedItemIndex]; // Store the dragged item
+        lastEnteredSlot = clickedItemIndex; // Update the last entered slot
     }
 }
+
 function mouseup(e) {
     if (!reorder || draggedItemIndex === -1) return;
     draggedItemIndex = -1;
-    reorder = false
+    reorder = false;
 }
 
 
