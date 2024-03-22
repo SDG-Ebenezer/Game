@@ -207,7 +207,12 @@ function updateCanv(info, serverPlayerCount, leaderboard){
 //UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER
 socket.on("sendUpdateDataToClient", (info)=>{
     //dont send data if dead
-    if(player.health > 0) player = info.player
+    let savedInv
+    if(reorder) savedInv = player.inventory
+    if(player.health > 0) {
+        player = info.player
+        if(reorder) player.inventory = savedInv
+    }
     updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard)
 })
 
@@ -367,12 +372,8 @@ function gMap(){
 var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
 var invY = 0
 var reorder = false; 
-
-// Variables to store drag state
-var dragStartX = 0;
-var dragStartY = 0;
-var draggedItemIndex = -1;
 function drawInventory(){
+    console.log(player.inventory)
     let i = 0
     gctx.fillStyle = "#000000aa"
     gctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
@@ -504,27 +505,28 @@ function keyup(event){
     }
 }
 
+var dragStartX = 0;
+var dragStartY = 0;
+var draggedItemIndex = -1;
 function mousemove(e) {
     // calculate the mouse position relative to the canvas center
-    mouse.x = e.clientX - canvas.width / 2
-    mouse.y = e.clientY - canvas.height / 2
+    mouse.x = e.clientX - canvas.width / 2;
+    mouse.y = e.clientY - canvas.height / 2;
 
     if (!reorder || draggedItemIndex === -1) return;
 
     let mouseX = e.clientX - canvas.getBoundingClientRect().left;
     let mouseY = e.clientY - canvas.getBoundingClientRect().top;
 
-    // Update the position of the dragged item
-    let newIndex = Math.min(Math.max(Math.floor(mouseX / invSize), 0), player.inventory.length); // Calculate the new index
+    // Calculate the index of the slot under the mouse cursor
+    let newIndex = Math.floor(mouseX / invSize);
 
+    // Check if the mouse cursor has entered a new slot
     if (newIndex !== draggedItemIndex) {
-        // Remove the item from its original position
+        // Update the position of the dragged item in the inventory
         let removedItem = player.inventory.splice(draggedItemIndex, 1)[0];
-        // Insert the item at the new index
         player.inventory.splice(newIndex, 0, removedItem);
-        // Update the dragged item index
         draggedItemIndex = newIndex;
-        // Redraw the inventory
         drawInventory();
     }
 }
