@@ -470,11 +470,6 @@ class Enemy extends Entity{
         }
     }
 }
-function findOutHowMuchXPToGive(xp){
-    let test = Math.round(xp * (3/4))
-    if(test < 25) return 10 //always at least give 50ish
-    else return test
-}
 
 /** @ENEMY_GENERATOR ************* */
 let currEnemyID = 0
@@ -639,7 +634,7 @@ setInterval(()=>{
                         let shotArrowDeathMessageWording = messageLi[random(messageLi.length-1, 0)]
                         let player = entities[arrows[key].whoShot.id]
                         console.log(shotArrowDeathMessageWording)
-                        player.xp += findOutHowMuchXPToGive(entity.xp)
+                        player.xp += entity.xp
                         player.kills ++
                     }
                     delete arrows[key]
@@ -679,13 +674,15 @@ io.sockets.on("connection", (socket)=>{
     }) 
 
     //update player (all vital info)
-    socket.on("updatePlayer", (player)=>{
+    socket.on("updatePlayer", (d)=>{
+        let player = d.player
         if(entities[player.id]) {
             entities[player.id].x = player.x
             entities[player.id].y = player.y
             entities[player.id].rotation = player.rotation
             entities[player.id].invSelected = player.invSelected
             entities[player.id].speed = player.speed
+            if(d.reorder) entities[player.id].inventory = player.inventory
         } else if(player.id && !entities[player.id]){
             id = player.id
             entities[id] = player
@@ -859,7 +856,7 @@ io.sockets.on("connection", (socket)=>{
                         && Math.abs(entity.y - data.y) < entitySize){
                             entity.health -= damage
                             if(entity.health <= 0){
-                                player.xp += findOutHowMuchXPToGive(entity.xp) // give player xp
+                                player.xp += entity.xp * 0.8 // give player xp
                                 console.log(entity.username, entity.id, "was slain by", player.username, player.id)
                                 
                                 player.kills ++
@@ -876,7 +873,7 @@ io.sockets.on("connection", (socket)=>{
                             enemy.health -= damage
                             if(enemy.health <= 0){
                                 //give player xp for killed
-                                player.xp += findOutHowMuchXPToGive(enemy.xp)
+                                player.xp += enemy.xp
                                 player.kills ++
                             }
                             didDamage = true // turn to true

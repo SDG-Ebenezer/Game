@@ -366,6 +366,12 @@ function gMap(){
 // "invSize" also updated in the canvas resize 
 var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
 var invY = 0
+var reorder = false; 
+
+// Variables to store drag state
+var dragStartX = 0;
+var dragStartY = 0;
+var draggedItemIndex = -1;
 function drawInventory(){
     let i = 0
     gctx.fillStyle = "#000000aa"
@@ -409,7 +415,6 @@ function drawInventory(){
     gctx.lineWidth = invSize * 10/75;
     gctx.strokeStyle = "white"
     gctx.strokeRect(currInvSlot * invSize, invY, invSize, invSize)
-    
 }
 
 /** @MOVEMENT_CONTROLS */
@@ -499,34 +504,71 @@ function keyup(event){
     }
 }
 
-function mousemove(e){
+function mousemove(e) {
     // calculate the mouse position relative to the canvas center
     mouse.x = e.clientX - canvas.width / 2
     mouse.y = e.clientY - canvas.height / 2
+
+    if (!reorder || draggedItemIndex === -1) return;
+
+    let mouseX = e.clientX - canvas.getBoundingClientRect().left;
+    let mouseY = e.clientY - canvas.getBoundingClientRect().top;
+
+    // Update the position of the dragged item
+    let newIndex = Math.min(Math.max(Math.floor(mouseX / invSize), 0), player.inventory.length); // Calculate the new index
+
+    if (newIndex !== draggedItemIndex) {
+        // Remove the item from its original position
+        let removedItem = player.inventory.splice(draggedItemIndex, 1)[0];
+        // Insert the item at the new index
+        player.inventory.splice(newIndex, 0, removedItem);
+        // Update the dragged item index
+        draggedItemIndex = newIndex;
+        // Redraw the inventory
+        drawInventory();
+    }
 }
-function mousedown(e){
-    //cannot switch inv while help open, cannot attack
-    //also, cannot activate when pressing btns
-    if(!helpOpen 
-    && e.target.tagName.toLowerCase() !== 'button'){ 
-        let clickedInv = false
-        for(let i = 0; i < player.inventory.length; i++){
-            let x = i * invSize
-            let y = invY
-            if(x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize){
-                currInvSlot = i
-                i += player.inventory.length
-                clickedInv = true
+function mousedown(e) {
+    // cannot switch inv while help open, cannot attack
+    // also, cannot activate when pressing btns
+    if (!helpOpen && e.target.tagName.toLowerCase() !== 'button') {
+        let clickedInv = false;
+        for (let i = 0; i < player.inventory.length; i++) {
+            let x = i * invSize;
+            let y = invY;
+            if (x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize) {
+                currInvSlot = i;
+                i += player.inventory.length;
+                clickedInv = true;
             }
         }
-        if(player.health > 0 && !clickedInv){
+        if (player.health > 0 && !clickedInv) {
             socket.emit("mousedown", {
-                x:mouse.x + player.x, 
-                y:mouse.y + player.y
-            })
+                x: mouse.x + player.x,
+                y: mouse.y + player.y
+            });
         }
-    }    
+    }
+
+    let mouseX = e.clientX - canvas.getBoundingClientRect().left;
+    let mouseY = e.clientY - canvas.getBoundingClientRect().top;
+
+    // Check if the mouse click is within an inventory slot
+    let clickedItemIndex = Math.floor(mouseX / invSize);
+    if (clickedItemIndex >= 0 && clickedItemIndex < player.inventory.length && mouseY <= invSize) {
+        reorder = true
+        dragStartX = mouseX;
+        dragStartY = mouseY;
+        draggedItemIndex = clickedItemIndex;
+        draggedItem = player.inventory[clickedItemIndex]; // Store the dragged item
+    }
 }
+function mouseup(e) {
+    if (!reorder || draggedItemIndex === -1) return;
+    draggedItemIndex = -1;
+    reorder = false
+}
+
 
 var touching = false
 function touchstart(e){
@@ -586,6 +628,7 @@ function startGame(){
         document.addEventListener("keyup", keyup)
         document.addEventListener("mousemove", mousemove)
         document.addEventListener("mousedown", mousedown)
+        document.addEventListener("mouseup", mouseup)
         //for mobile
         document.addEventListener("touchstart", touchstart)
         document.addEventListener("touchend", touchend)
@@ -621,7 +664,10 @@ function startGame(){
                 player.y += ty
                 player.invSelected = currInvSlot
                 player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
-                socket.emit("updatePlayer", player)  
+                socket.emit("updatePlayer", {
+                    player:player,
+                    reorder:reorder
+                })  
 
                 let inMarket = false
                 //check if on market
@@ -674,6 +720,7 @@ socket.on("gameOver", ()=>{
     document.removeEventListener("keyup", keyup)
     document.removeEventListener("mousemove", mousemove)
     document.removeEventListener("mousedown", mousedown)
+    document.removeEventListener("mouseup", mouseup)
     document.removeEventListener("touchstart", touchstart)
     document.removeEventListener("touchend", touchend)
     document.getElementById("exitGameBtn").style.display = "block"
