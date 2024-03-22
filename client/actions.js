@@ -775,3 +775,14 @@ function buy(boughtItem, btnID){
         socket.emit("buy", {item:boughtItem})
     }
 }
+
+// Detect when the user is leaving the page
+window.addEventListener('beforeunload', function(event) {
+    var stillPlaying = confirm("You are still playing the game. Are you sure you want to leave?");
+    if (stillPlaying) {
+        return null;
+    } else {
+        event.preventDefault();
+        return event.returnValue = 'Are you sure you want to leave?';
+    }
+});
