@@ -64,7 +64,7 @@ const holdableItems = {
         rotation:-45/57.1,
         stackSize:1,
         maxStackSize:1,
-        cost: 1000, //market value
+        cost: 1500, //market value
     },
     "Diamond Sword":{
         name:"Diamond Sword",
@@ -77,7 +77,7 @@ const holdableItems = {
         rotation:-45/57.1,
         stackSize:1,
         maxStackSize:1,
-        cost: 1500, //market value
+        cost: 3000, //market value
     },
     "Plasma Sword":{
         name:"Plasma Sword",
@@ -103,7 +103,7 @@ const holdableItems = {
         rotation:0,
         stackSize:1, //start out stack Size
         maxStackSize:64,
-        cost: 50, //market value
+        cost: 25, //market value
     },
     "Bow":{
         name:"Bow",
@@ -117,7 +117,7 @@ const holdableItems = {
         rotation:270/57.1,
         stackSize:1,
         maxStackSize:1,
-        cost: 1500, //market value
+        cost: 1000, //market value
     }
 }
 
@@ -528,7 +528,6 @@ setInterval(()=>{
             //find if percentage beats
             if(random(100, 1) <= enemies[e].lootTable[pick].generationProbability){
                 let loot = enemies[e].lootTable[pick]
-                //chance if enemy dropping iron sword
                 pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, null, loot.name, 0, loot.durability, loot.stackSize)
                 pickablesID++
             }
@@ -549,12 +548,13 @@ setInterval(()=>{
         let spawnLocation = findSpawn()
         if(random(5, 1) == 1){
             pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Speed", "/imgs/SP.png")
+            pickablesID ++
             amountOfBerries ++
         } else{
             pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "XP", "/imgs/Berry.png")
+            pickablesID ++
             amountOfBerries ++
         }
-        pickablesID ++
     }
 
     //add loot 0.1% chance
@@ -806,8 +806,8 @@ io.sockets.on("connection", (socket)=>{
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
             pickables[pickablesID] = new Pickable(pickablesID, x, y, item.name, null, item.name, 0, item.durability, item.stackSize)
-            entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             pickablesID++
+            entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
         }
     })
 

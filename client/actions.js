@@ -524,6 +524,28 @@ function mousemove(e) {
 
     // Check if the mouse cursor has entered a new slot
     if (newIndex !== lastEnteredSlot && newIndex < player.inventory.length) {
+        if (player.inventory[newIndex].name === draggedItem.name) {
+            //is there enough room for all?
+            if(player.inventory[newIndex].maxStackSize < draggedItem.stackSize + player.inventory[newIndex].stackSize){
+                let increase = player.inventory[newIndex].maxStackSize - player.inventory[newIndex].stackSize
+                let increase2 = draggedItem.stackSize - increase
+                
+                draggedItem.stackSize = player.inventory[newIndex].stackSize + increase
+
+                player.inventory[newIndex].stackSize = increase2
+            }
+            else{
+                player.inventory[newIndex].stackSize += draggedItem.stackSize;
+                // Clear the dragged item from the inventory
+                player.inventory.splice(draggedItemIndex, 1, {...holdables["Hand"]});
+                // Reset draggedItemIndex
+                draggedItemIndex = -1;
+                // Redraw the inventory
+                drawInventory();
+                return;
+            }            
+        }
+
         // Update the position of the dragged item in the inventory
         let removedItem = player.inventory.splice(draggedItemIndex, 1)[0];
         player.inventory.splice(newIndex, 0, removedItem);
