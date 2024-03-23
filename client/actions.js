@@ -267,7 +267,9 @@ function gSpeedBar(){
         if(speedTime <= 0){
             player.speed = 5 //[yS%^]
         }
-    }    
+    } else{
+        player.speed = 5  //[yS%^]
+    } 
 }
 function gShadow(){
     let radius = canvas.width > canvas.height ? canvas.width : canvas.height
