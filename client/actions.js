@@ -290,6 +290,7 @@ function gShadow(){
     ctx.closePath();
     ctx.restore()
 }
+//this is the little circle that appears...where you hit 
 function gAttackCursor(){
     if(mouse.x**2 + mouse.y**2 <= player.hitRange ** 2){
         let rangeCursorX = mouse.x + ginfo.width/2
@@ -298,7 +299,7 @@ function gAttackCursor(){
         gctx.strokeStyle = "rgba(0,0,0,0.5)"
         gctx.lineWidth = 5
         gctx.beginPath()
-        gctx.arc(rangeCursorX, rangeCursorY, 20, 0, 2 * Math.PI)
+        gctx.arc(rangeCursorX, rangeCursorY, player.hitSize, 0, 2 * Math.PI)
         gctx.fill()
         gctx.stroke()
     }
