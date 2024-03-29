@@ -468,7 +468,7 @@ class Player extends Entity{
         this.xp = 0
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Plasma Sword"]}, //CHANGE THIS DEBUGG!
+            {...holdableItems["Iron Sword"]}, 
             {...holdableItems["Bow"]},
             {...holdableItems["Arrow"]},
             {...holdableItems["Hand"]},
