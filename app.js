@@ -475,7 +475,8 @@ class Player extends Entity{
             {...holdableItems["Hand"]},
         ];
         this.invSelected = 0
-        this.hitRange = 100
+        this.hitRange = entitySize
+        this.hitSize = 20
     }
 }
 class Enemy extends Entity{
@@ -497,6 +498,9 @@ class Enemy extends Entity{
             {...holdableItems["Bow"]}, 
         ]
         this.xp = type=="Boss"?1000:(type=="Lord"||type=="Summoned_Lord"?100:50)
+        
+        this.targetX = 0
+        this.targetY = 0
     }
     findTargetPlayer(){
         let minDist = 10**10;
@@ -519,7 +523,7 @@ class Enemy extends Entity{
                 this.cooldownTime = 0
                 this.justAttacked = false
             }
-            }
+        }
     }
     move() {
         this.findTargetPlayer()
@@ -532,8 +536,6 @@ class Enemy extends Entity{
         }
         else {distanceToPlayer = 10**10}
 
-        this.targetX = 0
-        this.targetY = 0
 
         if(distanceToPlayer <= this.detectRange) { // Is player within range?
             this.status = "Attack"
@@ -633,8 +635,6 @@ class Boss extends Enemy{
             this.summonInGuards()
         }
 
-        //regenerate!! >:)
-        this.health += 0.1
         if(this.health == this.maxHealth){
             for(let e in enemies){
                 if (enemies[e].type=="Summoned_Lord"){
@@ -643,6 +643,10 @@ class Boss extends Enemy{
                     this.summoned = 0
                 }
             }
+        } else if (this.health < this.maxHealth){
+            
+            //regenerate!! >:)
+            this.health += 0.1
         }
     }
     summonInGuards(){
@@ -1083,34 +1087,32 @@ io.sockets.on("connection", (socket)=>{
                 let damage = (tool.durability != Infinity)?holdableItems[tool.name].damage:holdableItems["Hand"].damage
                 for(let e in entities){    
                     let entity = entities[e]            
-                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange){
-                        if(entity.id != id
-                        && Math.abs(entity.x - data.x) < entitySize
-                        && Math.abs(entity.y - data.y) < entitySize){
-                            entity.health -= damage
-                            if(entity.health <= 0){
-                                player.xp += entity.xp * 0.8 // give player xp
-                                console.log(entity.username, entity.id, "was slain by", player.username, player.id)
-                                
-                                player.kills ++
-                            }
-                            didDamage = true // turn to true
+                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange
+                    && entity.id != id
+                    && Math.abs(Math.abs(data.x) - Math.abs(entity.x)) < player.hitSize
+                    && Math.abs(Math.abs(data.y) - Math.abs(entity.y)) < player.hitSize){
+                        entity.health -= damage
+                        if(entity.health <= 0){
+                            player.xp += entity.xp * 0.8 // give player xp
+                            console.log(entity.username, entity.id, "was slain by", player.username, player.id)
+                            
+                            player.kills ++
                         }
+                        didDamage = true // turn to true
                     }
                 }
                 for(let e in enemies){    
                     let enemy = enemies[e]
-                    if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange){     
-                        if(Math.abs(enemy.x - data.x) < entitySize
-                        && Math.abs(enemy.y - data.y) < entitySize){
-                            enemy.health -= damage
-                            if(enemy.health <= 0){
-                                //give player xp for killed
-                                player.xp += enemy.xp
-                                player.kills ++
-                            }
-                            didDamage = true // turn to true
+                    if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange
+                    && Math.abs(Math.abs(enemy.x) - Math.abs(data.x)) < player.hitSize
+                    && Math.abs(Math.abs(enemy.y) - Math.abs(data.y)) < player.hitSize){
+                        enemy.health -= damage
+                        if(enemy.health <= 0){
+                            //give player xp for killed
+                            player.xp += enemy.xp
+                            player.kills ++
                         }
+                        didDamage = true // turn to true
                     }
                 }
                 if(didDamage && tool.durability != null){
@@ -1121,7 +1123,7 @@ io.sockets.on("connection", (socket)=>{
             //BREAK TOOL? Is the tool too weak?
             if(player.inventory[player.invSelected].durability <= 0 
             && player.inventory[player.invSelected].durability!=null){
-                console.log(player.inventory[player.invSelected])
+                //console.log(player.inventory[player.invSelected])
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
             }
         }
