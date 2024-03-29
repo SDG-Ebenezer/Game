@@ -31,10 +31,10 @@ var currInvSlot = 0
 //w_vars (Wait Variables)
 var images = {} //loads images as needed
 var borders = {}
-var walls = {}
+var walls = {} //all of the walls
 var holdables = {} //all things that you can hold
 var mapSize //defined soon!
-var wallsList = []
+var wallsList = [] //only the values
 var marketsList = []
 
 var helpOpen = false //
@@ -196,6 +196,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         gShadow()
         drawInventory()
         gAttackCursor()
+        gShowCountdown()
         //close if market is open
         if(!marketOpen){
             gLeaderboardData(serverPlayerCount, leaderboard)
@@ -214,6 +215,7 @@ socket.on("sendUpdateDataToClient", (info)=>{
         if(reorder) player.inventory = savedInv
     }
     updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard)
+    wallsList = info.structures
 })
 
 
@@ -358,7 +360,8 @@ function gMap(){
     //draw walls
     for(let i in wallsList){
         let wall = wallsList[i]
-        gctx.fillStyle = "gray"
+        if(wall.class == "Wall") {gctx.fillStyle = "gray"}
+        else {gctx.fillStyle = "green"}
         gctx.fillRect(wall.x*sf,wall.y*sf,pIcSize(wall.width),pIcSize(wall.height))
     }
     gctx.restore()
@@ -369,6 +372,28 @@ function gMap(){
     gctx.fillRect(player.x*sf,player.y*sf,pIcSize(100),pIcSize(100))
     gctx.restore()
 }
+var respawnTime = null
+function gShowCountdown() {
+    socket.emit("GetCountdownInfo")
+    if (respawnTime) {
+        let fontSize = 20
+        gctx.font = `bold ${fontSize}px Trebuchet MS`;
+
+        let pad = 15
+        let x = pad
+        let y = invSize + fontSize + pad
+
+        gctx.fillStyle = "white";
+        gctx.fillText("Boss respawning in ", x, y);
+
+        if(respawnTime <= 5) gctx.fillStyle = "red"; //5s red text warning
+        gctx.fillText(`${respawnTime}s`, gctx.measureText("Boss respawning in ").width + x, y);
+    }
+}
+
+socket.on("SendCountdownInfo", function(data){
+    respawnTime = data.time
+})
 
 // "invSize" also updated in the canvas resize 
 var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
@@ -556,7 +581,6 @@ function mousemove(e) {
         lastEnteredSlot = newIndex; // Update the last entered slot
     }
 }
-
 function mousedown(e) {
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
@@ -593,13 +617,11 @@ function mousedown(e) {
         lastEnteredSlot = clickedItemIndex; // Update the last entered slot
     }
 }
-
 function mouseup(e) {
     if (!reorder || draggedItemIndex === -1) return;
     draggedItemIndex = -1;
     reorder = false;
 }
-
 
 var touching = false
 function touchstart(e){
@@ -618,24 +640,27 @@ function touchend(e){
 }
 //Function also in APP js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty) {
+function checkCollision(walls, playerX, playerY, tx, ty, onWall) {
+    if(onWall) return {tx:tx, ty:ty}
     let newX = playerX + tx;
     let newY = playerY + ty;
     for (let wall of walls) {
-        let wallX = wall.x - wall.width/2
-        let wallY = wall.y - wall.height/2
-        if (newX >= wallX &&
-            newX <= wallX + wall.width &&
-            wallY <= playerY && playerY <= wallY + wall.height) {
-            tx = 0;
-        }
-        if (newY >= wallY &&
-            newY <= wallY + wall.height &&
-            wallX <= playerX && playerX <= wallX + wall.width) {
-            ty = 0;
+        if(wall.class == "Wall"){
+            let wallX = wall.x - wall.width/2
+            let wallY = wall.y - wall.height/2
+            if (newX >= wallX &&
+                newX <= wallX + wall.width &&
+                wallY <= playerY && playerY <= wallY + wall.height) {
+                tx = 0;
+            }
+            if (newY >= wallY &&
+                newY <= wallY + wall.height &&
+                wallX <= playerX && playerX <= wallX + wall.width) {
+                ty = 0;
+            }
         }
     }
-    return { tx: tx, ty: ty };
+    return { tx: tx, ty: ty};
 }
 
 /** @update */
@@ -686,8 +711,34 @@ function startGame(){
                     ty = 0
                 }
 
+                //update onWall
+                let oW = false
+                for(let w in wallsList){
+                    let wall = wallsList[w]
+                    if(wall.class == "Stairs"
+                    && player.x > wall.x-wall.width/2 && player.x < wall.x+wall.width/2
+                    && player.y > wall.y-wall.height/2 && player.y < wall.y+wall.height/2
+                    && !player.onWall){
+                        oW = true;
+                        break;
+                    } else if(player.onWall){
+                        if((wall.class == "Wall" || wall.class == "Stairs")
+                        && player.x > wall.x-wall.width/2 && player.x < wall.x+wall.width/2
+                        && player.y > wall.y-wall.height/2 && player.y < wall.y+wall.height/2) {
+                            oW = true
+                            break;
+                        }
+                    }
+                }
+                player.onWall = oW
+
                 //check if hit wall
-                let newCoords = checkCollision(wallsList,player.x, player.y, tx, ty)
+                let newCoords = this.onWall?
+                {
+                    tx:player.x+tx, 
+                    ty:player.y+ty,
+                }:
+                checkCollision(wallsList,player.x, player.y, tx, ty, player.onWall)
                 tx = newCoords.tx
                 ty = newCoords.ty
 
@@ -854,6 +905,7 @@ function buy(boughtItem, btnID){
     }
 }
 
+/*
 // Detect when the user is leaving the page
 window.addEventListener('beforeunload', function(event) {
     var stillPlaying = confirm("You are still playing the game. Are you sure you want to leave?");
@@ -863,4 +915,4 @@ window.addEventListener('beforeunload', function(event) {
         event.preventDefault();
         return event.returnValue = 'Are you sure you want to leave?';
     }
-});
+});*/

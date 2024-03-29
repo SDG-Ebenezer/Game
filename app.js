@@ -142,41 +142,95 @@ var fps = 1000/60 //
 
 /** @STRUCTURES *****/
 class Wall {
-    constructor(wall, structureID, wallImgSize) {
+    constructor(wall, id, wallImgSize) {
         this.x = wall.relX;
         this.y = wall.relY;
-        this.id = `WALL${structureID}`;
+        this.class = "Wall"
+        this.id = `WALL${id}`;
         this.imgSrc = random(5,1)==5?"/imgs/Mossy%20Wall.png":"/imgs/Wall.png";
         this.width = wallImgSize;
         this.height = wallImgSize;
+        this.rotation = 0
     }
 }
-var structures = {}
-var structureID = 0
-var structureW = random(10, 6); // width
-var structureH = structureW; // height (making it a square)
-var structureBlueprint = []
+class Stairs {
+    constructor(x, y, id, wallImgSize, rotation) {
+        this.x = x;
+        this.y = y;
+        this.class = "Stairs"
+        this.id = `STAIRS${id}`;
+        this.imgSrc = "/imgs/Stairs.png";
+        this.width = wallImgSize;
+        this.height = wallImgSize;
+        this.rotation = rotation
+    }
+}
+
+var structures = {} //all, walls, stairs, etc.
+var structuresID = 0
+
+/** @MAIN_STRUCTURE */
+/**Key:
+ * S = Stairs
+ * W = Wall
+ * N = Space
+ * E = Escape (Comes later after boss defeated)
+ */
+var structureBlueprint = [
+    ["S", "W", "W", "W", "W", "W", "W", "S"],
+    ["W", "E", "N", "N", "N", "N", "E", "W"],
+    ["W", "N", "N", "N", "N", "N", "N", "W"],
+    ["W", "N", "N", "N", "N", "N", "N", "W"],
+    ["W", "N", "N", "N", "N", "N", "N", "W"],
+    ["W", "N", "N", "N", "N", "N", "N", "W"],
+    ["W", "E", "N", "N", "N", "N", "E", "W"],
+    ["S", "W", "W", "W", "W", "W", "W", "S"]
+]
+var structureW = structureBlueprint[0].length; // width
+var structureH = structureBlueprint.length; // height (making it a square)
+var structureCenter = {x:0,y:0}
 var wallSize = 100
 var wallImgSize = wallSize * 1.15
+var escapesData = [] //for boss defeats
 for(let r = 0; r < structureW; r++){
-   structureBlueprint.push([])
-   for(let c = 0; c < structureH; c++){
-       structureBlueprint[r].push({
-           isWall: random(1,0)==1?true:false,
-           relX: r*wallSize,
-           relY: c*wallSize})
-   }
+    for(let c = 0; c < structureH; c++){
+        let wall = {
+            relX: r*wallSize-(structureW * wallSize)/2 + structureCenter.x,
+            relY: c*wallSize-(structureH * wallSize)/2 + structureCenter.y
+        }
+        if(structureBlueprint[r][c] == "W"){
+            structures[structuresID] = new Wall(wall, structuresID, wallImgSize)
+            structuresID++;
+        } else if(structureBlueprint[r][c] == "S"){
+            structures[structuresID] = new Stairs(wall.relX, wall.relY, structuresID, wallImgSize, c==0?Math.PI:(Math.PI/180)) //make rotate based on corner
+            structuresID++;
+        } else if(structureBlueprint[r][c] == "E"){
+            escapesData.push({x:wall.relX,y:wall.relY,r:r,c:c})
+        }
+    }
 }
-for(let r = 0; r < structureW; r++){
-   for(let c = 0; c < structureH; c++){
-       let wall = structureBlueprint[r][c];
-       wall.x -= structureBlueprint.length/2
-       if(wall.isWall){
-           structures[structureID] = new Wall(wall, structureID, wallImgSize)
-           structureID++;
-       }
-   }
+
+var escapesIDRoot = "Escapes"
+var escapesIDs = []
+function toggleOpeningsToArena(escapesLocked){
+    if(!escapesLocked){
+        let i = 0
+        for(let e in escapesData){
+            let obj = escapesData[e]
+            let id = `${escapesIDRoot}${i}`
+            structures[id] = new Stairs(obj.x, obj.y, id, wallImgSize, obj.r==1?270*(Math.PI/180):90*(Math.PI/180))
+            escapesIDs.push(id)
+            i++
+        }
+    } else{
+        for(let i in escapesIDs){
+            let id = escapesIDs[i]
+            delete structures[id]
+        }
+        escapesIDs = []
+    }
 }
+
 /** @SPAWN_FINDER */
 function findSpawn(size=0) {
     let s = size;
@@ -208,35 +262,98 @@ function findSpawn(size=0) {
     return { x: x, y: y };
 }
 
-/** @WALL_GENERATOR ********** */
-var numOfRandomWalls = 10
+/** @SMALL_STRUCTURE_GENERATOR ********** */
+var numOfRandomWalls = random(10, 5)
 for(let i = 0; i < numOfRandomWalls; i++){
-    let a = findSpawn(wallSize)
-    let nC = { relX: a.x, relY: a.y }
-    structures[structureID] = new Wall(nC, structureID, wallImgSize)
-    structureID++
+    let blueprintSize = random(4,1)
+    //make blueprint
+    let blueprint = []
+    for(let r = 0; r< blueprintSize; r++){
+        blueprint.push([])
+        for(let c = 0; c< blueprintSize; c++){
+            /**Key:
+             * S = Stairs
+             * N = Nothing
+             * W = Wall
+             */
+            possibleWalls = ["W", "W", "W", "W", "W", "N", "N", "N", "N", "S"] //1 "S" in 10 tries
+            blueprint[r].push(possibleWalls[random(possibleWalls.length-1, 0)])
+        }
+    }
+    //console.log(blueprint)
+
+    let structureSize = blueprintSize * wallImgSize
+    let a = findSpawn(structureSize)
+    let allStairs = []
+    //generate Structure
+    for(let r = 0; r < blueprintSize; r++){
+        for(let c = 0; c < blueprintSize; c++){
+            let nC = { 
+                relX: a.x+c*wallSize, 
+                relY: a.y+r*wallSize 
+            }
+            if(blueprint[r][c] == "W"){
+                structures[structuresID] = new Wall(nC, structuresID, wallImgSize)
+                structuresID++
+            } else if(blueprint[r][c] == "S"){
+                allStairs.push({r:r,c:c,id:structuresID})
+                structures[structuresID] = new Stairs(nC.relX, nC.relY, structuresID, wallImgSize, 0) //rotate none as a placeholder
+                structuresID++
+            }
+        }
+    }
+    //rotate stairs accordingly
+    for(let s in allStairs){
+        let stair = allStairs[s]
+        let rotate
+        if(blueprint[stair.r+1] && blueprint[stair.r+1][stair.c]
+        && blueprint[stair.r+1][stair.c] == "W")
+        { rotate = 180 }
+        else if (blueprint[stair.r-1] && blueprint[stair.r-1][stair.c]
+        && blueprint[stair.r-1][stair.c] == "W")
+        { rotate = 0 }
+        else if (blueprint[stair.r][stair.c+1] 
+        && blueprint[stair.r][stair.c+1] == "W")
+        { rotate = 90 }
+        else if (blueprint[stair.r][stair.c-1] 
+        && blueprint[stair.r][stair.c-1] == "W")
+        { rotate = 270 }
+        else{ 
+            //cant be a stair, because no adjacent walls!
+            let old = structures[stair.id]
+            structures[stair.id] = new Wall({relX:old.x,relY:old.y}, structuresID, wallImgSize)
+            console.log("Stairs replaced.")
+        }
+
+        structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
+    }
 }
+
+
 //Function also in PLAYER js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty) {
+function checkCollision(walls, playerX, playerY, tx, ty, onWall) {
+    if(onWall) return {tx:tx,ty:ty}
     let newX = playerX + tx;
     let newY = playerY + ty;
     for(let w in walls){
         let wall = walls[w]
-        let wallX = wall.x - wall.width/2
-        let wallY = wall.y - wall.height/2
-        if (newX >= wallX &&
-            newX <= wallX + wall.width &&
-            wallY <= playerY && playerY <= wallY + wall.height) {
-            tx = 0;
-        }
-        if (newY >= wallY &&
-            newY <= wallY + wall.height &&
-            wallX <= playerX && playerX <= wallX + wall.width) {
-            ty = 0;
+        if(wall.class == "Wall" && !onWall){
+            let wallX = wall.x - wall.width/2
+            let wallY = wall.y - wall.height/2
+            if (newX >= wallX &&
+                newX <= wallX + wall.width &&
+                wallY <= playerY && playerY <= wallY + wall.height) {
+                tx = 0;
+            }
+            if (newY >= wallY &&
+                newY <= wallY + wall.height &&
+                wallX <= playerX && playerX <= wallX + wall.width) {
+                ty = 0;
+            }
         }
     }
-    return { tx: tx, ty: ty };
+    return { tx: tx, ty: ty};
 }
 
 /** @MARKET *****/
@@ -341,6 +458,7 @@ class Entity {
         this.height = h;
         this.speed = speed;
         this.maxSpeed = speed
+        this.onWall = false //default
     }
 }
 class Player extends Entity{
@@ -350,7 +468,7 @@ class Player extends Entity{
         this.xp = 0
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Iron Sword"]},
+            {...holdableItems["Plasma Sword"]}, //CHANGE THIS DEBUGG!
             {...holdableItems["Bow"]},
             {...holdableItems["Arrow"]},
             {...holdableItems["Hand"]},
@@ -378,20 +496,20 @@ class Enemy extends Entity{
             {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
             {...holdableItems["Bow"]}, 
         ]
-        this.xp = type=="Lord"?100:50
+        this.xp = type=="Boss"?1000:(type=="Lord"||type=="Summoned_Lord"?100:50)
     }
     findTargetPlayer(){
-        let minDist = Infinity;
+        let minDist = 10**10;
         let closestIndex;
         for (let i in entities) {
             let plyr = entities[i]
             let dist = Math.sqrt(Math.pow(plyr.x - this.x, 2) + Math.pow(plyr.y - this.y, 2));
-            if (dist < minDist && plyr.type == "player") {
+            if (dist < minDist && plyr.type == "player" && plyr) {
                 minDist = dist;
                 closestIndex = i;
             }
         }
-        if(entities[closestIndex]) this.targetPlayer = entities[closestIndex]
+        if(closestIndex!=undefined && entities[closestIndex]) this.targetPlayer = entities[closestIndex]
         else{this.targetPlayer = null}
     }
     damageCoolDown(){
@@ -412,7 +530,11 @@ class Enemy extends Entity{
         if(this.targetPlayer) {
             distanceToPlayer = Math.sqrt((this.targetPlayer.x - this.x) ** 2 + (this.targetPlayer.y - this.y) ** 2)
         }
-        else {distanceToPlayer = Infinity}
+        else {distanceToPlayer = 10**10}
+
+        this.targetX = 0
+        this.targetY = 0
+
         if(distanceToPlayer <= this.detectRange) { // Is player within range?
             this.status = "Attack"
             this.dx = this.targetPlayer.x - this.x;
@@ -450,7 +572,34 @@ class Enemy extends Entity{
         if (this.y + this.yInc > BORDERS.U || this.y + this.yInc < BORDERS.D){this.yInc = 0}
         
         //CANT GO INTO WALLS
-        let newCoords = checkCollision(structures, this.x, this.y, this.xInc, this.yInc)
+        //update onWall
+        let oW = false
+        for(let w in structures){
+            let wall = structures[w]
+            if(wall.class == "Stairs"
+            && this.x > wall.x-wall.width/2 && this.x < wall.x+wall.width/2
+            && this.y > wall.y-wall.height/2 && this.y < wall.y+wall.height/2
+            && !this.onWall){
+                oW = true;
+                break;
+            } else if(this.onWall){
+                if((wall.class == "Wall" || wall.class == "Stairs")
+                && this.x > wall.x-wall.width/2 && this.x < wall.x+wall.width/2
+                && this.y > wall.y-wall.height/2 && this.y < wall.y+wall.height/2) {
+                    oW = true
+                    break;
+                }
+            }
+        }
+        this.onWall = oW
+
+        //update
+        let newCoords = this.onWall?
+            {
+                tx:this.xInc, 
+                ty:this.yInc,
+            }:
+            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall)
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -464,16 +613,59 @@ class Enemy extends Entity{
             player.health -= this.damage
             //death message
             if(player.health <= 0){
-                console.log(player.username, player.id, "was slain by a monster")
+                
+                console.log(player.username, player.id, this.type == "Boss"?"was bonked by the boss":"was slain by a monster")
             }
             this.justAttacked = true
         }
     }
 }
+class Boss extends Enemy{
+    constructor(x=0, y=0, type="Boss", imgSrc="/imgs/Enemy_Elder.png", damage=50, detectRange=500, reloadTime=100, speed=1, health = 1000, w=entitySize, h=entitySize){
+        super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h)
+        this.summonGuards = false
+        this.summoned = 0
+    }
+    move(){
+        super.move()
+        if(this.health < this.maxHealth * 3/4 && !this.summonGuards){
+            console.log("Big Guy is damaged")
+            this.summonInGuards()
+        }
+
+        //regenerate!! >:)
+        this.health += 0.1
+        if(this.health == this.maxHealth){
+            for(let e in enemies){
+                if (enemies[e].type=="Summoned_Lord"){
+                    delete enemies[e]
+                    this.summonGuards = false
+                    this.summoned = 0
+                }
+            }
+        }
+    }
+    summonInGuards(){
+        let spread = 100
+        if(!this.summonGuards){
+            this.summonGuards = true
+            for(let i = 0; i < 2; i ++){
+                let x = (i * spread) - spread
+                for(let j = 0; j < 2; j ++){
+                    let id = `@Summoned${i}${j}${random(65536,0)}`
+                    let y = (j * spread) - spread
+                    enemies[id] = new Enemy(x, y, "Summoned_Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 1/2, 500)
+                    enemyCount++
+                    this.summoned++
+                }
+            }
+        }
+    }
+}
 
 /** @ENEMY_GENERATOR ************* */
-let currEnemyID = 0
-let enemyCount = 0
+var currEnemyID = 0
+var enemyCount = 0
 function spawnNormal(){
     let nC = findSpawn(entitySize)
     enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 1)
@@ -486,6 +678,12 @@ function spawnLord(){
     currEnemyID++
     enemyCount++
 }
+
+var bossID = "Boss"
+//var bossSpawned = false
+toggleOpeningsToArena(true)
+enemies[bossID] = new Boss()
+enemyCount++
 
 /** @ARROWS */
 var arrows = {}
@@ -509,9 +707,28 @@ class Arrow{
 }
 
 /** @SERVER_GAME_LOOOOOP ********** */
-//server "game loop"
+var startedCountdown = false
 var amountOfBerries = 0
+var countDownTime = 0; //already spawned in?
 setInterval(()=>{
+    if (!enemies[bossID] && !startedCountdown){
+        toggleOpeningsToArena(false);
+        startedCountdown = true
+        countDownTime = 60; // seconds  
+        let countdownInterval = setInterval(() => {
+            countDownTime--;
+    
+            if (countDownTime === 0) {
+                clearInterval(countdownInterval); // Stop the countdown interval
+                toggleOpeningsToArena(true);
+                enemies[bossID] = new Boss();
+                enemyCount++;
+                startedCountdown = false
+                console.log("The boss has entered the arena.");
+            }
+        }, 1000);
+    }
+    
     //Spawn in enemies (chance of)
     if(enemyCount < 10){
         if(random(100, 1) == 1){
@@ -521,6 +738,9 @@ setInterval(()=>{
     }
     //Move and update enemies' health
     for(let e in enemies){
+        if(enemies[e].type=="Summoned_Lord"){
+            enemies[bossID].health = enemies[bossID].maxHealth * 3/4
+        }
         enemies[e].move()
         if(enemies[e].health <= 0) {
             enemyCount -= 1
@@ -597,7 +817,7 @@ setInterval(()=>{
         } else {arrow.duration -= 1} //update
 
         //no hitty walls
-        let nC = checkCollision(structures, arrow.x, arrow.y, arrow.speed * Math.cos(arrow.direction), arrow.speed * Math.sin(arrow.direction)) //check new coordinates
+        let nC = checkCollision(structures, arrow.x, arrow.y, arrow.speed * Math.cos(arrow.direction), arrow.speed * Math.sin(arrow.direction), arrow.whoShot.onWall) //check new coordinates
         //no going outta bounds
         if (!(arrow.x + nC.tx > BORDERS.L && arrow.x + nC.tx < BORDERS.R && arrow.y + nC.ty > BORDERS.D && arrow.y + nC.ty < BORDERS.U)){nC = {tx: 0, ty: 0}}
         //if it stopped, just drop 
@@ -682,11 +902,23 @@ io.sockets.on("connection", (socket)=>{
             entities[player.id].rotation = player.rotation
             entities[player.id].invSelected = player.invSelected
             entities[player.id].speed = player.speed
+            entities[player.id].onWall = player.onWall
             if(d.reorder) entities[player.id].inventory = player.inventory
         } else if(player.id && !entities[player.id]){
             id = player.id
             entities[id] = player
             console.log(entities[id].username, id, "was added to pool")
+            // put on top of wall if regenerated
+            for (let w in structures) {
+                let wall = structures[w];
+                if (wall.x - wall.width / 2 < player.x && player.x > wall.x + wall.width / 2 
+                && wall.y - wall.height / 2 < player.y && player.y > wall.y + wall.height / 2) {
+                    console.log("Put player on wall.");
+                    player.onWall = true;
+                    break;
+                }
+            }
+            //
             socket.emit("reupdate", {
                 bordersObj:BORDERS,
                 structuresObj: structures,
@@ -703,7 +935,7 @@ io.sockets.on("connection", (socket)=>{
         let updateContent = [borderRect] //always have the border
         let reach = 500
         //should we load? (also order)
-        let updateLi = [markets, entities, enemies, structures, pickables, arrows, trees]
+        let updateLi = [markets, structures, entities, enemies,  pickables, arrows, trees]
         updateLi.forEach(group=>{
             for(let i in group){
                 let item = group[i]
@@ -722,7 +954,8 @@ io.sockets.on("connection", (socket)=>{
             leaderboard: Object.values(entities)
             .sort((a, b) => b.kills - a.kills)
             .slice(0, 5)
-            .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })),  
+            .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })), 
+            structures:Object.values(structures)
         })
         
         //only if player exists and is alive
@@ -901,6 +1134,22 @@ io.sockets.on("connection", (socket)=>{
         player.xp -= boughtItem.cost
         pickables[pickablesID] = new Pickable(pickablesID, player.x, player.y, boughtItem.name, null, boughtItem.name, 0, boughtItem.durability, boughtItem.stackSize)
         pickablesID ++ 
+    })
+
+    //boss respawn?
+    socket.on("GetCountdownInfo", function(){
+        let player = entities[id]
+        //additional area (padding)
+        let aPad = 1.5 //area x __ == actual area detection
+        if(player.x > structureCenter.x - (structureW/2) * (wallSize * aPad)
+        && player.x < structureCenter.x + (structureW/2) * (wallSize * aPad)
+        && player.y > structureCenter.y - (structureH/2) * (wallSize * aPad)
+        && player.y < structureCenter.y + (structureH/2) * (wallSize * aPad)) //emit only when in range...
+            {
+                socket.emit("SendCountdownInfo", {
+                    time:countDownTime > 0?countDownTime:null
+                })
+        } 
     })
 
     //disconnect
