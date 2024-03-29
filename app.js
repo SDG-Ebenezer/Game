@@ -644,7 +644,6 @@ class Boss extends Enemy{
                 }
             }
         } else if (this.health < this.maxHealth){
-            
             //regenerate!! >:)
             this.health += 0.1
         }
@@ -1141,17 +1140,19 @@ io.sockets.on("connection", (socket)=>{
     //boss respawn?
     socket.on("GetCountdownInfo", function(){
         let player = entities[id]
+        let ret = countDownTime //emit value
+
         //additional area (padding)
         let aPad = 1.5 //area x __ == actual area detection
-        if(player.x > structureCenter.x - (structureW/2) * (wallSize * aPad)
+        if(!(player.x > structureCenter.x - (structureW/2) * (wallSize * aPad)
         && player.x < structureCenter.x + (structureW/2) * (wallSize * aPad)
         && player.y > structureCenter.y - (structureH/2) * (wallSize * aPad)
-        && player.y < structureCenter.y + (structureH/2) * (wallSize * aPad)) //emit only when in range...
-            {
-                socket.emit("SendCountdownInfo", {
-                    time:countDownTime > 0?countDownTime:null
-                })
-        } 
+        && player.y < structureCenter.y + (structureH/2) * (wallSize * aPad) 
+        && countDownTime > 0)) ret = null //emit only when in range...
+        
+        socket.emit("SendCountdownInfo", {
+            time:ret
+        })
     })
 
     //disconnect
