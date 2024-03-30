@@ -19,6 +19,10 @@ window.addEventListener("resize", ()=>{
     
     gBarHeight = window.innerHeight * 40/847 
     createMarketBtn(holdables)
+
+    scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
+    maxScale = scale
+    minScale = maxScale - 0.2
 })
 
 var socket = io()
@@ -76,18 +80,30 @@ socket.on("reupdate", (data)=>{
 
 /** @UPDATE !! */
 //DRAWING FUNCTION
-var scale = 1
+var scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
+var maxScale = scale
+var minScale = maxScale - 0.2
 function updateCanv(info, serverPlayerCount, leaderboard){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save();
+
+    //scale
+    if(player.onWall){
+        if(scale>minScale){scale-=0.01}//transition effect
+    }
+    else{
+        if(scale<maxScale){scale+=0.01} //transition effect
+    }
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.scale(scale, scale);
+    ctx.translate(-canvas.width/2, -canvas.height/2);
+
+    //center on player (panning)
     let centerX = canvas.width/2 - player.x
     let centerY = canvas.height/2 - player.y
     if(player) ctx.translate(centerX, centerY);
-    /*
-    ctx.translate(centerX, centerY);
-    ctx.scale(scale, scale);
-    ctx.translate(-centerX, -centerY);
-    */
+    
+    
     //draw!
     info.forEach(item=>{
         ctx.save()
@@ -512,6 +528,11 @@ function keydown(event){
             })
             break
     }
+    // Check if Ctrl key is pressed and either + or - is pressed
+    if ((event.ctrlKey || event.metaKey) && (event.key === '+' || event.key === '-')) {
+        // Prevent the default zoom behavior
+        event.preventDefault();
+    }
 }
 function keyup(event){
     event.preventDefault()
@@ -681,6 +702,8 @@ var gameLoopInt // TO BE THE GAME LOOPA!
 //also contains the game loop
 function startGame(){
     {
+        //zoom in spawn effect
+        scale -= 0.5
         //reset or set these:
         tx = ty = invSelected = 0
         //set these:
