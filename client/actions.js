@@ -89,10 +89,10 @@ function updateCanv(info, serverPlayerCount, leaderboard){
 
     //scale
     if(player.onWall){
-        if(scale>minScale){scale-=0.01}//transition effect
+        if(scale>minScale){scale-=0.05}//transition effect
     }
     else{
-        if(scale<maxScale){scale+=0.01} //transition effect
+        if(scale<maxScale){scale+=0.05} //transition effect
     }
     ctx.translate(canvas.width/2, canvas.height/2);
     ctx.scale(scale, scale);
@@ -703,7 +703,7 @@ var gameLoopInt // TO BE THE GAME LOOPA!
 function startGame(){
     {
         //zoom in spawn effect
-        scale -= 0.5
+        scale -= 0.25
         //reset or set these:
         tx = ty = invSelected = 0
         //set these:
