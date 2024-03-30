@@ -15,9 +15,9 @@ window.addEventListener("resize", ()=>{
     canvas.height = window.innerHeight
     ginfo.width = window.innerWidth
     ginfo.height = window.innerHeight
-    if(player) invSize = 75*5<canvas.width?75:canvas.width/5 //only if player exists
-    gBarHeight = canvas.height * 40/847
-
+    if(player) invSize = 75*5<window.innerWidth?75:window.innerWidth/5 //only if player exists
+    
+    gBarHeight = window.innerHeight * 40/847 
     createMarketBtn(holdables)
 })
 
@@ -76,10 +76,18 @@ socket.on("reupdate", (data)=>{
 
 /** @UPDATE !! */
 //DRAWING FUNCTION
+var scale = 1
 function updateCanv(info, serverPlayerCount, leaderboard){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save();
-    if(player) ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y);
+    let centerX = canvas.width/2 - player.x
+    let centerY = canvas.height/2 - player.y
+    if(player) ctx.translate(centerX, centerY);
+    /*
+    ctx.translate(centerX, centerY);
+    ctx.scale(scale, scale);
+    ctx.translate(-centerX, -centerY);
+    */
     //draw!
     info.forEach(item=>{
         ctx.save()
@@ -220,7 +228,7 @@ socket.on("sendUpdateDataToClient", (info)=>{
 
 
 /** @GAME_DETAILS */
-var gBarHeight = canvas.height * 40/847 //also in resize
+var gBarHeight = window.innerHeight * 40/847 //also in resize
 function gHealth(){
     let width = canvas.width
     let height = gBarHeight
@@ -299,7 +307,7 @@ function gAttackCursor(){
         gctx.strokeStyle = "rgba(0,0,0,0.5)"
         gctx.lineWidth = 5
         gctx.beginPath()
-        gctx.arc(rangeCursorX, rangeCursorY, player.hitSize, 0, 2 * Math.PI)
+        gctx.arc(rangeCursorX, rangeCursorY, player.hitSize/2, 0, 2 * Math.PI)
         gctx.fill()
         gctx.stroke()
     }
@@ -397,7 +405,7 @@ socket.on("SendCountdownInfo", function(data){
 })
 
 // "invSize" also updated in the canvas resize 
-var invSize = 75*5<canvas.width?75:canvas.width/5 //5 bc of slots
+var invSize = 75*5<window.innerWidth?75:window.innerWidth/5 //5 bc of slots
 var invY = 0
 var reorder = false; 
 function drawInventory(){

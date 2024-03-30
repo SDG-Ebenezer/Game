@@ -476,7 +476,7 @@ class Player extends Entity{
         ];
         this.invSelected = 0
         this.hitRange = entitySize
-        this.hitSize = 20
+        this.hitSize = 40
     }
 }
 class Enemy extends Entity{
@@ -935,6 +935,7 @@ io.sockets.on("connection", (socket)=>{
 
     //give data if requested
     socket.on("requestUpdateDataFromServer", (data)=>{
+        let player = entities[data.id]
         let updateContent = [borderRect] //always have the border
         let reach = 500
         //should we load? (also order)
@@ -952,7 +953,7 @@ io.sockets.on("connection", (socket)=>{
         //if in range
         socket.emit("sendUpdateDataToClient", {
             updateContent: updateContent,
-            player: entities[data.id],
+            player: player,
             serverPlayerCount: Object.keys(entities).length,
             leaderboard: Object.values(entities)
             .sort((a, b) => b.kills - a.kills)
@@ -962,10 +963,10 @@ io.sockets.on("connection", (socket)=>{
         })
         
         //only if player exists and is alive
-        if(entities[data.id] && entities[data.id].health <= 0) {
+        if(player && player.health <= 0) {
             socket.emit("gameOver")
             dropAll(data.id)
-            delete entities[data.id]
+            delete entities[id]
         }
     })
 
