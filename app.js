@@ -415,6 +415,7 @@ class Pickable{
        this.rotation = rotation
        this.durability = durability
        this.stackSize = stackSize
+       this.despawnIn = 10000 // * fps sec
    }
 }
 var pickablesID = 0
@@ -865,6 +866,15 @@ setInterval(()=>{
                 }
             }
         })
+    }
+
+    //update pickables (despawn?)
+    for(let key in pickables){
+        let pickable = pickables[key]
+        pickable.despawnIn -= 1
+        if(pickable.despawnIn <= 0){
+            delete pickables[key]
+        }
     }
 }, fps)
 
