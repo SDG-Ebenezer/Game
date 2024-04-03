@@ -2,6 +2,7 @@
     padding: none;
     overflow: hidden;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    zoom: reset; /* Disable zooming */
 }
 canvas{
     left:0;
@@ -277,3 +278,21 @@ input[type="radio"]:checked + img {
     -khtml-user-select: none; /* Webkit (Konqueror) browsers */
     -ms-user-select: none; /* IE10+ */
 }
+
+#wait {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000000dd;
+    text-align: center; /* Center horizontally */
+}
+
+#waitText {
+    font-size: 40px;
+    color: white;
+    line-height: 100vh; /* Center vertically */
+}
+

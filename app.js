@@ -763,7 +763,7 @@ setInterval(()=>{
     for(let e in entities){
         let entity = entities[e]
         if(entity.health < entity.maxHealth){
-            entities[entity.id].health += 0.01
+            entities[e].health += 0.01
         }
     }
 
@@ -959,6 +959,12 @@ io.sockets.on("connection", (socket)=>{
                 }
             }
         })
+        
+        //delete killed players
+        if(player && player.health<=0){//& player.health <= 0){
+            delete entities[id]
+            socket.emit("gameOver")
+        }
 
         //if in range
         socket.emit("sendUpdateDataToClient", {
@@ -971,13 +977,6 @@ io.sockets.on("connection", (socket)=>{
             .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })), 
             structures:Object.values(structures)
         })
-        
-        //only if player exists and is alive
-        if(player && player.health <= 0) {
-            socket.emit("gameOver")
-            dropAll(data.id)
-            delete entities[id]
-        }
     })
 
     //player eat/pick up, etc.! ADD TO Inventory 
@@ -1105,7 +1104,8 @@ io.sockets.on("connection", (socket)=>{
                         if(entity.health <= 0){
                             player.xp += entity.xp * 0.8 // give player xp
                             console.log(entity.username, entity.id, "was slain by", player.username, player.id)
-                            
+                            //dropAll(entity.id)
+                            //delete entities[entity.id]
                             player.kills ++
                         }
                         didDamage = true // turn to true
@@ -1151,19 +1151,21 @@ io.sockets.on("connection", (socket)=>{
     //boss respawn?
     socket.on("GetCountdownInfo", function(){
         let player = entities[id]
-        let ret = countDownTime //emit value
+        if(player){
+            let ret = countDownTime //emit value
 
-        //additional area (padding)
-        let aPad = 1.5 //area x __ == actual area detection
-        if(!(player.x > structureCenter.x - (structureW/2) * (wallSize * aPad)
-        && player.x < structureCenter.x + (structureW/2) * (wallSize * aPad)
-        && player.y > structureCenter.y - (structureH/2) * (wallSize * aPad)
-        && player.y < structureCenter.y + (structureH/2) * (wallSize * aPad) 
-        && countDownTime > 0)) ret = null //emit only when in range...
-        
-        socket.emit("SendCountdownInfo", {
-            time:ret
-        })
+            //additional area (padding)
+            let aPad = 1.5 //area x __ == actual area detection
+            if(!(player.x > structureCenter.x - (structureW/2) * (wallSize * aPad)
+            && player.x < structureCenter.x + (structureW/2) * (wallSize * aPad)
+            && player.y > structureCenter.y - (structureH/2) * (wallSize * aPad)
+            && player.y < structureCenter.y + (structureH/2) * (wallSize * aPad) 
+            && countDownTime > 0)) ret = null //emit only when in range...
+            
+            socket.emit("SendCountdownInfo", {
+                time:ret
+            })
+        }
     })
 
     //disconnect

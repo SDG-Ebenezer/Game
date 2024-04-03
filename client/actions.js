@@ -829,6 +829,7 @@ function exitGame(){
 
 //show game over screen if dead
 socket.on("gameOver", ()=>{
+    console.log("Game over :(")
     //remove all event listeners
     document.removeEventListener("keydown", keydown)
     document.removeEventListener("keyup", keyup)
@@ -948,3 +949,35 @@ window.addEventListener('beforeunload', function(event) {
         return event.returnValue = 'Are you sure you want to leave?';
     }
 });*/
+
+//WAIT SCREEN on
+const waitDiv = document.getElementById("wait")
+const dotsSpan = document.getElementById('dots');
+const dotsCount = 3; // Number of dots to display
+let dotIndex = 0;
+var disconnectTimeout
+//reconnected
+socket.on('connect', () => {
+    console.log('Connected to server');
+    // Clear the timeout if the connection is established
+    if(disconnectTimeout) clearTimeout(disconnectTimeout);
+    // Hide the "wait" div when connected
+    waitDiv.style.display = 'none';
+});
+//disconnected
+socket.on("disconnect", ()=>{
+    console.log('Disconnected from server');
+    waitDiv.style.display = 'block';
+    disconnectTimeout = setInterval(addDot, 1000);
+})
+
+// Function to add a dot
+function addDot() {
+    if (dotIndex < dotsCount) {
+        dotsSpan.textContent += '.';
+        dotIndex++;
+    } else {
+        dotsSpan.textContent = ""
+        dotIndex = 0
+    }
+}
