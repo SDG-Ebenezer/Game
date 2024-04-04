@@ -420,6 +420,10 @@ class Pickable{
 }
 var pickablesID = 0
 //drop everything after death
+/**
+ * This function copies the inventory of an entity
+ * in entities via the "id" parameter.
+ */
 function dropAll(id){
     let player = entities[id]
     if(player){
@@ -478,6 +482,14 @@ class Player extends Entity{
         this.invSelected = 0
         this.hitRange = entitySize
         this.hitSize = 40
+
+        /** @NOTE!
+         * This is to prevent players from not despawning 
+         * when they are inactive or not on the page while
+         * also allowing player to keep everything if the
+         * server crashes and resets.
+        */
+        this.isDead = false
     }
 }
 class Enemy extends Entity{
@@ -765,6 +777,9 @@ setInterval(()=>{
         if(entity.health < entity.maxHealth){
             entities[e].health += 0.01
         }
+        if(entity.health <= 0){
+            entities[e].isDead = true // This player is NOW dead!!
+        }
     }
 
     //add berries, swords, etc.
@@ -948,8 +963,11 @@ io.sockets.on("connection", (socket)=>{
         let player = entities[data.id]
         let updateContent = [borderRect] //always have the border
         let reach = 500
+
+        let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
+
         //should we load? (also order)
-        let updateLi = [markets, structures, entities, enemies,  pickables, arrows, trees]
+        let updateLi = [markets, structures, players, enemies,  pickables, arrows, trees]
         updateLi.forEach(group=>{
             for(let i in group){
                 let item = group[i]
@@ -961,7 +979,8 @@ io.sockets.on("connection", (socket)=>{
         })
         
         //delete killed players
-        if(player && player.health<=0){//& player.health <= 0){
+        if(player && player.isDead){// player.health <= 0
+            dropAll(id)
             delete entities[id]
             socket.emit("gameOver")
         }
@@ -1104,8 +1123,6 @@ io.sockets.on("connection", (socket)=>{
                         if(entity.health <= 0){
                             player.xp += entity.xp * 0.8 // give player xp
                             console.log(entity.username, entity.id, "was slain by", player.username, player.id)
-                            //dropAll(entity.id)
-                            //delete entities[entity.id]
                             player.kills ++
                         }
                         didDamage = true // turn to true
