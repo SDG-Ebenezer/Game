@@ -125,7 +125,19 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 images[item.imgSrc].src = item.imgSrc
             }
             ctx.rotate(item.rotation)
-            ctx.drawImage(images[item.imgSrc], -item.width/2, -item.height/2, item.width, item.height)
+            
+            //draw walls differently
+            if(item.class == "Wall"){
+                //This is to draw the wall
+                //in a way so that players
+                //won't have overlap when
+                //beside walls. The .width/
+                //.height values are used for
+                //collision detection.
+                ctx.drawImage(images[item.imgSrc], -item.actualWidth/2, -item.actualHeight/2, item.actualWidth, item.actualHeight)
+            } else{
+                ctx.drawImage(images[item.imgSrc], -item.width/2, -item.height/2, item.width, item.height)
+            }
         }
         //draw held item
         if(item.inventory){

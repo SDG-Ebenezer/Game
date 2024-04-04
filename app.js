@@ -140,28 +140,34 @@ var borderRect = {
 }
 var fps = 1000/60 //
 
+const entitySize = 75
+
 /** @STRUCTURES *****/
 class Wall {
-    constructor(wall, id, wallImgSize) {
+    constructor(wall, id, wallSize) {
         this.x = wall.relX;
         this.y = wall.relY;
         this.class = "Wall"
         this.id = `WALL${id}`;
         this.imgSrc = random(5,1)==5?"/imgs/Mossy%20Wall.png":"/imgs/Wall.png";
-        this.width = wallImgSize;
-        this.height = wallImgSize;
+        //how the picture looks like (actual...pictureWidth/Height)
+        this.actualWidth = wallSize; 
+        this.actualHeight = wallSize;
+        //real boundaries (actual...border Width/Height)
+        this.width = wallSize + entitySize/2 
+        this.height = wallSize + entitySize/2
         this.rotation = 0
     }
 }
 class Stairs {
-    constructor(x, y, id, wallImgSize, rotation) {
+    constructor(x, y, id, wallSize, rotation) {
         this.x = x;
         this.y = y;
         this.class = "Stairs"
         this.id = `STAIRS${id}`;
         this.imgSrc = "/imgs/Stairs.png";
-        this.width = wallImgSize;
-        this.height = wallImgSize;
+        this.width = wallSize;
+        this.height = wallSize;
         this.rotation = rotation
     }
 }
@@ -190,7 +196,6 @@ var structureW = structureBlueprint[0].length; // width
 var structureH = structureBlueprint.length; // height (making it a square)
 var structureCenter = {x:0,y:0}
 var wallSize = 100
-var wallImgSize = wallSize * 1
 var escapesData = [] //for boss defeats
 for(let r = 0; r < structureW; r++){
     for(let c = 0; c < structureH; c++){
@@ -199,10 +204,10 @@ for(let r = 0; r < structureW; r++){
             relY: c*wallSize-(structureH * wallSize)/2 + structureCenter.y
         }
         if(structureBlueprint[r][c] == "W"){
-            structures[structuresID] = new Wall(wall, structuresID, wallImgSize)
+            structures[structuresID] = new Wall(wall, structuresID, wallSize)
             structuresID++;
         } else if(structureBlueprint[r][c] == "S"){
-            structures[structuresID] = new Stairs(wall.relX, wall.relY, structuresID, wallImgSize, c==0?Math.PI:(Math.PI/180)) //make rotate based on corner
+            structures[structuresID] = new Stairs(wall.relX, wall.relY, structuresID, wallSize, c==0?Math.PI:(Math.PI/180)) //make rotate based on corner
             structuresID++;
         } else if(structureBlueprint[r][c] == "E"){
             escapesData.push({x:wall.relX,y:wall.relY,r:r,c:c})
@@ -218,7 +223,7 @@ function toggleOpeningsToArena(escapesLocked){
         for(let e in escapesData){
             let obj = escapesData[e]
             let id = `${escapesIDRoot}${i}`
-            structures[id] = new Stairs(obj.x, obj.y, id, wallImgSize, obj.r==1?270*(Math.PI/180):90*(Math.PI/180))
+            structures[id] = new Stairs(obj.x, obj.y, id, wallSize, obj.r==1?270*(Math.PI/180):90*(Math.PI/180))
             escapesIDs.push(id)
             i++
         }
@@ -282,7 +287,7 @@ for(let i = 0; i < numOfRandomWalls; i++){
     }
     //console.log(blueprint)
 
-    let structureSize = blueprintSize * wallImgSize
+    let structureSize = blueprintSize * wallSize
     let a = findSpawn(structureSize)
     let allStairs = []
     //generate Structure
@@ -293,11 +298,11 @@ for(let i = 0; i < numOfRandomWalls; i++){
                 relY: a.y+r*wallSize 
             }
             if(blueprint[r][c] == "W"){
-                structures[structuresID] = new Wall(nC, structuresID, wallImgSize)
+                structures[structuresID] = new Wall(nC, structuresID, wallSize)
                 structuresID++
             } else if(blueprint[r][c] == "S"){
                 allStairs.push({r:r,c:c,id:structuresID})
-                structures[structuresID] = new Stairs(nC.relX, nC.relY, structuresID, wallImgSize, 0) //rotate none as a placeholder
+                structures[structuresID] = new Stairs(nC.relX, nC.relY, structuresID, wallSize, 0) //rotate none as a placeholder
                 structuresID++
             }
         }
@@ -321,7 +326,7 @@ for(let i = 0; i < numOfRandomWalls; i++){
         else{ 
             //cant be a stair, because no adjacent walls!
             let old = structures[stair.id]
-            structures[stair.id] = new Wall({relX:old.x,relY:old.y}, structuresID, wallImgSize)
+            structures[stair.id] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
             console.log("Stairs replaced.")
         }
 
@@ -443,7 +448,6 @@ function dropAll(id){
 
 
 /** @ENTITIES *****/
-const entitySize = 75
 var entities = {} //players info
 var enemies = {} //monsters info
 
