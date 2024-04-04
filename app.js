@@ -924,15 +924,15 @@ io.sockets.on("connection", (socket)=>{
     //update player (all vital info)
     socket.on("updatePlayer", (d)=>{
         let player = d.player
-        if(entities[player.id]) {
-            entities[player.id].x = player.x
-            entities[player.id].y = player.y
-            entities[player.id].rotation = player.rotation
-            entities[player.id].invSelected = player.invSelected
-            entities[player.id].speed = player.speed
-            entities[player.id].onWall = player.onWall
-            if(d.reorder) entities[player.id].inventory = player.inventory
-        } else if(player.id && !entities[player.id]){
+        id = player.id //update!
+        let entity = entities[id];
+        if(entity) {
+            let { id, x, y, rotation, invSelected, speed, onWall, inventory } = player
+            if (entity) {
+                Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
+                if (d.reorder) entity.inventory = inventory;
+            }
+        } else if(player.id && !entity){
             id = player.id
             entities[id] = player
             console.log(entities[id].username, id, "was added to pool")
