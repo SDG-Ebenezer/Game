@@ -150,12 +150,8 @@ class Wall {
         this.class = "Wall"
         this.id = `WALL${id}`;
         this.imgSrc = random(5,1)==5?"/imgs/Mossy%20Wall.png":"/imgs/Wall.png";
-        //how the picture looks like (actual...pictureWidth/Height)
-        this.actualWidth = wallSize; 
-        this.actualHeight = wallSize;
-        //real boundaries (actual...border Width/Height)
-        this.width = wallSize + entitySize/2 
-        this.height = wallSize + entitySize/2
+        this.width = wallSize 
+        this.height = wallSize 
         this.rotation = 0
     }
 }
@@ -337,28 +333,31 @@ for(let i = 0; i < numOfRandomWalls; i++){
 
 //Function also in PLAYER js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty, onWall) {
-    if(onWall) return {tx:tx,ty:ty}
+function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize) {
+    if(onWall) return { tx, ty }
     let newX = playerX + tx;
     let newY = playerY + ty;
     for(let w in walls){
         let wall = walls[w]
         if(wall.class == "Wall" && !onWall){
-            let wallX = wall.x - wall.width/2
-            let wallY = wall.y - wall.height/2
+            let padding = size/2 
+            let width = wall.width + padding
+            let height = wall.height + padding 
+            let wallX = wall.x - width/2
+            let wallY = wall.y - height/2
             if (newX >= wallX &&
-                newX <= wallX + wall.width &&
-                wallY <= playerY && playerY <= wallY + wall.height) {
+                newX <= wallX + width &&
+                wallY <= playerY && playerY <= wallY + height) {
                 tx = 0;
             }
             if (newY >= wallY &&
-                newY <= wallY + wall.height &&
-                wallX <= playerX && playerX <= wallX + wall.width) {
+                newY <= wallY + height &&
+                wallX <= playerX && playerX <= wallX + width) {
                 ty = 0;
             }
         }
     }
-    return { tx: tx, ty: ty};
+    return { tx, ty };
 }
 
 /** @MARKET *****/
@@ -590,21 +589,26 @@ class Enemy extends Entity{
         if (this.x + this.xInc > BORDERS.R || this.x + this.xInc < BORDERS.L){this.xInc = 0}
         if (this.y + this.yInc > BORDERS.U || this.y + this.yInc < BORDERS.D){this.yInc = 0}
         
-        //CANT GO INTO WALLS
         //update onWall
         let oW = false
         for(let w in structures){
             let wall = structures[w]
+            let width = this.width/2
+            let height = this.height/2
             if(wall.class == "Stairs"
-            && this.x > wall.x-wall.width/2 && this.x < wall.x+wall.width/2
-            && this.y > wall.y-wall.height/2 && this.y < wall.y+wall.height/2
+            && this.x > wall.x-wall.width/2 
+            && this.x < wall.x+wall.width/2
+            && this.y > wall.y-wall.height/2
+            && this.y < wall.y+wall.height/2
             && !this.onWall){
                 oW = true;
                 break;
             } else if(this.onWall){
                 if((wall.class == "Wall" || wall.class == "Stairs")
-                && this.x > wall.x-wall.width/2 && this.x < wall.x+wall.width/2
-                && this.y > wall.y-wall.height/2 && this.y < wall.y+wall.height/2) {
+                && this.x > wall.x-wall.width/2-width 
+                && this.x < wall.x+wall.width/2+width
+                && this.y > wall.y-wall.height/2-height 
+                && this.y < wall.y+wall.height/2+height) {
                     oW = true
                     break;
                 }
@@ -618,7 +622,7 @@ class Enemy extends Entity{
                 tx:this.xInc, 
                 ty:this.yInc,
             }:
-            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall)
+            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this.width==this.height?this.width:Math.max(this.width, this.height))
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -840,7 +844,7 @@ setInterval(()=>{
         } else {arrow.duration -= 1} //update
 
         //no hitty walls
-        let nC = checkCollision(structures, arrow.x, arrow.y, arrow.speed * Math.cos(arrow.direction), arrow.speed * Math.sin(arrow.direction), arrow.whoShot.onWall) //check new coordinates
+        let nC = checkCollision(structures, arrow.x, arrow.y, arrow.speed * Math.cos(arrow.direction), arrow.speed * Math.sin(arrow.direction), arrow.whoShot.onWall, arrow.width==arrow.height?arrow.width:Math.max(arrow.width, arrow.height)) //check new coordinates
         //no going outta bounds
         if (!(arrow.x + nC.tx > BORDERS.L && arrow.x + nC.tx < BORDERS.R && arrow.y + nC.ty > BORDERS.D && arrow.y + nC.ty < BORDERS.U)){nC = {tx: 0, ty: 0}}
         //if it stopped, just drop 

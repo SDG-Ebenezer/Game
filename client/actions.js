@@ -125,19 +125,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 images[item.imgSrc].src = item.imgSrc
             }
             ctx.rotate(item.rotation)
-            
-            //draw walls differently
-            if(item.class == "Wall"){
-                //This is to draw the wall
-                //in a way so that players
-                //won't have overlap when
-                //beside walls. The .width/
-                //.height values are used for
-                //collision detection.
-                ctx.drawImage(images[item.imgSrc], -item.actualWidth/2, -item.actualHeight/2, item.actualWidth, item.actualHeight)
-            } else{
-                ctx.drawImage(images[item.imgSrc], -item.width/2, -item.height/2, item.width, item.height)
-            }
+            ctx.drawImage(images[item.imgSrc], -item.width/2, -item.height/2, item.width, item.height)
         }
         //draw held item
         if(item.inventory){
@@ -682,28 +670,33 @@ function touchend(e){
 }
 //Function also in APP js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty, onWall) {
-    if(onWall) return {tx:tx, ty:ty}
+function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize) {
+    if(onWall) return { tx, ty }
     let newX = playerX + tx;
     let newY = playerY + ty;
-    for (let wall of walls) {
-        if(wall.class == "Wall"){
-            let wallX = wall.x - wall.width/2
-            let wallY = wall.y - wall.height/2
+    for(let w in walls){
+        let wall = walls[w]
+        if(wall.class == "Wall" && !onWall){
+            let padding = size/2 
+            let width = wall.width + padding
+            let height = wall.height + padding 
+            let wallX = wall.x - width/2
+            let wallY = wall.y - height/2
             if (newX >= wallX &&
-                newX <= wallX + wall.width &&
-                wallY <= playerY && playerY <= wallY + wall.height) {
+                newX <= wallX + width &&
+                wallY <= playerY && playerY <= wallY + height) {
                 tx = 0;
             }
             if (newY >= wallY &&
-                newY <= wallY + wall.height &&
-                wallX <= playerX && playerX <= wallX + wall.width) {
+                newY <= wallY + height &&
+                wallX <= playerX && playerX <= wallX + width) {
                 ty = 0;
             }
         }
     }
-    return { tx: tx, ty: ty};
+    return { tx, ty };
 }
+
 
 /** @update */
 //request data to update canv
@@ -759,16 +752,22 @@ function startGame(){
                 let oW = false
                 for(let w in wallsList){
                     let wall = wallsList[w]
+                    let width = player.width/2
+                    let height = player.height/2
                     if(wall.class == "Stairs"
-                    && player.x > wall.x-wall.width/2 && player.x < wall.x+wall.width/2
-                    && player.y > wall.y-wall.height/2 && player.y < wall.y+wall.height/2
+                    && player.x > wall.x-wall.width/2 
+                    && player.x < wall.x+wall.width/2
+                    && player.y > wall.y-wall.height/2
+                    && player.y < wall.y+wall.height/2
                     && !player.onWall){
                         oW = true;
                         break;
                     } else if(player.onWall){
                         if((wall.class == "Wall" || wall.class == "Stairs")
-                        && player.x > wall.x-wall.width/2 && player.x < wall.x+wall.width/2
-                        && player.y > wall.y-wall.height/2 && player.y < wall.y+wall.height/2) {
+                        && player.x > wall.x-wall.width/2-width 
+                        && player.x < wall.x+wall.width/2+width
+                        && player.y > wall.y-wall.height/2-height 
+                        && player.y < wall.y+wall.height/2+height) {
                             oW = true
                             break;
                         }
@@ -782,7 +781,7 @@ function startGame(){
                     tx:player.x+tx, 
                     ty:player.y+ty,
                 }:
-                checkCollision(wallsList,player.x, player.y, tx, ty, player.onWall)
+                checkCollision(wallsList,player.x, player.y, tx, ty, player.onWall, player.width==player.height?player.width:Math.max(player.width, player.height))
                 tx = newCoords.tx
                 ty = newCoords.ty
 
