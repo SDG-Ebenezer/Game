@@ -1,7 +1,7 @@
 *{
     padding: none;
     overflow: hidden;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: 'Montserrat', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     zoom: reset; /* Disable zooming */
 }
 canvas{
@@ -30,10 +30,11 @@ button{
     padding-left: 100px;
     padding-right: 100px;
     margin:0;
+    /*
     position:absolute;
     top:65%;
     left:50%;
-    transform: translate(-50%, -35%);
+    transform: translate(-50%, -35%);*/
 }
 #startGameBtn:hover{
     color:white;
@@ -141,57 +142,74 @@ button{
 }
 
 .image-options {
-    margin:0;
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform: translate(-50%, -50%);
+    margin: 0;
     display: flex;
-    gap:-5px;
-    /*flex-direction: column;*/
 }
-.skins_imgs{
+
+.image-options label {
+    margin: 0;
+    padding: 0;
+    flex: 1; /* Equal distribution of space */
+}
+
+.skins_imgs {
     width: 50px;
     height: 50px;
-    padding:20px;
+    padding: 20px;
     border: 2px solid #ccc;
-    rotate:calc(90deg);
+    rotate: calc(90deg);
     transition: border-color 0.3s ease;
     cursor: pointer;
 }
 
 input[type="radio"] {
-    display:none;
+    display: none;
 }
+
+input[type="radio"] + img {
+    margin-right: 5px;
+}
+
 input[type="radio"]:checked + img {
-    border-color: #007bff; /* Highlight the selected image */
+    border-color: #007bff;
 }
+
 .new_label {
-    position:fixed;
+    position: fixed;
     background-color: #007bff;
     color: white;
     padding: 5px;
     font-size: 14px;
 }
 
-
-#canv{background-color: rgb(33, 48, 33);}
-#info_canv{background-color: none;}
-
-#preGame_Stuff{
+#canv{
     background-color: rgb(33, 48, 33);
+}
+#info_canv{
+    background-color: none;
+}
+
+#title{
+    color:white;
+}
+#preGame_Stuff {
+    background-image: url("/client/imgs/BackgroundImg.png"); /* Set background image */
+    background-size: cover; /* Adjust as per your requirement */
+    background-position: center; /* Adjust as per your requirement */
+    z-index: 1; /* Ensure it's behind other content */
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    position:fixed;
+    position: absolute;
+    display: flex; /* Add Flexbox */
+    flex-direction: column; /* Organize as a column */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
 }
+
 #username{
     margin:0;
-    position:absolute;
-    top:40%;
-    left:50%;
-    transform: translate(-50%, -60%);
 }
 
 #gameOver {
@@ -206,7 +224,7 @@ input[type="radio"]:checked + img {
 #gameOverText {
     background-color: none;
     color: white;
-    font-size: 15vw; /* Adjust as needed */
+    font-size: 10vw;
     position: fixed;
     top: 0;
     bottom: 0;
@@ -216,7 +234,6 @@ input[type="radio"]:checked + img {
     justify-content: center;
     align-items: center;
 }
-
 
 .padText{
     padding-left:5px;
@@ -295,4 +312,3 @@ input[type="radio"]:checked + img {
     color: white;
     line-height: 100vh; /* Center vertically */
 }
-

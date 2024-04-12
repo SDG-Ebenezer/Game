@@ -260,7 +260,7 @@ function findSpawn(size=0) {
             }
         })
     }
-    return { x: x, y: y };
+    return { x, y };
 }
 
 /** @SMALL_STRUCTURE_GENERATOR ********** */
@@ -383,23 +383,22 @@ for(let i = 0; i < 3; i ++){
 
 /** @TREES *****/
 class Tree {
-    constructor(treesID, size=random(125,100)) {
-        let thing = {
-            x:random(mapSize/2,-mapSize/2),
-            y:random(mapSize/2,-mapSize/2)
-        }
+    constructor(treesID, size=random(500,200)) {
+        let thing = findSpawn(size)
         this.x = thing.x;
         this.y = thing.y;
         this.id = `TREE${treesID}`;
-        this.isCircle = true;
-        this.color = "rgb(0, 95, 0, 0.3)";
-        this.size = size
+        //this.color = "rgb(0, 95, 0, 0.3)";
+        this.width = size
+        this.height = size
+        this.imgSrc = `/imgs/Tree${random(1,3)}.png`
+        this.rotation = random(0, 355) * (Math.PI/180)
     }
 }
 var trees = {}
 var treesID = 0
 //Generate 1000 trees in the world...
-for(let i = 0; i < 1000; i ++){
+for(let i = 0; i < mapSize/25; i ++){
    let newTree = new Tree(treesID)
    trees[treesID] = newTree
    treesID++
@@ -870,7 +869,6 @@ setInterval(()=>{
                 && arrow.y < entity.y + entity.height-entitySize/2) {
                     entity.health -= arrow.damage
                     if(entity.health <= 0){
-                        console.log(arrows[key].whoShot)
                         let whoShotIt = arrows[key].whoShot.username
                         let messageLi = [
                             `${whoShotIt} killed ${entity.username} with an arrow.`,

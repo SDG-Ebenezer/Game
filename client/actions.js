@@ -26,6 +26,7 @@ window.addEventListener("resize", ()=>{
 })
 
 var socket = io()
+var defaultFontFamily = window.getComputedStyle(document.body).fontFamily;
 
 //player
 var entitySize
@@ -191,7 +192,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.fillRect(x - 5, y - fontSize + 5, width * 1.5 + 10, fontSize + 10);
 
             // Draw text
-            ctx.font = `${fontSize}px Arial`;
+            ctx.font = `${fontSize}px ${defaultFontFamily}`;
             ctx.fillStyle = "white";
             ctx.fillText(username, x, y);
             ctx.restore()
@@ -254,7 +255,7 @@ function gHealth(){
     gctx.fillStyle = "rgb(120, 210, 156)"
     gctx.fillRect(0, canvas.height-height, width * (player.health/player.maxHealth), height)
     gctx.fillStyle = 'black'
-    gctx.font = `${fontSize}px Verdana`
+    gctx.font = `${fontSize}px ${defaultFontFamily}`
     gctx.fillText (`HEALTH ${Math.round(player.health)}`, 0, canvas.height-height+fontSize)
 }
 var xpImg = new Image()
@@ -264,7 +265,7 @@ function gXP(){
     let size = gBarHeight
     gctx.drawImage(xpImg, padding, canvas.height-size * 3 - padding, size, size)
     gctx.fillStyle = 'white'
-    gctx.font = `${gBarHeight * 3/4}px Verdana`
+    gctx.font = `${gBarHeight * 3/4}px ${defaultFontFamily}`
     gctx.fillText (`XP ${player.xp}`, size + padding, canvas.height-size * 3 - padding + size)
 }
 var speedTime = 0
@@ -286,7 +287,7 @@ function gSpeedBar(){
         gctx.fillRect(0, canvas.height-height * 2, width * (speedTime/speedTimeMax), height - 15) //[###]
         //
         gctx.fillStyle = 'white'
-        gctx.font = `10px Verdana`
+        gctx.font = `10px ${defaultFontFamily}`
         gctx.fillText(`SPEED: ${Math.round(speedTime)}`, 0, canvas.height-height * 2+height-2 - 15)
         // 
         speedTime -= 0.1
@@ -335,12 +336,12 @@ function gLeaderboardData(pc, leaderboard){
     let x = canvas.width/4>200?canvas.width-200:canvas.width * 3/4
     let y = fontSize + 100  // Increased the initial y position for more space
 
-    gctx.font = `${(canvas.width/4)/10<20?(canvas.width/4)/10:20}px Verdana` //fontSize but "5" bigger (in ratio)
+    gctx.font = `${(canvas.width/4)/10<20?(canvas.width/4)/10:20}px ${defaultFontFamily}` //fontSize but "5" bigger (in ratio)
     gctx.fillText("Leaderboard", x, y - padding)
 
     y += fontSize + padding // Adjusted y position for the first leaderboard entry
 
-    gctx.font = `${fontSize}px Verdana`
+    gctx.font = `${fontSize}px ${defaultFontFamily}`
     for (let i = 0; i < 5; i++) {
         gctx.fillStyle = "#000000aa"
         gctx.fillRect(x, y - fontSize - padding, canvas.width-x, fontSize + 2 * padding) // Adjusted the height of the rectangle
@@ -356,7 +357,7 @@ function gLeaderboardData(pc, leaderboard){
     let text = `Players in server: ${pc}`
     fontSize = 10
     gctx.fillStyle = 'white'
-    gctx.font = `${fontSize}px Verdana`
+    gctx.font = `${fontSize}px ${defaultFontFamily}`
     gctx.fillText(text, x, y-padding)
 }
 function gMap(){
@@ -402,7 +403,7 @@ function gShowCountdown() {
     socket.emit("GetCountdownInfo")
     if (respawnTime) {
         let fontSize = 20
-        gctx.font = `bold ${fontSize}px Trebuchet MS`;
+        gctx.font = `bold ${fontSize}px ${defaultFontFamily}`;
 
         let pad = 15
         let x = pad
@@ -455,7 +456,7 @@ function drawInventory(){
 
         //if stackable give it a number to show how many you have
         if(each.maxStackSize > 1){
-            gctx.font = `15px Arial`;
+            gctx.font = `15px ${defaultFontFamily}`;
             gctx.fillStyle = "white";
             gctx.fillText(each.stackSize, i * invSize + invSize * 0.75, invSize -15); //minus fontSize
         }
@@ -834,7 +835,7 @@ function exitGame(){
     clearInterval(gameLoopInt) 
     //make home screen visible again
     document.getElementById("startGameBtn").style.display = "block"
-    document.getElementById("preGame_Stuff").style.display = "block"
+    document.getElementById("preGame_Stuff").style.display = "flex"
     document.getElementById("exitGameBtn").style.display = "none"
 }
 

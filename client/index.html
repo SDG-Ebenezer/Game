@@ -3,6 +3,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="/client/game.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/imgs/Logo.ico">
     <title>Game</title>
 </head>
@@ -24,36 +27,35 @@
         <!-- CONTENT -->
     </div>
     <div id="preGame_Stuff" class="no_selection">
+        <h1 id="title">Game</h1>
         <input id="username" class="text_input" placeholder="Username..." maxlength="25">
         <div class="image-options" id="skins-image-options">
             <!--NOTE: input values are actual titles (.png) of the image's skins-->
             <label>
                 <input type="radio" name="option" value="Player" checked>
                 <img class="skins_imgs" src="/client/imgs/Player.png" alt="Player 1">
-                <span class="new_label">NEW!</span> <!--Actually 2-->
             </label>
             <label>
                 <input type="radio" name="option" value="Player2">
                 <img class="skins_imgs" src="/client/imgs/Player2.png" alt="Player 2">
-                <span class="new_label">NEW!</span> <!--Actually 3-->
             </label>
             <label>
                 <input type="radio" name="option" value="Player3">
                 <img class="skins_imgs" src="/client/imgs/Player3.png" alt="Player 3">
             </label>
         </div>
-    </div>
-    <div id="gameOver">
-        <h1 id="gameOverText">GAME OVER</h1>
-    </div>
-    
-    <div class="no_selection">
         <button onclick="startGame()" id="startGameBtn">Play</button>
+        
+    </div>
+    <div class="no_selection">            
         <button onclick="exitGame()" id="exitGameBtn">Exit</button>
         <div id="marketBtnDiv">
             <button onclick="openMarket()" id="showMarketBtn">Market</button>
         </div>
     </div>
+    <div id="gameOver">
+        <h1 id="gameOverText">GAME OVER</h1>
+    </div>   
     <!-- Help Btn -->
     <button onclick="showHelp()" id="helpBtn">HELP</button> 
     <!-- help -->
