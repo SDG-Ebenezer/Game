@@ -181,18 +181,18 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             // Set text properties
             ctx.save()
             ctx.translate(item.x, item.y)
+            let fontSize = 24;
+            ctx.font = `${fontSize}px ${defaultFontFamily}`;
             let username = item.username;
-            let width = ctx.measureText(username).width * 1.6 //to fill entire space (width of rect)
+            let width = ctx.measureText(username).width * 0.675 //to fill entire space (width of rect)
             let x = -width/1.4; //to get aligned with center
             let y = entitySize;
-            let fontSize = 24;
 
             // Draw background
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
             ctx.fillRect(x - 5, y - fontSize + 5, width * 1.5 + 10, fontSize + 10);
 
             // Draw text
-            ctx.font = `${fontSize}px ${defaultFontFamily}`;
             ctx.fillStyle = "white";
             ctx.fillText(username, x, y);
             ctx.restore()
