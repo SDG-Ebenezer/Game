@@ -1127,7 +1127,7 @@ io.sockets.on("connection", (socket)=>{
                     && Math.abs(Math.abs(data.y) - Math.abs(entity.y)) < player.hitSize){
                         entity.health -= damage
                         if(entity.health <= 0){
-                            player.xp += entity.xp * 0.8 // give player xp
+                            player.xp += Math.floor(entity.xp * 0.8 )// give player xp
                             console.log(entity.username, entity.id, "was slain by", player.username, player.id)
                             player.kills ++
                         }

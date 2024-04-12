@@ -432,7 +432,8 @@ function drawInventory(){
     gctx.save()
     for(let invSpot in player.inventory){
         let each = player.inventory[invSpot]
-        gctx.lineWidth = invSize * 10/75;
+        let strokeWidth = invSize * 10/75 //how thick the inv slot is
+        gctx.lineWidth = strokeWidth;
         gctx.strokeStyle = "gray"
         gctx.strokeRect(i * invSize, invY, invSize, invSize)
         //draw pic
@@ -458,7 +459,8 @@ function drawInventory(){
         if(each.maxStackSize > 1){
             gctx.font = `15px ${defaultFontFamily}`;
             gctx.fillStyle = "white";
-            gctx.fillText(each.stackSize, i * invSize + invSize * 0.75, invSize -15); //minus fontSize
+            //align on right
+            gctx.fillText(each.stackSize, i * (invSize) + invSize - ctx.measureText(`${each.stackSize}`).width - strokeWidth - 5, invSize - 15); 
         }
 
         i++ //x 
