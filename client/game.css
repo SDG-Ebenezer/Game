@@ -3,6 +3,7 @@
     overflow: hidden;
     font-family: 'Montserrat', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     zoom: reset; /* Disable zooming */
+    cursor: url("/imgs/CrosshairCursor.cur"), crosshair;
 }
 canvas{
     left:0;
@@ -14,7 +15,7 @@ li{
     padding: 5px;
 }
 button{
-    cursor:pointer;
+    cursor: url("/imgs/PointerCursor.cur"),pointer;
 }
 #startGameBtn{
     color:white;
@@ -74,7 +75,7 @@ button{
     border: none;
     padding: 10px 20px;
     font-size: 200%;
-    cursor: pointer;
+    cursor: url("/imgs/PointerCursor.cur"), pointer;
     position: absolute;
     bottom: 0;
 }
@@ -159,7 +160,7 @@ button{
     border: 2px solid #ccc;
     rotate: calc(90deg);
     transition: border-color 0.3s ease;
-    cursor: pointer;
+    cursor: url("/imgs/PointerCursor.cur"),pointer;
 }
 
 input[type="radio"] {
@@ -193,7 +194,7 @@ input[type="radio"]:checked + img {
     color:white;
 }
 #preGame_Stuff {
-    background-image: url("/client/imgs/BackgroundImg.png"); /* Set background image */
+    background-image: url("/imgs/BackgroundImg.png"); /* Set background image */
     background-size: cover; /* Adjust as per your requirement */
     background-position: center; /* Adjust as per your requirement */
     z-index: 1; /* Ensure it's behind other content */
@@ -245,7 +246,7 @@ input[type="radio"]:checked + img {
     position: absolute;
     top: 0px;
     right: 25;
-    cursor:pointer;
+    cursor: url("/imgs/PointerCursor.cur"),pointer;
     z-index: 2;
     background-color: aqua;
     color:black;
