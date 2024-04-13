@@ -98,7 +98,7 @@ const holdableItems = {
         pic:"/imgs/Arrow.png",
         durability:Infinity,
         maxDurability:Infinity,
-        damage:5,
+        damage:20,
         generationProbability:75, //out of 100
         rotation:0,
         stackSize:1, //start out stack Size
@@ -118,6 +118,20 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 1000, //market value
+    },
+    "Spear":{
+        name:"Spear",
+        class:"Spear",
+        pic:"/imgs/Spear.png",
+        loadedBowPic:"/imgs/Spear.png",
+        durability:5,
+        maxDurability:5,
+        damage:80,
+        generationProbability:1, //out of 100
+        rotation:270/57.1, //how looks like when held
+        stackSize:1,
+        maxStackSize:1,
+        cost: 2500, //market value
     }
 }
 
@@ -506,13 +520,27 @@ class Enemy extends Entity{
         this.justAttacked = false
         this.cooldownTime = 0 //s
         this.cooldownDuration = reloadTime //ms
-        this.lootTable = [
-            {...holdableItems["Iron Sword"]}, 
-            {...holdableItems["Gold Sword"]}, 
-            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-            {...holdableItems["Bow"]}, 
-        ]
-        this.xp = type=="Boss"?1000:(type=="Lord"||type=="Summoned_Lord"?100:50)
+        /** @this.lootable - what it drops*/
+        if(type == "Boss") {
+            this.lootTable = [{...holdableItems["Diamond Sword"], generationProbability:100}] //boss mob gives diamond sword 100%
+        } else{
+            this.lootTable = [
+                {...holdableItems["Iron Sword"]}, 
+                {...holdableItems["Gold Sword"]}, 
+                {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
+                {...holdableItems["Bow"]}, 
+            ]
+        }
+        /** @this.xp - how much xp this gives*/
+        if(type == "Boss"){
+            this.xp = 2500
+        } else if(type == "Summoned_Lord"){
+            this.xp = 500
+        } else if(type == "Lord"){
+            this.xp = 250
+        } else{
+            this.xp = 75
+        }
         
         this.targetX = 0
         this.targetY = 0
@@ -550,7 +578,6 @@ class Enemy extends Entity{
             distanceToPlayer = Math.sqrt((this.targetPlayer.x - this.x) ** 2 + (this.targetPlayer.y - this.y) ** 2)
         }
         else {distanceToPlayer = 10**10}
-
 
         if(distanceToPlayer <= this.detectRange) { // Is player within range?
             this.status = "Attack"
@@ -618,16 +645,16 @@ class Enemy extends Entity{
         //update
         let newCoords = this.onWall?
             {
-                tx:this.xInc, 
-                ty:this.yInc,
+                tx: this.xInc, 
+                ty: this.yInc,
             }:
             checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this.width==this.height?this.width:Math.max(this.width, this.height))
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
         // UPDATE
-        this.x += this.xInc//panCoords[0]; //xInc
-        this.y += this.yInc//panCoords[1]; //yInc
+        this.x += this.xInc
+        this.y += this.yInc
         this.rotation = Math.atan2(this.yInc, this.xInc) + Math.PI
         // Check for damage
         if(distanceToPlayer < entitySize/2 && !this.justAttacked){
@@ -635,7 +662,6 @@ class Enemy extends Entity{
             player.health -= this.damage
             //death message
             if(player.health <= 0){
-                
                 console.log(player.username, player.id, this.type == "Boss"?"was bonked by the boss":"was slain by a monster")
             }
             this.justAttacked = true
@@ -651,7 +677,6 @@ class Boss extends Enemy{
     move(){
         super.move()
         if(this.health < this.maxHealth * 3/4 && !this.summonGuards){
-            console.log("Big Guy is damaged")
             this.summonInGuards()
         }
 
@@ -708,10 +733,11 @@ toggleOpeningsToArena(true)
 enemies[bossID] = new Boss()
 enemyCount++
 
-/** @ARROWS */
-var arrows = {}
-class Arrow{
-    constructor(x, y, dir, whoShot, flightDuration=50, speed=15){
+/** @projectiles */
+var projectiles = {}
+class Projectile{
+    constructor(type, x, y, w, h, damage, dir, whoShot, flightDuration=50, speed=15, imgSrc="/imgs/Arrow.png", durability=null){
+        this.type = type //key inside holdable items!
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
@@ -719,13 +745,15 @@ class Arrow{
         this.duration = flightDuration
         this.speed = speed
 
-        this.imgSrc = "/imgs/Arrow.png"
-        this.width = 50
-        this.height = 50
+        this.imgSrc = imgSrc
+        this.width = w
+        this.height = h
 
-        this.damage = 20
+        this.damage = damage
 
         this.whoShot = whoShot
+
+        this.durability = `${durability}`?durability:holdableItems[type].durability
     }
 }
 
@@ -824,69 +852,92 @@ setInterval(()=>{
         }
     }
 
-    //update arrows
-    for(let key in arrows){
-        let arrow = arrows[key]
-
-        //CAN NEVER! go out of world and drop
-        if(!(arrow.x > BORDERS.L && arrow.x < BORDERS.R && arrow.y > BORDERS.D && arrow.y < BORDERS.U)) {
-            console.log("Yo out buddy", arrow.x > BORDERS.L && arrow.x < BORDERS.R, arrow.y > BORDERS.D && arrow.y < BORDERS.U)
-            delete arrows[key] //!!
+    // Update projectiles
+    for (let key in projectiles) {
+        let projectile = projectiles[key];
+        // Check if projectile is out of the world
+        let projectileOut = {x:null,y:null}
+        if(projectile.x < BORDERS.L){
+            projectileOut.x = BORDERS.L
+        } else if(projectile.x > BORDERS.R){
+            projectileOut.x = BORDERS.R
+        }
+        if(projectile.y < BORDERS.D){
+            projectileOut.y = BORDERS.D
+        } else if(projectile.y > BORDERS.U){
+            projectileOut.y = BORDERS.U
+        }
+        if ((projectileOut.x || projectileOut.y) || projectile.duration <= 0) {
+            if(projectile.durability > 0){
+                // Create a pickable object at projectile's position
+                pickables[pickablesID] = new Pickable(pickablesID, projectileOut.x?projectileOut.x:projectile.x, projectileOut.y?projectileOut.y:projectile.y, projectile.type, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
+                pickablesID++;
+            }
+            delete projectiles[key];
             break;
+        } else {
+            projectile.duration -= 1; // Update projectile duration
         }
 
-        //if no more flight length
-        if(arrow.duration <= 0) {
-            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].name, arrow.rotation ,holdableItems["Arrow"].durability, 1)
-            pickablesID ++
-            delete arrows[key] //!!
-        } else {arrow.duration -= 1} //update
-
-        //no hitty walls
-        let nC = checkCollision(structures, arrow.x, arrow.y, arrow.speed * Math.cos(arrow.direction), arrow.speed * Math.sin(arrow.direction), arrow.whoShot.onWall, arrow.width==arrow.height?arrow.width:Math.max(arrow.width, arrow.height)) //check new coordinates
-        //no going outta bounds
-        if (!(arrow.x + nC.tx > BORDERS.L && arrow.x + nC.tx < BORDERS.R && arrow.y + nC.ty > BORDERS.D && arrow.y + nC.ty < BORDERS.U)){nC = {tx: 0, ty: 0}}
-        //if it stopped, just drop 
-        if(nC.tx == 0 || nC.ty == 0) {
-            //drop arrow if hits
-            pickables[pickablesID] = new Pickable(pickablesID, arrow.x, arrow.y, "Arrow", null, holdableItems["Arrow"].name, arrow.rotation,holdableItems["Arrow"].durability)
-            pickablesID++
-            delete arrows[key] //!!
+        // Check collision with walls
+        let collision = checkCollision(structures, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
+        
+        // Check if the projectile goes out of bounds
+        if (!(projectile.x + collision.tx > BORDERS.L && projectile.x + collision.tx < BORDERS.R && projectile.y + collision.ty > BORDERS.D && projectile.y + collision.ty < BORDERS.U)) {
+            collision = { tx: 0, ty: 0 };
         }
-        //if it hasn't been dropped...
-        arrow.x += nC.tx
-        arrow.y += nC.ty
+        
+        // Drop projectile if it stops
+        if (collision.tx === 0 || collision.ty === 0){
+            if( projectile.durability > 0){
+                // Create a pickable object at projectile's position
+                pickables[pickablesID] = new Pickable(pickablesID, projectile.x, projectile.y, projectile.type, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
+                pickablesID++;
+            }
+            delete projectiles[key];
+        }
 
-        //DAMAGE
-        let damageAbles = [entities, enemies]
-        damageAbles.forEach(obj=>{
-            for(let k in obj){
-                let entity = obj[k]
-                //NOTE: offset by entitySize because players drawn are offcentered
-                if(arrow.x > entity.x-entitySize/2 
-                && arrow.x < entity.x + entity.width-entitySize/2
-                && arrow.y > entity.y -entitySize/2
-                && arrow.y < entity.y + entity.height-entitySize/2) {
-                    entity.health -= arrow.damage
-                    if(entity.health <= 0){
-                        let whoShotIt = arrows[key].whoShot.username
-                        let messageLi = [
-                            `${whoShotIt} killed ${entity.username} with an arrow.`,
+        // Update projectile position
+        projectile.x += collision.tx;
+        projectile.y += collision.ty;
+
+        // Damage entities and enemies
+        let damageables = [entities, enemies];
+        damageables.forEach(obj => {
+            for (let k in obj) {
+                let entity = obj[k];
+                // Check if projectile hits entity
+                if (projectile.x > entity.x - entitySize / 2 &&
+                    projectile.x < entity.x + entity.width - entitySize / 2 &&
+                    projectile.y > entity.y - entitySize / 2 &&
+                    projectile.y < entity.y + entity.height - entitySize / 2) {
+                    // Decrease entity health by projectile damage
+                    entity.health -= projectile.damage;
+                    if (entity.health <= 0) {
+                        // If entity is killed, update player's stats
+                        let whoShotIt = projectiles[key].whoShot.username;
+                        let messages = [
+                            `${whoShotIt} killed ${entity.username} with a ${projectile.type}.`,
                             `${whoShotIt} shot ${entity.username}.`,
-                            `The arrow from ${whoShotIt} found its mark on ${entity.username}.`,
-                            `${entity.username} was sniped from afar by ${whoShotIt} with an arrow.`
-                        ]
-                        let shotArrowDeathMessageWording = messageLi[random(messageLi.length-1, 0)]
-                        let player = entities[arrows[key].whoShot.id]
-                        console.log(shotArrowDeathMessageWording)
-                        player.xp += entity.xp
-                        player.kills ++
+                            `The ${projectile.type} from ${whoShotIt} found its mark on ${entity.username}.`,
+                            `${entity.username} was sniped from afar by ${whoShotIt} with an ${projectile.type}.`
+                        ];
+                        let deathMessage = messages[Math.floor(Math.random() * messages.length)];
+                        let player = entities[projectiles[key].whoShot.id];
+                        console.log(deathMessage);
+                        player.xp += entity.xp;
+                        player.kills++;
                     }
-                    delete arrows[key]
-                    break
+                    if(projectile.durability != Infinity 
+                    && projectile.durability > 0){
+                        pickables[pickablesID] = new Pickable(pickablesID, projectile.x, projectile.y, projectile.type, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
+                        pickablesID++;
+                    }
+                    delete projectiles[key];
+                    break;
                 }
             }
-        })
+        });
     }
 
     //update pickables (despawn?)
@@ -973,7 +1024,7 @@ io.sockets.on("connection", (socket)=>{
         let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
 
         //should we load? (also order)
-        let updateLi = [markets, structures, players, enemies,  pickables, arrows, trees]
+        let updateLi = [markets, structures, players, enemies,  pickables, projectiles, trees]
         updateLi.forEach(group=>{
             for(let i in group){
                 let item = group[i]
@@ -1096,7 +1147,7 @@ io.sockets.on("connection", (socket)=>{
                 if (canShoot) {
                     let arrowDirection = player.rotation + Math.PI;
                     
-                    arrows[createID()] = new Arrow(player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, arrowDirection, player);
+                    projectiles[createID()] = new Projectile("Arrow", player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, player);
             
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
@@ -1114,7 +1165,15 @@ io.sockets.on("connection", (socket)=>{
                     //damage bow
                     tool.durability -= 1
                 }
-            }   
+            }  
+            else if(tool.name === "Spear"){
+                let spearDirection = player.rotation + Math.PI;
+                
+                tool.durability -= 1
+
+                projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, 75, 20, "/imgs/Spear.png", tool.durability);
+                player.inventory[player.invSelected] = {...holdableItems["Hand"]}
+            } 
             //melee attack         
             else {
                 let didDamage = false
