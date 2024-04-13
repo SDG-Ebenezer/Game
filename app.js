@@ -736,7 +736,7 @@ enemyCount++
 /** @projectiles */
 var projectiles = {}
 class Projectile{
-    constructor(type, x, y, w, h, damage, dir, whoShot, flightDuration=50, speed=15, imgSrc="/imgs/Arrow.png", durability=null){
+    constructor(type, x, y, w, h, damage, dir, whoShot, durability, flightDuration=50, speed=15, imgSrc="/imgs/Arrow.png"){
         this.type = type //key inside holdable items!
         this.x = x
         this.y = y
@@ -753,7 +753,7 @@ class Projectile{
 
         this.whoShot = whoShot
 
-        this.durability = `${durability}`?durability:holdableItems[type].durability
+        this.durability = durability
     }
 }
 
@@ -1147,7 +1147,7 @@ io.sockets.on("connection", (socket)=>{
                 if (canShoot) {
                     let arrowDirection = player.rotation + Math.PI;
                     
-                    projectiles[createID()] = new Projectile("Arrow", player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, player);
+                    projectiles[createID()] = new Projectile("Arrow", player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, player, holdableItems["Arrow"].durability);
             
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
@@ -1171,7 +1171,7 @@ io.sockets.on("connection", (socket)=>{
                 
                 tool.durability -= 1
 
-                projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, 75, 20, "/imgs/Spear.png", tool.durability);
+                projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, tool.durability, 75, 20, "/imgs/Spear.png");
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
             } 
             //melee attack         
