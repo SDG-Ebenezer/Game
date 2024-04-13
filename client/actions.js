@@ -317,7 +317,8 @@ function gShadow(){
 }
 //this is the little circle that appears...where you hit 
 function gAttackCursor(){
-    if(mouse.x**2 + mouse.y**2 <= player.hitRange ** 2){
+    let hitRange = (player.inventory[player.invSelected].hitRange? player.inventory[player.invSelected].hitRange:entitySize) * scale
+    if(mouse.x**2 + mouse.y**2 <= hitRange ** 2){
         let rangeCursorX = mouse.x + ginfo.width/2
         let rangeCursorY = mouse.y + ginfo.height/2
         gctx.fillStyle = "rgba(0,0,0,0.2)"

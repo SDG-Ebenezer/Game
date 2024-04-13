@@ -26,6 +26,7 @@ function createID(){
     return id
 }
 var pickables = {} //stuff, like XP, berries, etc.
+var maxLoad = 500 //most px a player can see (to cancel zoom out)
 const holdableItems = {
     "Hand":{
         name:"Hand",
@@ -39,6 +40,7 @@ const holdableItems = {
         stackSize:0,
         maxStackSize:0,
         cost: Infinity, //market value
+        hitRange: null
     },
     "Iron Sword":{
         name:"Iron Sword",
@@ -52,6 +54,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 500, //market value
+        hitRange: 175
     },
     "Gold Sword":{
         name:"Gold Sword",
@@ -65,6 +68,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 1500, //market value
+        hitRange: 150
     },
     "Diamond Sword":{
         name:"Diamond Sword",
@@ -78,6 +82,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 3000, //market value
+        hitRange: 150
     },
     "Plasma Sword":{
         name:"Plasma Sword",
@@ -91,6 +96,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 10_000, //market value
+        hitRange: 125
     },
     "Arrow":{
         name:"Arrow",
@@ -104,6 +110,7 @@ const holdableItems = {
         stackSize:1, //start out stack Size
         maxStackSize:64,
         cost: 25, //market value
+        hitRange: null
     },
     "Bow":{
         name:"Bow",
@@ -118,6 +125,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 1000, //market value
+        hitRange: maxLoad
     },
     "Spear":{
         name:"Spear",
@@ -132,6 +140,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 2500, //market value
+        hitRange: maxLoad
     }
 }
 
@@ -496,7 +505,6 @@ class Player extends Entity{
             {...holdableItems["Hand"]},
         ];
         this.invSelected = 0
-        this.hitRange = entitySize
         this.hitSize = 40
 
         /** @NOTE!
@@ -1019,7 +1027,6 @@ io.sockets.on("connection", (socket)=>{
     socket.on("requestUpdateDataFromServer", (data)=>{
         let player = entities[data.id]
         let updateContent = [borderRect] //always have the border
-        let reach = 500
 
         let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
 
@@ -1028,8 +1035,8 @@ io.sockets.on("connection", (socket)=>{
         updateLi.forEach(group=>{
             for(let i in group){
                 let item = group[i]
-                if(Math.abs(item.x - data.x) < reach
-                && Math.abs(item.y - data.y) < reach){
+                if(Math.abs(item.x - data.x) < maxLoad
+                && Math.abs(item.y - data.y) < maxLoad){
                     updateContent.push(item) //add to load
                 }
             }
@@ -1177,10 +1184,11 @@ io.sockets.on("connection", (socket)=>{
             //melee attack         
             else {
                 let didDamage = false
-                let damage = (tool.durability != Infinity)?holdableItems[tool.name].damage:holdableItems["Hand"].damage
+                let damage = (tool.durability === Infinity || !tool.durability)?holdableItems["Hand"].damage:holdableItems[tool.name].damage
+                let hitRange = player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize
                 for(let e in entities){    
                     let entity = entities[e]            
-                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < player.hitRange
+                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
                     && entity.id != id
                     && Math.abs(Math.abs(data.x) - Math.abs(entity.x)) < player.hitSize
                     && Math.abs(Math.abs(data.y) - Math.abs(entity.y)) < player.hitSize){
@@ -1195,7 +1203,7 @@ io.sockets.on("connection", (socket)=>{
                 }
                 for(let e in enemies){    
                     let enemy = enemies[e]
-                    if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < player.hitRange
+                    if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < hitRange
                     && Math.abs(Math.abs(enemy.x) - Math.abs(data.x)) < player.hitSize
                     && Math.abs(Math.abs(enemy.y) - Math.abs(data.y)) < player.hitSize){
                         enemy.health -= damage
