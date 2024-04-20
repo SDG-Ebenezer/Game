@@ -269,7 +269,7 @@ class Lake{
         this.isCircle = true
         this.color = "#188B8F"
 
-        this.decreaseSpeedFactor = 0.75 //slow speed
+        this.decreaseSpeedFactor = 0.5 //slow speed
     }
 }
 //generate
