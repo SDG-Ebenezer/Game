@@ -287,7 +287,7 @@ for(let i = 0; i < lakeCount; i++){
  */
 var particles = {}
 var particleTimeouts = {}
-var particleFrequency = 100 // 5 ms
+var particleFrequency = 200 // 5 ms
 class Particle{
     constructor(x, y, size=random(entitySize/2, entitySize/5)){
         this.x = x
@@ -404,7 +404,7 @@ for(let i = 0; i < numOfRandomWalls; i++){
 
 //Function also in PLAYER js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, size=entitySize) {
+function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, particlesTF, size=entitySize) {
     if(onWall) return { tx, ty }
     let newX = playerX + tx;
     let newY = playerY + ty;
@@ -428,7 +428,7 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, size=entit
             }
         }
     }
-    if (!onWall) {
+    if (!onWall && particlesTF) {
         for (let l in lakes) {
             let lake = lakes[l];
             let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
@@ -442,8 +442,7 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, size=entit
                 return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor };
             }
         }
-    }
-    
+    }    
     
     return { tx, ty };
 }
@@ -721,7 +720,7 @@ class Enemy extends Entity{
                 tx: this.xInc, 
                 ty: this.yInc,
             }:
-            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this, this.width==this.height?this.width:Math.max(this.width, this.height))
+            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height))
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -964,7 +963,7 @@ setInterval(()=>{
         }
 
         // Check collision with walls
-        let collision = checkCollision(structures, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
+        let collision = checkCollision(structures, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
         
         // Check if the projectile goes out of bounds
         if (!(projectile.x + collision.tx > BORDERS.L && projectile.x + collision.tx < BORDERS.R && projectile.y + collision.ty > BORDERS.D && projectile.y + collision.ty < BORDERS.U)) {
