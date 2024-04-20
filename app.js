@@ -287,12 +287,12 @@ for(let i = 0; i < lakeCount; i++){
  */
 var particles = {}
 var particleTimeouts = {}
-var particleFrequency = 200 // 5 ms
+var particleFrequency = 400 // 5 ms
 class Particle{
     constructor(x, y, radius=random(entitySize/2, entitySize/5)){
         this.x = x
         this.y = y
-        this.duration = 50
+        this.duration = 150
         this.color = "#00000010"
         this.size = radius
         this.radius = radius
