@@ -1095,6 +1095,7 @@ io.sockets.on("connection", (socket)=>{
                 mapSize:mapSize,
                 entitySize:entitySize,
                 walls: Object.values(structures),
+                lakes: Object.values(lakes),
                 markets: Object.values(markets),
             }) //re updates updated game data.
         }
