@@ -1366,4 +1366,7 @@ io.sockets.on("connection", (socket)=>{
             delete entities[undefined]
         }
     })
+    socket.on("playerClosedTab", function(data){
+        dropAll(data.player.id)
+    })
 })
