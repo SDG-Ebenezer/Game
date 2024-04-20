@@ -292,7 +292,7 @@ class Particle{
     constructor(x, y, size=random(entitySize/2, entitySize/5)){
         this.x = x
         this.y = y
-        this.duration = 35
+        this.duration = 50
         this.color = "#00000010"
         this.size = size
 
@@ -1119,11 +1119,9 @@ io.sockets.on("connection", (socket)=>{
                 let item = group[i]
                 let distance;
                 if (item.isCircle) {
-                    distance = Math.sqrt(Math.pow(item.x - data.x, 2) + Math.pow(item.y - data.y, 2));
+                    distance = Math.sqrt(Math.pow(data.x - item.x, 2) + Math.pow(data.y - item.y, 2));
                 } else {
-                    let itemCenterX = item.x + item.width / 2;
-                    let itemCenterY = item.y + item.height / 2;
-                    distance = Math.sqrt(Math.pow(itemCenterX - data.x, 2) + Math.pow(itemCenterY - data.y, 2));
+                    distance = Math.sqrt(Math.pow(item.x - data.x, 2) + Math.pow(item.y - data.y, 2));
                 }
                 if (distance <= maxLoad) {
                     updateContent.push(item); 
