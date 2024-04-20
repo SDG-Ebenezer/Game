@@ -255,7 +255,55 @@ function toggleOpeningsToArena(escapesLocked){
     }
 }
 
+/** @LAKES */
+/**
+ * Take a swim! Cool off bud!
+ */
+var lakes = {}
+class Lake{
+    constructor(x, y, radius){
+        this.x = x
+        this.y = y
+        this.size = radius
+        this.radius = radius
+        this.isCircle = true
+        this.color = "#188B8F"
+
+        this.decreaseSpeedFactor = 0.75 //slow speed
+    }
+}
+//generate
+let lakeCount = Math.floor(mapSize/1000)>0?Math.floor(mapSize/1000):1
+console.log("Lakes:", lakeCount)
+for(let i = 0; i < lakeCount; i++){
+    let size = random(300,250)
+    lakes[`LAKE${i}`] = new Lake(random(mapSize/2-size,-mapSize/2+size), random(mapSize/2-size,-mapSize/2+size), size)
+}
+
+/** @PARTICLES */
+/**
+ * Particles are for animation, when an object steps
+ * in water, climbs walls?, etc. For animation purposes.
+ */
+var particles = {}
+var particleTimeouts = {}
+var particleFrequency = 100 // 5 ms
+class Particle{
+    constructor(x, y, size=random(entitySize/2, entitySize/5)){
+        this.x = x
+        this.y = y
+        this.duration = 35
+        this.color = "#00000010"
+        this.size = size
+
+        this.isCircle = true
+    }
+}
+
 /** @SPAWN_FINDER */
+/**
+ * Everyone needs a home!
+ */
 function findSpawn(size=0) {
     let s = size;
     let x, y;
@@ -265,7 +313,7 @@ function findSpawn(size=0) {
         x = random(mapSize / 2 - s / 2, -mapSize / 2);
         y = random(mapSize / 2 - s / 2, -mapSize / 2);
         //cannot spawn on structures or markets 
-        let li1 = [structures, markets]
+        let li1 = [structures, markets, lakes]
         li1.forEach(obj=>{
             for (let sKey in obj) {
                 let st = obj[sKey];
@@ -356,7 +404,7 @@ for(let i = 0; i < numOfRandomWalls; i++){
 
 //Function also in PLAYER js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize) {
+function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, size=entitySize) {
     if(onWall) return { tx, ty }
     let newX = playerX + tx;
     let newY = playerY + ty;
@@ -380,6 +428,23 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize
             }
         }
     }
+    if (!onWall) {
+        for (let l in lakes) {
+            let lake = lakes[l];
+            let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
+            if (distanceSquared <= Math.pow(lake.radius, 2)) {
+                if(!particleTimeouts[who.id]){
+                    particleTimeouts[who.id] = setTimeout(()=>{
+                        delete particleTimeouts[who.id]
+                    }, particleFrequency)
+                    particles[createID()] = new Particle(playerX, playerY)
+                }
+                return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor };
+            }
+        }
+    }
+    
+    
     return { tx, ty };
 }
 
@@ -656,7 +721,7 @@ class Enemy extends Entity{
                 tx: this.xInc, 
                 ty: this.yInc,
             }:
-            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this.width==this.height?this.width:Math.max(this.width, this.height))
+            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this, this.width==this.height?this.width:Math.max(this.width, this.height))
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -860,6 +925,17 @@ setInterval(()=>{
         }
     }
 
+    // Update particles
+    for (let key in particles) {
+        let particle = particles[key];
+        if(particle.duration > 1){
+            particles[key].duration -= 1
+        } else{
+            delete particles[key]
+        }
+
+    }
+
     // Update projectiles
     for (let key in projectiles) {
         let projectile = projectiles[key];
@@ -888,7 +964,7 @@ setInterval(()=>{
         }
 
         // Check collision with walls
-        let collision = checkCollision(structures, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
+        let collision = checkCollision(structures, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
         
         // Check if the projectile goes out of bounds
         if (!(projectile.x + collision.tx > BORDERS.L && projectile.x + collision.tx < BORDERS.R && projectile.y + collision.ty > BORDERS.D && projectile.y + collision.ty < BORDERS.U)) {
@@ -980,6 +1056,7 @@ io.sockets.on("connection", (socket)=>{
             mapSize:mapSize,
             entitySize:entitySize,
             walls: Object.values(structures),
+            lakes: Object.values(lakes),
             markets: Object.values(markets),
             holdables: holdableItems
         })
@@ -1030,17 +1107,29 @@ io.sockets.on("connection", (socket)=>{
 
         let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
 
-        //should we load? (also order)
-        let updateLi = [markets, structures, players, enemies,  pickables, projectiles, trees]
-        updateLi.forEach(group=>{
-            for(let i in group){
+        let updateLi = [
+            lakes, markets, structures, //landmarks
+            particles, //um...
+            players, enemies, //entities
+            pickables, projectiles, //items
+            trees //um....
+        ];
+        updateLi.forEach(group => {
+            for (let i in group) {
                 let item = group[i]
-                if(Math.abs(item.x - data.x) < maxLoad
-                && Math.abs(item.y - data.y) < maxLoad){
-                    updateContent.push(item) //add to load
+                let distance;
+                if (item.isCircle) {
+                    distance = Math.sqrt(Math.pow(item.x - data.x, 2) + Math.pow(item.y - data.y, 2));
+                } else {
+                    let itemCenterX = item.x + item.width / 2;
+                    let itemCenterY = item.y + item.height / 2;
+                    distance = Math.sqrt(Math.pow(itemCenterX - data.x, 2) + Math.pow(itemCenterY - data.y, 2));
+                }
+                if (distance <= maxLoad) {
+                    updateContent.push(item); 
                 }
             }
-        })
+        });
         
         //delete killed players
         if(player && player.isDead){// player.health <= 0
@@ -1255,6 +1344,16 @@ io.sockets.on("connection", (socket)=>{
             socket.emit("SendCountdownInfo", {
                 time:ret
             })
+        }
+    })
+
+    //add particles?
+    socket.on("addParticles", function(data){
+        if(!particleTimeouts[data.id]){
+            particleTimeouts[data.id] = setTimeout(()=>{
+                delete particleTimeouts[data.id]
+            }, particleFrequency)
+            particles[createID()] = new Particle(data.x, data.y)
         }
     })
 

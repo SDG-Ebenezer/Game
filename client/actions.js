@@ -27,6 +27,7 @@ window.addEventListener("resize", ()=>{
 
 var socket = io()
 var defaultFontFamily = window.getComputedStyle(document.body).fontFamily;
+var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 
 //player
 var entitySize
@@ -40,6 +41,7 @@ var walls = {} //all of the walls
 var holdables = {} //all things that you can hold
 var mapSize //defined soon!
 var wallsList = [] //only the values
+var lakesList = []
 var marketsList = []
 
 var helpOpen = false //
@@ -64,6 +66,7 @@ socket.on("sendStartData", (data)=>{
     updateAgain = true
 
     wallsList = data.walls
+    lakesList = data.lakes
     marketsList = data.markets
     holdables = data.holdables
 })
@@ -75,6 +78,7 @@ socket.on("reupdate", (data)=>{
     canPlay = true
     updateAgain = true
     wallsList = data.walls
+    lakesList = data.lakes
     marketsList = data.markets
 })
 
@@ -378,11 +382,16 @@ function gMap(){
     //structures + markets
     gctx.save()
     gctx.translate(x+size/2,y+size/2)
-    //draw markets
-    for(let i in marketsList){
-        let market = marketsList[i]
-        gctx.fillStyle = "#1E90FF"
-        gctx.fillRect(market.x*sf,market.y*sf,pIcSize(market.width),pIcSize(market.height))
+    
+    
+    //draw lakes
+    for(let i in lakesList){
+        let lake = lakesList[i]
+        gctx.fillStyle = "#188B8F"
+        gctx.beginPath();
+        gctx.arc(lake.x * sf, lake.y * sf, lake.size * sf, 0, Math.PI * 2, true);
+        gctx.closePath();
+        gctx.fill();
     }
     //draw walls
     for(let i in wallsList){
@@ -391,6 +400,13 @@ function gMap(){
         else {gctx.fillStyle = "green"}
         gctx.fillRect(wall.x*sf,wall.y*sf,pIcSize(wall.width),pIcSize(wall.height))
     }
+    //draw markets
+    for(let i in marketsList){
+        let market = marketsList[i]
+        gctx.fillStyle = "#1E90FF"
+        gctx.fillRect(market.x*sf,market.y*sf,pIcSize(market.width),pIcSize(market.height))
+    }
+
     gctx.restore()
 
     gctx.save()
@@ -698,6 +714,21 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize
             }
         }
     }
+    if (!onWall) {
+        for (let l in lakesList) {
+            let lake = lakesList[l];
+            let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
+            if (distanceSquared <= Math.pow(lake.radius, 2)) {
+                    socket.emit("addParticles", {
+                        id:player.id,
+                        x:player.x,
+                        y:player.y,
+                    })
+                return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor };
+            }
+        }
+    }
+    
     return { tx, ty };
 }
 
