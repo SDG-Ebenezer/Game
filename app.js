@@ -289,12 +289,13 @@ var particles = {}
 var particleTimeouts = {}
 var particleFrequency = 200 // 5 ms
 class Particle{
-    constructor(x, y, size=random(entitySize/2, entitySize/5)){
+    constructor(x, y, radius=random(entitySize/2, entitySize/5)){
         this.x = x
         this.y = y
         this.duration = 50
         this.color = "#00000010"
-        this.size = size
+        this.size = radius
+        this.radius = radius
 
         this.isCircle = true
     }
@@ -313,7 +314,7 @@ function findSpawn(size=0) {
         x = random(mapSize / 2 - s / 2, -mapSize / 2);
         y = random(mapSize / 2 - s / 2, -mapSize / 2);
         //cannot spawn on structures or markets 
-        let li1 = [structures, markets, lakes]
+        let li1 = [structures, markets]
         li1.forEach(obj=>{
             for (let sKey in obj) {
                 let st = obj[sKey];
@@ -330,6 +331,14 @@ function findSpawn(size=0) {
                 }
             }
         })
+        for(let l in lakes){
+            let lake = lakes[l]
+            let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
+            if(distance <= lake.radius){
+                doNotPass = true; // aww
+                break
+            }
+        }
     }
     return { x, y };
 }
@@ -1119,7 +1128,7 @@ io.sockets.on("connection", (socket)=>{
                 let item = group[i]
                 let distance;
                 if (item.isCircle) {
-                    distance = Math.sqrt(Math.pow(data.x - item.x, 2) + Math.pow(data.y - item.y, 2));
+                    distance = Math.sqrt(Math.pow(data.x - item.x, 2) + Math.pow(data.y - item.y, 2)) - item.radius;
                 } else {
                     distance = Math.sqrt(Math.pow(item.x - data.x, 2) + Math.pow(item.y - data.y, 2));
                 }
@@ -1348,10 +1357,13 @@ io.sockets.on("connection", (socket)=>{
     //add particles?
     socket.on("addParticles", function(data){
         if(!particleTimeouts[data.id]){
+            //creates new particle...
+            let id = createID()
+            particles[id] = new Particle(data.x, data.y)
+            //particle timeout manages time til disappear
             particleTimeouts[data.id] = setTimeout(()=>{
                 delete particleTimeouts[data.id]
             }, particleFrequency)
-            particles[createID()] = new Particle(data.x, data.y)
         }
     })
 
