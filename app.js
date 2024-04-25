@@ -290,7 +290,7 @@ var movingParticlesID = {} // contains the ID of the particles that move
 var particleTimeouts = {}
 var particleFrequency = 400 // 
 class Particle{
-    constructor(x, y, radius=random(entitySize/2, entitySize/5), imgSrc=null, angle=null, source=null, speed=random(2,0.1)){
+    constructor(x, y, radius=random(entitySize/2, entitySize/5), imgSrc=null, angle=null, source=null, speed=random(0.5,0.1)){
         this.x = x
         this.y = y
         this.duration = 95
@@ -944,14 +944,14 @@ setInterval(()=>{
     }
 
     //Add moving particles
-    if(random(10, 1) == 1){
+    if(random(100, 1) == 1){
         let lake = lakes[Object.keys(lakes)[random(Object.keys(lakes).length-1, 0)]]
         let angle = Math.random() * 2 * Math.PI;
         let distance = Math.sqrt(Math.random()) * lake.radius;
         let x = lake.x + distance * Math.cos(angle);
         let y = lake.y + distance * Math.sin(angle);
         let id = createID()
-        particles[id] = new Particle(x, y, random(100, 50), `/imgs/Wave${random(3,1)}.png`, angle, {...lake})
+        particles[id] = new Particle(x, y, random(100, 80), `/imgs/Wave${random(3,1)}.png`, angle, {...lake})
         movingParticlesID[id] = id
     }
     // Update particles
