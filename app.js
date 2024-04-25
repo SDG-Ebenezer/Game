@@ -1129,11 +1129,15 @@ io.sockets.on("connection", (socket)=>{
                 let distance;
                 if (item.isCircle) {
                     distance = Math.sqrt(Math.pow(data.x - item.x, 2) + Math.pow(data.y - item.y, 2)) - item.radius;
+                    if (distance <= maxLoad) {
+                        updateContent.push(item); 
+                    }
                 } else {
-                    distance = Math.sqrt(Math.pow(item.x - data.x, 2) + Math.pow(item.y - data.y, 2));
-                }
-                if (distance <= maxLoad) {
-                    updateContent.push(item); 
+                    let dx = Math.max(Math.abs(data.x - item.x) - item.width / 2, 0);
+                    let dy = Math.max(Math.abs(data.y - item.y) - item.height / 2, 0);
+                    if(Math.sqrt(dx * dx + dy * dy) <= maxLoad) {
+                        updateContent.push(item); 
+                    }
                 }
             }
         });
