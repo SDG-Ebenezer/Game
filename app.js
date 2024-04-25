@@ -286,18 +286,28 @@ for(let i = 0; i < lakeCount; i++){
  * in water, climbs walls?, etc. For animation purposes.
  */
 var particles = {}
+var movingParticlesID = {} // contains the ID of the particles that move
 var particleTimeouts = {}
-var particleFrequency = 400 // 5 ms
+var particleFrequency = 400 // 
 class Particle{
-    constructor(x, y, radius=random(entitySize/2, entitySize/5)){
+    constructor(x, y, radius=random(entitySize/2, entitySize/5), imgSrc=null, angle=null, source=null, speed=random(2,0.1)){
         this.x = x
         this.y = y
-        this.duration = 150
-        this.color = "#00000010"
+        this.duration = 95
+        this.color = "#00000008"
         this.size = radius
         this.radius = radius
 
-        this.isCircle = true
+        this.isCircle = imgSrc === null
+
+        //moving particle properties
+        this.imgSrc = imgSrc
+        this.width = radius
+        this.height = radius
+        this.source = source // {}
+        this.rotation = angle
+        this.movingDir = angle
+        this.speed = speed
     }
 }
 
@@ -933,6 +943,17 @@ setInterval(()=>{
         }
     }
 
+    //Add moving particles
+    if(random(10, 1) == 1){
+        let lake = lakes[Object.keys(lakes)[random(Object.keys(lakes).length-1, 0)]]
+        let angle = Math.random() * 2 * Math.PI;
+        let distance = Math.sqrt(Math.random()) * lake.radius;
+        let x = lake.x + distance * Math.cos(angle);
+        let y = lake.y + distance * Math.sin(angle);
+        let id = createID()
+        particles[id] = new Particle(x, y, random(100, 50), `/imgs/Wave${random(3,1)}.png`, angle, {...lake})
+        movingParticlesID[id] = id
+    }
     // Update particles
     for (let key in particles) {
         let particle = particles[key];
@@ -940,6 +961,27 @@ setInterval(()=>{
             particles[key].duration -= 1
         } else{
             delete particles[key]
+        }
+
+    }
+    // Update moving particles
+    for (let key in movingParticlesID) {
+        let particleKey = movingParticlesID[key];
+        if(!particles[particleKey]){
+            delete movingParticlesID[key]
+        } else{
+            //delete if out 
+            let p = particles[particleKey]
+            let l = particles[particleKey].source
+            if (Math.sqrt(Math.pow(p.x - l.x, 2) + Math.pow(p.y - l.y, 2)) > l.radius){
+                delete particles[particleKey]
+                delete movingParticlesID[key]
+            } 
+            //else, update x,y
+            else {
+                particles[particleKey].x += Math.cos(particles[particleKey].movingDir) * particles[particleKey].speed
+                particles[particleKey].y += Math.sin(particles[particleKey].movingDir) * particles[particleKey].speed
+            }
         }
 
     }
