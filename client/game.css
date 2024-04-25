@@ -58,7 +58,6 @@ button{
     display:none;
 }
 
-
 /* Common styles for market */
 #marketBtnDiv {
     height: 100%;
@@ -251,6 +250,7 @@ input[type="radio"]:checked + img {
     background-color: aqua;
     color:black;
     animation: btn_anim 0.5s linear 4;
+    z-index: 3; /*Above help page*/
 } 
 #helpBtn:hover{
     opacity: 1;
@@ -270,6 +270,7 @@ input[type="radio"]:checked + img {
     height: 100vh;
     background-color: rgb(0, 0, 0, 0.85);
     display: none;
+    z-index: 2; /*Above starting page*/
 }
 /*scroll bar*/
 ::-webkit-scrollbar {
