@@ -736,7 +736,7 @@ class Enemy extends Entity{
         // UPDATE
         this.x += this.xInc
         this.y += this.yInc
-        this.rotation = Math.atan2(this.yInc, this.xInc) + Math.PI
+        this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
         // Check for damage
         if(distanceToPlayer < entitySize/2 && !this.justAttacked){
             let player = entities[this.targetPlayer.id]
@@ -756,9 +756,10 @@ class Boss extends Enemy{
         this.summoned = 0
     }
     move(){
-        super.move()
-        if(this.health < this.maxHealth * 3/4 && !this.summonGuards){
-            this.summonInGuards()
+        if(this.health < this.maxHealth * 3/4){
+            if(!this.summonGuards) this.summonInGuards()
+        } else {
+            super.move()
         }
 
         if(this.health == this.maxHealth){
