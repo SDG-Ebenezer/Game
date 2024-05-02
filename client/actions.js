@@ -547,8 +547,14 @@ var mouse = {
 //defined when game starts
 // these are what each event listener will do
 var tx = ty = 0
-// Initialize set to store keys
-var keySet = {}; 
+/** @How_Moving_Works */
+/* When a key is pressed, it is stored inside of "keySet = {}". The
+ * key is then performed in "performActions()". When "keyUp", the 
+ * key is removed from "keySet". "performActions()" checks for any
+ * key pressed. If no keys are pressed (including the space bar), then
+ * tx, ty = 0. No movement. Else, each key is acted to accordingly. 
+*/
+var keySet = {}; // Initialize set to store keys
 // Event listener for keydown
 function keydown(event) {
     event.preventDefault();
