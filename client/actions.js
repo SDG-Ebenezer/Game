@@ -283,6 +283,10 @@ var spX = canvas.width - spCircleRadius * 2;
 var spY = canvas.height - (gBarHeight + 15) - spCircleRadius; // Give padding above health bar
 var displayHelp = false
 function gActivateSpeedBar() {
+    //update
+    spCircleRadius = canvas.width * 0.05;
+    spX = canvas.width - spCircleRadius * 2;
+    spY = canvas.height - (gBarHeight + 15) - spCircleRadius;
     let outlinePercentage = speedTime / speedTimeMax; 
     {
         // Circle
@@ -327,6 +331,7 @@ function gActivateSpeedBar() {
         let w = 500
         let h = 40
         // Draw translucent white background
+        gctx.save()
         gctx.fillStyle = "rgba(255, 255, 255, 0.5)";
         gctx.fillRect(x - w/2, y - h/2, w, h);
 
@@ -335,6 +340,7 @@ function gActivateSpeedBar() {
         gctx.font = `${h / 2}px ${defaultFontFamily}`
         gctx.textAlign = "center";
         gctx.fillText("Hold a Key and then Press [X] to Sprint", x , y);
+        gctx.restore()
     }
 }
 document.addEventListener("mousemove", function(event) {
