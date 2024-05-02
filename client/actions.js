@@ -221,7 +221,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     if(player && player.health > 0){
         gHealth()
         gXP()
-        gSpeedBar()
+        gActivateSpeedBar()
         gShadow()
         drawInventory()
         gAttackCursor()
@@ -272,36 +272,83 @@ function gXP(){
     gctx.font = `${gBarHeight * 3/4}px ${defaultFontFamily}`
     gctx.fillText (`XP ${player.xp}`, size + padding, canvas.height-size * 3 - padding + size)
 }
-var speedTime = 0
+var speedTime = 100
 var speedTimeMax = 100
-socket.on("speed", ()=>{speedTime+=100})
-function gSpeedBar(){
-    if(speedTime > 0){ 
-        //just making sure...
-        if(speedTime > speedTimeMax) {speedTime = speedTimeMax}
-        //set
-        player.speed = 10 //[yS%^++]
-        //now...
-        let width = canvas.width - 15
-        let height = gBarHeight
-        gctx.fillStyle = 'black'
-        gctx.fillRect(0, canvas.height-height * 2, width, height - 15)
-        //
-        gctx.fillStyle = "rgb(146, 236, 246)"
-        gctx.fillRect(0, canvas.height-height * 2, width * (speedTime/speedTimeMax), height - 15) //[###]
-        //
-        gctx.fillStyle = 'white'
-        gctx.font = `10px ${defaultFontFamily}`
-        gctx.fillText(`SPEED: ${Math.round(speedTime)}`, 0, canvas.height-height * 2+height-2 - 15)
-        // 
-        speedTime -= 0.1
-        if(speedTime <= 0){
-            player.speed = 5 //[yS%^]
-        }
-    } else{
-        player.speed = 5  //[yS%^]
-    } 
+var speedImg = new Image()
+speedImg.src = "/imgs/SP.png"
+var sprint = false //aka speed on?
+socket.on("speed", ()=>{speedTime += 10})
+var spCircleRadius = canvas.width * 0.05;
+var spX = canvas.width - spCircleRadius * 2;
+var spY = canvas.height - (gBarHeight + 15) - spCircleRadius; // Give padding above health bar
+var displayHelp = false
+function gActivateSpeedBar() {
+    let outlinePercentage = speedTime / speedTimeMax; 
+    {
+        // Circle
+        gctx.beginPath();
+        gctx.arc(spX, spY, spCircleRadius, 0, 2 * Math.PI);
+        gctx.fillStyle = "#8FEAEEAA";
+        gctx.fill();
+
+        // Calculate position for the image
+        let imgWidth = imgHeight = spCircleRadius; 
+        let imgX = spX - imgWidth / 2;
+        let imgY = spY - imgHeight / 2;
+
+        // Draw the image in the center of the circle
+        gctx.drawImage(speedImg, imgX, imgY, imgWidth, imgHeight);
+
+        // Draw the outline
+        let endAngle = outlinePercentage >= 0 ? (2 * Math.PI * outlinePercentage) : 0;
+        gctx.beginPath();
+        gctx.arc(spX, spY, spCircleRadius * 1.1, 0, endAngle);
+        gctx.strokeStyle = '#CEFDFFaa'; // Outline color
+        gctx.lineWidth = spCircleRadius * 0.1; // Outline width
+        gctx.stroke();
+    }
+
+    if(sprint && speedTime > 0 && (tx != 0 || ty != 0)) { //have to have speed time and be moving to lose speed
+        speedTime -= 0.25
+        player.speed = 10
+    } else {
+        // Circle
+        gctx.beginPath();
+        gctx.arc(spX, spY, spCircleRadius, 0, 2 * Math.PI);
+        gctx.fillStyle = "#00000050";
+        gctx.fill();
+        player.speed = 5
+        speedTime += 0.01
+    }    
+
+    if(displayHelp){
+        let x = ginfo.width / 2
+        let y = ginfo.height - gBarHeight * 2
+        let w = 500
+        let h = 40
+        // Draw translucent white background
+        gctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        gctx.fillRect(x - w/2, y - h/2, w, h);
+
+        // Draw text
+        gctx.fillStyle = "black";
+        gctx.font = `${h / 2}px ${defaultFontFamily}`
+        gctx.textAlign = "center";
+        gctx.fillText("Hold a Key and then Press [X] to Sprint", x , y);
+    }
 }
+document.addEventListener("mousemove", function(event) {
+    // Get mouse coordinates relative to the canvas
+    let rect = canvas.getBoundingClientRect();
+    let mouseX = event.clientX - rect.left;
+    let mouseY = event.clientY - rect.top;
+    //display help for sprinting
+    let distanceToCenter = Math.sqrt(Math.pow(mouseX - spX, 2) + Math.pow(mouseY - spY, 2));
+    if (distanceToCenter <= spCircleRadius) {
+        displayHelp = true
+    } else {displayHelp = false}
+})
+
 function gShadow(){
     let radius = canvas.width > canvas.height ? canvas.width : canvas.height
     let startAngle = Math.PI / 4
@@ -500,86 +547,58 @@ var mouse = {
 //defined when game starts
 // these are what each event listener will do
 var tx = ty = 0
-function keydown(event){
-    event.preventDefault()
-    event.stopPropagation()
-    //inventory
-    switch(event.key.toLowerCase()){
-        case " ":
-            tx = -Math.cos(player.rotation) * player.speed
-            ty = -Math.sin(player.rotation) * player.speed
-            break
-        case "w":
-        case "arrowup":
-            ty = -player.speed
-            break
-        case "a":
-        case "arrowleft":
-            tx = -player.speed
-            break
-        case "s":
-        case "arrowdown":
-            ty = player.speed
-            break
-        case "d":
-        case "arrowright":
-            tx = player.speed
-            break
-        case "1":
-            currInvSlot = 1 - 1
-            break
-        case "2":
-            currInvSlot = 2 - 1
-            break
-        case "3":
-            currInvSlot = 3 - 1
-            break
-        case "4":
-            currInvSlot = 4 - 1
-            break   
-        case "5":
-            currInvSlot = 5 - 1
-            break
-        case "q":
-            socket.emit("drop", {
-                playerInvI:currInvSlot,
-                x:player.x - Math.cos(player.rotation) * entitySize * 2,
-                y:player.y - Math.sin(player.rotation) * entitySize * 2,
-            })
-            break
+// Initialize set to store keys
+var keySet = {}; 
+// Event listener for keydown
+function keydown(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    keySet[event.key.toLowerCase()] = true;
+};
+// Event listener for keyup
+function keyup(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    delete keySet[event.key.toLowerCase()];
+};
+
+// Function to perform actions based on keys in the set
+function performActions() {
+    let movementKeys = ["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"];
+
+    // Check if any movement key is currently pressed
+    let movementKeyPressed = movementKeys.some(key => keySet[key]);
+
+    // If no movement key is pressed and the spacebar is not pressed, reset the corresponding movement component
+    if (!movementKeyPressed && !keySet[" "]) {
+        tx = ty = 0;
+    } else if (keySet[" "]) { 
+        //player rotation must be adjusted 180 deg (PI rad)
+        tx = Math.cos(player.rotation + Math.PI) * player.speed;
+        ty = Math.sin(player.rotation + Math.PI) * player.speed;
+    } else { // If movement keys are pressed, handle movement
+        tx = (keySet["d"] || keySet["arrowright"]) ? player.speed : (keySet["a"] || keySet["arrowleft"]) ? -player.speed : 0;
+        ty = (keySet["s"] || keySet["arrowdown"]) ? player.speed : (keySet["w"] || keySet["arrowup"]) ? -player.speed : 0;
     }
-    // Check if Ctrl key is pressed and either + or - is pressed
-    if ((event.ctrlKey || event.metaKey) && (event.key === '+' || event.key === '-')) {
-        // Prevent the default zoom behavior
-        event.preventDefault();
+
+    // Handle other keys
+    sprint = keySet["x"] && speedTime > 0;
+
+    if (keySet["1"]) currInvSlot = 1 - 1;
+    if (keySet["2"]) currInvSlot = 2 - 1;
+    if (keySet["3"]) currInvSlot = 3 - 1;
+    if (keySet["4"]) currInvSlot = 4 - 1;
+    if (keySet["5"]) currInvSlot = 5 - 1;
+
+    if (keySet["q"]) {
+        socket.emit("drop", {
+            playerInvI: currInvSlot,
+            x: player.x - Math.cos(player.rotation) * entitySize * 2,
+            y: player.y - Math.sin(player.rotation) * entitySize * 2,
+        });
     }
 }
-function keyup(event){
-    event.preventDefault()
-    event.stopPropagation()
-    switch(event.key.toLowerCase()){
-        case " ":
-            tx = 0
-            ty = 0
-            break
-        case "w":
-        case "arrowup":
-            ty = 0
-            break
-        case "a":
-        case "arrowleft":
-            tx = 0
-            break
-        case "s":
-        case "arrowdown":
-            ty = 0
-            break
-        case "d":
-        case "arrowright":
-            tx = 0 
-            break
-    }
-}
+
 
 var dragStartX = 0;
 var dragStartY = 0;
@@ -773,6 +792,9 @@ function startGame(){
         //player update
         if(player && updateAgain && canPlay) {
             if(player.health > 0){ 
+                performActions() //get tx,ty from keys
+                //close market if attacked
+                if(lastHealthBeforeMarket > player.health) openMarket()
                 //check if in border
                 if (player.x + tx >= borders.R 
                 || player.x + tx <= borders.L){
@@ -860,8 +882,7 @@ function startGame(){
             }) //gives data to draw  
             updateAgain = false  
         }
-        
-    }, 0.01)
+    }, 0.01) //0.01
 }
 function exitGame(){
     canPlay = false // turn off
@@ -906,17 +927,22 @@ function showHelp(){
         helpOpen = true
     }
 }
+var lastHealthBeforeMarket; //keep track of health. If lower then, close market
 function openMarket(){
     let market = document.getElementById("market")
     let marketBackground = document.getElementById("marketBackground")
     let marketBtn = document.getElementById("showMarketBtn")
+    //close market page
     if (market.style.display != "none"){
+        lastHealthBeforeMarket = null
         market.style.display = "none"
         marketBtn.innerHTML = "Market"
         marketBackground.style.display = "none" //background display
         marketOpen = false
     }
+    //open market page
     else{
+        lastHealthBeforeMarket = player.health
         market.style.display = "flex"
         marketBackground.style.display = "block" //background display
         marketBtn.innerHTML = "Close"

@@ -1384,6 +1384,6 @@ io.sockets.on("connection", (socket)=>{
         }
     })
     socket.on("playerClosedTab", function(data){
-        if(data.player.id) dropAll(data.player.id)
+        if(data.player.id && entities[data.player.id]) dropAll(data.player.id)
     })
 })
