@@ -664,6 +664,7 @@ function mousemove(e) {
         lastEnteredSlot = newIndex; // Update the last entered slot
     }
 }
+let attackCooldown = false; // Initialize attack cooldown status
 function mousedown(e) {
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
@@ -678,11 +679,24 @@ function mousedown(e) {
                 clickedInv = true;
             }
         }
-        if (player.health > 0 && !clickedInv) {
-            socket.emit("mousedown", {
-                x: mouse.x + player.x,
-                y: mouse.y + player.y
-            });
+        if (player.health > 0 && !clickedInv && !attackCooldown) { // Check if not in cooldown
+            let selectedTool = player.inventory[player.invSelected];
+            if (selectedTool && selectedTool.cooldownTime !== undefined) { // Check if selected tool has a cooldown
+                // Set attack cooldown status
+                attackCooldown = true;
+
+                // Emit attack event
+                socket.emit("mousedown", {
+                    x: mouse.x + player.x,
+                    y: mouse.y + player.y
+                });
+
+                // Start cooldown timer based on selected tool's cooldown time
+                setTimeout(() => {
+                    // Reset attack cooldown status after cooldown time
+                    attackCooldown = false;
+                }, selectedTool.cooldownTime * 1000);
+            }
         }
     }
 

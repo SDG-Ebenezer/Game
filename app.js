@@ -40,7 +40,9 @@ const holdableItems = {
         stackSize:0,
         maxStackSize:0,
         cost: Infinity, //market value
-        hitRange: null
+        hitRange: null,
+        cooldownTime: 0.01, //s till next use
+        cooldownTimer:0
     },
     "Iron Sword":{
         name:"Iron Sword",
@@ -54,7 +56,9 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 500, //market value
-        hitRange: 175
+        hitRange: 175,
+        cooldownTime: 0.25, //s till next use
+        cooldownTimer:0
     },
     "Gold Sword":{
         name:"Gold Sword",
@@ -68,7 +72,9 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 1500, //market value
-        hitRange: 150
+        hitRange: 150,
+        cooldownTime: 0.75, //s till next use
+        cooldownTimer:0
     },
     "Diamond Sword":{
         name:"Diamond Sword",
@@ -82,7 +88,9 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 3000, //market value
-        hitRange: 150
+        hitRange: 150,
+        cooldownTime: 0.5, //s till next use
+        cooldownTimer:0
     },
     "Plasma Sword":{
         name:"Plasma Sword",
@@ -96,7 +104,9 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 10_000, //market value
-        hitRange: 125
+        hitRange: 125,
+        cooldownTime: 1, //s till next use
+        cooldownTimer:0
     },
     "Arrow":{
         name:"Arrow",
@@ -110,7 +120,9 @@ const holdableItems = {
         stackSize:1, //start out stack Size
         maxStackSize:64,
         cost: 25, //market value
-        hitRange: null
+        hitRange: null,
+        cooldownTime: 0, //s till next use
+        cooldownTimer:0
     },
     "Bow":{
         name:"Bow",
@@ -125,7 +137,9 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 1000, //market value
-        hitRange: maxLoad
+        hitRange: maxLoad,
+        cooldownTime: 1, //s till next use
+        cooldownTimer:0
     },
     "Spear":{
         name:"Spear",
@@ -140,7 +154,9 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 2500, //market value
-        hitRange: maxLoad
+        hitRange: maxLoad,
+        cooldownTime: 0, //s till next use
+        cooldownTimer:0
     }
 }
 
@@ -1080,7 +1096,7 @@ io.sockets.on("connection", (socket)=>{
             let { id, x, y, rotation, invSelected, speed, onWall, inventory } = player
             if (entity) {
                 Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
-                if (d.reorder) entity.inventory = inventory;
+                if (d.reorder) entity.inventory = inventory; //only update inventory if reordering...
             }
         } else if(player.id && !entity){
             id = player.id
