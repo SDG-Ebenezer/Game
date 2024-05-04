@@ -576,6 +576,25 @@ function keyup(event) {
 
 // Function to perform actions based on keys in the set
 function performActions() {
+    // Handle other keys first
+    sprint = keySet["x"] && speedTime > 0;
+
+    if (keySet["1"]) currInvSlot = 1 - 1;
+    if (keySet["2"]) currInvSlot = 2 - 1;
+    if (keySet["3"]) currInvSlot = 3 - 1;
+    if (keySet["4"]) currInvSlot = 4 - 1;
+    if (keySet["5"]) currInvSlot = 5 - 1;
+
+    if (keySet["q"]) {
+        socket.emit("drop", {
+            playerInvI: currInvSlot,
+            x: player.x - Math.cos(player.rotation) * entitySize * 2,
+            y: player.y - Math.sin(player.rotation) * entitySize * 2,
+        });
+        delete keySet["q"] //drop 1 only!
+    }
+
+    //MOVEMENT
     let movementKeys = ["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"];
 
     // Check if any movement key is currently pressed
@@ -591,23 +610,6 @@ function performActions() {
     } else { // If movement keys are pressed, handle movement
         tx = (keySet["d"] || keySet["arrowright"]) ? player.speed : (keySet["a"] || keySet["arrowleft"]) ? -player.speed : 0;
         ty = (keySet["s"] || keySet["arrowdown"]) ? player.speed : (keySet["w"] || keySet["arrowup"]) ? -player.speed : 0;
-    }
-
-    // Handle other keys
-    sprint = keySet["x"] && speedTime > 0;
-
-    if (keySet["1"]) currInvSlot = 1 - 1;
-    if (keySet["2"]) currInvSlot = 2 - 1;
-    if (keySet["3"]) currInvSlot = 3 - 1;
-    if (keySet["4"]) currInvSlot = 4 - 1;
-    if (keySet["5"]) currInvSlot = 5 - 1;
-
-    if (keySet["q"]) {
-        socket.emit("drop", {
-            playerInvI: currInvSlot,
-            x: player.x - Math.cos(player.rotation) * entitySize * 2,
-            y: player.y - Math.sin(player.rotation) * entitySize * 2,
-        });
     }
 }
 
@@ -707,15 +709,13 @@ function mouseup(e) {
 var touching = false
 function touchstart(e){
     if(!marketOpen){
-        tx = -Math.cos(player.rotation) * player.speed
-        ty = -Math.sin(player.rotation) * player.speed
+        keySet[" "] = true;
         touching = true
     }
 }
 function touchend(e){
     if(!marketOpen){
-        tx = 0
-        ty = 0
+        delete keySet[" "]
         touching = false
     }
 }
@@ -919,7 +919,8 @@ socket.on("gameOver", ()=>{
     document.removeEventListener("touchend", touchend)
     document.getElementById("exitGameBtn").style.display = "block"
     document.getElementById("gameOver").style.display = "block"
-    speedTime = 0 //reset speed!!
+    speedTime = speedTimeMax //reset speed!!
+    keySet = {} // reset keySet
     //close dem
     if(helpOpen) showHelp() 
     if(marketOpen) openMarket()

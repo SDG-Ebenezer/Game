@@ -758,9 +758,8 @@ class Boss extends Enemy{
     move(){
         if(this.health < this.maxHealth * 3/4){
             if(!this.summonGuards) this.summonInGuards()
-        } else {
-            super.move()
-        }
+        } 
+        super.move()
 
         if(this.health == this.maxHealth){
             for(let e in enemies){
