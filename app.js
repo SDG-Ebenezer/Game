@@ -41,7 +41,7 @@ const holdableItems = {
         maxStackSize:0,
         cost: Infinity, //market value
         hitRange: null,
-        cooldownTime: 0, //s till next use
+        cooldownTime: 0, //ms till next use
         cooldownTimer: 0
     },
     "Iron Sword":{
@@ -57,7 +57,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 500, //market value
         hitRange: 175,
-        cooldownTime: 0.15, //s till next use
+        cooldownTime: 5, //mms till next use
         cooldownTimer:0
     },
     "Gold Sword":{
@@ -73,7 +73,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1500, //market value
         hitRange: 150,
-        cooldownTime: 0.5, //s till next use
+        cooldownTime: 15, //ms till next use
         cooldownTimer:0
     },
     "Diamond Sword":{
@@ -89,7 +89,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 3000, //market value
         hitRange: 150,
-        cooldownTime: 0.25, //s till next use
+        cooldownTime: 10, //ms till next use
         cooldownTimer:0
     },
     "Plasma Sword":{
@@ -105,7 +105,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 10_000, //market value
         hitRange: 125,
-        cooldownTime: 1, //s till next use
+        cooldownTime: 50, //ms till next use
         cooldownTimer:0
     },
     "Arrow":{
@@ -121,7 +121,7 @@ const holdableItems = {
         maxStackSize:64,
         cost: 25, //market value
         hitRange: null,
-        cooldownTime: 0, //s till next use
+        cooldownTime: 0, //ms till next use
         cooldownTimer:0
     },
     "Bow":{
@@ -138,7 +138,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 0.7, //s till next use
+        cooldownTime: 30, //ms till next use
         cooldownTimer:0
     },
     "Spear":{
@@ -155,7 +155,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 2500, //market value
         hitRange: maxLoad,
-        cooldownTime: 0, //s till next use
+        cooldownTime: 0, //ms till next use
         cooldownTimer:0
     }
 }

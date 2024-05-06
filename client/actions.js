@@ -518,9 +518,6 @@ function drawInventory(){
         let each = player.inventory[invSpot]
         let strokeWidth = invSize * 10/75 //how thick the inv slot is
         //outline // invSelected
-        gctx.lineWidth = strokeWidth;
-        gctx.strokeStyle = "gray"
-        gctx.strokeRect(invSpot * invSize, invY, invSize, invSize)
         //PICTURE of icon (if any)
         if(each.pic){
             if(!images[each.pic]){
@@ -543,7 +540,13 @@ function drawInventory(){
         //SHADED out if timer on
         let timerPercentage = each.cooldownTimer/each.cooldownTime
         gctx.fillStyle = "#ffffffaa"
-        gctx.fillRect(invSpot * invSize, invY + invSize, invSize, -invSize * timerPercentage)
+        gctx.fillRect(invSpot * invSize - strokeWidth/2, invY + invSize, invSize, -(invSize - strokeWidth) * timerPercentage)
+
+        //OUTLINE
+        gctx.lineWidth = strokeWidth;
+        gctx.strokeStyle = "gray"
+        gctx.strokeRect(invSpot * invSize, invY, invSize, invSize)
+
         //(if stackable) give it a NUMBER to show how many you have
         if(each.maxStackSize > 1){
             gctx.font = `15px ${defaultFontFamily}`;
@@ -553,8 +556,10 @@ function drawInventory(){
         }
 
         //update cooldown timer
-        if(each.cooldownTimer * 1000 > 0){
-            player.inventory[invSpot].cooldownTimer = (each.cooldownTimer * 1000 - 1) / 1000
+        if(each.cooldownTimer > 0){
+            player.inventory[invSpot].cooldownTimer -= 1
+        } else if(each.cooldownTimer < 0){
+            player.inventory[invSpot].cooldownTimer = 0
         }
     }
     gctx.restore()
