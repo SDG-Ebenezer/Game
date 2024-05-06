@@ -41,8 +41,8 @@ const holdableItems = {
         maxStackSize:0,
         cost: Infinity, //market value
         hitRange: null,
-        cooldownTime: 0.01, //s till next use
-        cooldownTimer:0
+        cooldownTime: 0, //s till next use
+        cooldownTimer: 0
     },
     "Iron Sword":{
         name:"Iron Sword",
@@ -57,7 +57,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 500, //market value
         hitRange: 175,
-        cooldownTime: 0.25, //s till next use
+        cooldownTime: 0.15, //s till next use
         cooldownTimer:0
     },
     "Gold Sword":{
@@ -73,7 +73,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1500, //market value
         hitRange: 150,
-        cooldownTime: 0.75, //s till next use
+        cooldownTime: 0.5, //s till next use
         cooldownTimer:0
     },
     "Diamond Sword":{
@@ -89,7 +89,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 3000, //market value
         hitRange: 150,
-        cooldownTime: 0.5, //s till next use
+        cooldownTime: 0.25, //s till next use
         cooldownTimer:0
     },
     "Plasma Sword":{
@@ -138,7 +138,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 1, //s till next use
+        cooldownTime: 0.7, //s till next use
         cooldownTimer:0
     },
     "Spear":{
@@ -787,7 +787,7 @@ class Boss extends Enemy{
             }
         } else if (this.health < this.maxHealth){
             //regenerate!! >:)
-            this.health += 0.1
+            this.health += 0.01
         }
     }
     summonInGuards(){
@@ -1260,6 +1260,7 @@ io.sockets.on("connection", (socket)=>{
     socket.on("mousedown", function(data){
         let player = entities[id]
         if(player){
+            let usedItem = false
             let tool = player.inventory[player.invSelected]
             //shoot arrow IF bow
             if (tool.name === "Bow") {
@@ -1287,6 +1288,7 @@ io.sockets.on("connection", (socket)=>{
 
                     //damage bow
                     tool.durability -= 1
+                    usedItem = true // item was used!
                 }
             }  
             else if(tool.name === "Spear"){
@@ -1296,6 +1298,7 @@ io.sockets.on("connection", (socket)=>{
 
                 projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, tool.durability, 75, 20, "/imgs/Spear.png");
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
+                usedItem = true // item was used!
             } 
             //melee attack         
             else {
@@ -1333,6 +1336,7 @@ io.sockets.on("connection", (socket)=>{
                 }
                 if(didDamage && tool.durability != null){
                     tool.durability -= 1 //DAMAGE Tool
+                    usedItem = true // item was used!
                 }
             }
 
@@ -1341,7 +1345,10 @@ io.sockets.on("connection", (socket)=>{
             && player.inventory[player.invSelected].durability!=null){
                 //console.log(player.inventory[player.invSelected])
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
+                usedItem = false // item was used...but destroyed
             }
+
+            if (usedItem) {socket.emit("giveInventoryItemCooldownTime", {id:data.invID})}
         }
     })
 

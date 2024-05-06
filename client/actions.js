@@ -84,7 +84,7 @@ socket.on("reupdate", (data)=>{
 
 
 /** @UPDATE !! */
-//DRAWING FUNCTION
+// DRAWING FUNCTION
 var scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
 var maxScale = scale
 var minScale = maxScale - 0.2
@@ -234,19 +234,33 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     }
     updateAgain = true//allow update
 }
-//UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER
-socket.on("sendUpdateDataToClient", (info)=>{
-    //dont send data if dead
-    let savedInv
-    if(reorder) savedInv = player.inventory
-    if(player.health > 0) {
-        player = info.player
-        if(reorder) player.inventory = savedInv
-    }
-    updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard)
-    wallsList = info.structures
-})
+// UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER
+socket.on("sendUpdateDataToClient", (info) => {
+    // Don't update data if the player is dead
+    if (player.health > 0) {
+        // Save the current inventory if needed
+        let savedInv = player.inventory;
+        // Update player data
+        player = info.player;
 
+        // Restore the saved inventory if needed
+        if (reorderInventory) player.inventory = savedInv;
+
+        // EXCLUDE updating "cooldownTimer" property in inventory
+        for(let s in player.inventory){
+            player.inventory[s].cooldownTimer = savedInv[s].cooldownTimer
+        };
+
+        // Update walls list with provided structures
+        wallsList = info.structures;
+    }
+    /** @Note
+     * The updateCanv function is outside of the "player.health > 0"
+     * condition in order for a "spectator" view to be allowed after
+     * death.
+     */
+    updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard);
+});
 
 /** @GAME_DETAILS */
 var gBarHeight = window.innerHeight * 40/847 //also in resize
@@ -272,8 +286,8 @@ function gXP(){
     gctx.font = `${gBarHeight * 3/4}px ${defaultFontFamily}`
     gctx.fillText (`XP ${player.xp}`, size + padding, canvas.height-size * 3 - padding + size)
 }
-var speedTime = 100
-var speedTimeMax = 100
+var speedTime = 100 // Actual time
+var speedTimeMax = 100 // Max time (used as reference)
 var speedImg = new Image()
 speedImg.src = "/imgs/SP.png"
 var sprint = false //aka speed on?
@@ -343,6 +357,7 @@ function gActivateSpeedBar() {
         gctx.restore()
     }
 }
+// Add help display if hover over speed bar icon
 document.addEventListener("mousemove", function(event) {
     // Get mouse coordinates relative to the canvas
     let rect = canvas.getBoundingClientRect();
@@ -372,7 +387,7 @@ function gShadow(){
     ctx.closePath();
     ctx.restore()
 }
-//this is the little circle that appears...where you hit 
+// This is the little circle that appears...where you hit 
 function gAttackCursor(){
     let hitRange = (player.inventory[player.invSelected].hitRange? player.inventory[player.invSelected].hitRange:entitySize) * scale
     if(mouse.x**2 + mouse.y**2 <= hitRange ** 2){
@@ -486,54 +501,61 @@ function gShowCountdown() {
         gctx.fillText(`${respawnTime}s`, gctx.measureText("Boss respawning in ").width + x, y);
     }
 }
-
 socket.on("SendCountdownInfo", function(data){
     respawnTime = data.time
 })
 
+/** *** @Inventory  *** */
 // "invSize" also updated in the canvas resize 
 var invSize = 75*5<window.innerWidth?75:window.innerWidth/5 //5 bc of slots
 var invY = 0
-var reorder = false; 
+var reorderInventory = false; 
 function drawInventory(){
-    let i = 0
     gctx.fillStyle = "#000000aa"
     gctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
     gctx.save()
     for(let invSpot in player.inventory){
         let each = player.inventory[invSpot]
         let strokeWidth = invSize * 10/75 //how thick the inv slot is
+        //outline // invSelected
         gctx.lineWidth = strokeWidth;
         gctx.strokeStyle = "gray"
-        gctx.strokeRect(i * invSize, invY, invSize, invSize)
-        //draw pic
+        gctx.strokeRect(invSpot * invSize, invY, invSize, invSize)
+        //PICTURE of icon (if any)
         if(each.pic){
             if(!images[each.pic]){
                 images[each.pic] = new Image()
                 images[each.pic].src = each.pic
             }
-            gctx.drawImage(images[each.pic], i * invSize, invY, invSize, invSize)
+            gctx.drawImage(images[each.pic], invSpot * invSize, invY, invSize, invSize)
         }
+        //DURABILITY bar
         if(each.durability < each.maxDurability){
-            let w = invSize
+            let w = invSize - strokeWidth * 2
             let h = 5
-            let x = i * invSize
+            let x = invSpot * invSize + strokeWidth
             let y = invSize - h*3
-            gctx.fillStyle = "black"
+            gctx.fillStyle = "#353535"
             gctx.fillRect(x, y, w, h)
             gctx.fillStyle = "rgb(0,235,0)"
             gctx.fillRect(x, y, w * (each.durability/each.maxDurability), h)
         }  
-
-        //if stackable give it a number to show how many you have
+        //SHADED out if timer on
+        let timerPercentage = each.cooldownTimer/each.cooldownTime
+        gctx.fillStyle = "#ffffffaa"
+        gctx.fillRect(invSpot * invSize, invY + invSize, invSize, -invSize * timerPercentage)
+        //(if stackable) give it a NUMBER to show how many you have
         if(each.maxStackSize > 1){
             gctx.font = `15px ${defaultFontFamily}`;
             gctx.fillStyle = "white";
             //align on right
-            gctx.fillText(each.stackSize, i * (invSize) + invSize - ctx.measureText(`${each.stackSize}`).width - strokeWidth - 5, invSize - 15); 
+            gctx.fillText(each.stackSize, invSpot * (invSize) + invSize - ctx.measureText(`${each.stackSize}`).width - strokeWidth - 5, invSize - 15); 
         }
 
-        i++ //x 
+        //update cooldown timer
+        if(each.cooldownTimer * 1000 > 0){
+            player.inventory[invSpot].cooldownTimer = (each.cooldownTimer * 1000 - 1) / 1000
+        }
     }
     gctx.restore()
     //selected
@@ -541,6 +563,13 @@ function drawInventory(){
     gctx.strokeStyle = "white"
     gctx.strokeRect(currInvSlot * invSize, invY, invSize, invSize)
 }
+socket.on("giveInventoryItemCooldownTime", function(data){
+    if(player.health > 0){
+        let selectedTool = player.inventory[data.id];
+        // Set attack cooldown status
+        player.inventory[data.id].cooldownTimer = selectedTool.cooldownTime // add cooldown time
+    }
+})
 
 /** @MOVEMENT_CONTROLS */
 //KEYS
@@ -553,8 +582,8 @@ var mouse = {
 //defined when game starts
 // these are what each event listener will do
 var tx = ty = 0
-/** @How_Moving_Works */
-/* When a key is pressed, it is stored inside of "keySet = {}". The
+/** NOTE: ~ How Moving Works ~
+ * When a key is pressed, it is stored inside of "keySet = {}". The
  * key is then performed in "performActions()". When "keyUp", the 
  * key is removed from "keySet". "performActions()" checks for any
  * key pressed. If no keys are pressed (including the space bar), then
@@ -613,7 +642,7 @@ function performActions() {
     }
 }
 
-
+// Drag functions 
 var dragStartX = 0;
 var dragStartY = 0;
 var draggedItemIndex = -1;
@@ -624,7 +653,7 @@ function mousemove(e) {
     mouse.x = e.clientX - canvas.width / 2;
     mouse.y = e.clientY - canvas.height / 2;
 
-    if (!reorder || draggedItemIndex === -1) return;
+    if (!reorderInventory || draggedItemIndex === -1) return;
 
     let mouseX = e.clientX - canvas.getBoundingClientRect().left;
     let mouseY = e.clientY - canvas.getBoundingClientRect().top;
@@ -664,7 +693,6 @@ function mousemove(e) {
         lastEnteredSlot = newIndex; // Update the last entered slot
     }
 }
-let attackCooldown = false; // Initialize attack cooldown status
 function mousedown(e) {
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
@@ -679,24 +707,14 @@ function mousedown(e) {
                 clickedInv = true;
             }
         }
-        if (player.health > 0 && !clickedInv && !attackCooldown) { // Check if not in cooldown
-            let selectedTool = player.inventory[player.invSelected];
-            if (selectedTool && selectedTool.cooldownTime !== undefined) { // Check if selected tool has a cooldown
-                // Set attack cooldown status
-                attackCooldown = true;
-
-                // Emit attack event
-                socket.emit("mousedown", {
-                    x: mouse.x + player.x,
-                    y: mouse.y + player.y
-                });
-
-                // Start cooldown timer based on selected tool's cooldown time
-                setTimeout(() => {
-                    // Reset attack cooldown status after cooldown time
-                    attackCooldown = false;
-                }, selectedTool.cooldownTime * 1000);
-            }
+        if (player.health > 0 && !clickedInv 
+        && player.inventory[player.invSelected].cooldownTimer == 0){// Check if not in cooldown
+            // Emit attack event
+            socket.emit("mousedown", {
+                x: mouse.x + player.x,
+                y: mouse.y + player.y,
+                invID: player.invSelected
+            });
         }
     }
 
@@ -706,7 +724,7 @@ function mousedown(e) {
     // Check if the mouse click is within an inventory slot
     let clickedItemIndex = Math.floor(mouseX / invSize);
     if (clickedItemIndex >= 0 && clickedItemIndex < player.inventory.length && mouseY <= invSize) {
-        reorder = true
+        reorderInventory = true
         dragStartX = mouseX;
         dragStartY = mouseY;
         draggedItemIndex = clickedItemIndex;
@@ -715,11 +733,14 @@ function mousedown(e) {
     }
 }
 function mouseup(e) {
-    if (!reorder || draggedItemIndex === -1) return;
+    if (!reorderInventory || draggedItemIndex === -1) return;
     draggedItemIndex = -1;
-    reorder = false;
+    reorderInventory = false;
 }
 
+/** @NOTE: 
+ * On phone, touching simply activates the "Space" bar.
+*/
 var touching = false
 function touchstart(e){
     if(!marketOpen){
@@ -777,14 +798,12 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize
     return { tx, ty };
 }
 
-
-/** @update */
-//request data to update canv
+/** @Update */
+// Request data to update canv
 var updateAgain = false
-//in some unhappy circumstances, allow update to restart
 socket.on("allowUpdate", ()=>{updateAgain = true})
-var gameLoopInt // TO BE THE GAME LOOPA!
-//also contains the game loop
+var gameLoopInt // TO BE THE GAME LOOPA! (currently undefined)
+// Function startGame() contains the game loop
 function startGame(){
     {
         //zoom in spawn effect
@@ -874,7 +893,7 @@ function startGame(){
                 player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
                 socket.emit("updatePlayer", {
                     player:player,
-                    reorder:reorder
+                    reorder: reorderInventory
                 })  
 
                 let inMarket = false
@@ -920,7 +939,7 @@ function exitGame(){
     document.getElementById("exitGameBtn").style.display = "none"
 }
 
-//show game over screen if dead
+// Show game over screen if dead
 socket.on("gameOver", ()=>{
     console.log("Game over :(")
     //remove all event listeners
@@ -954,7 +973,7 @@ function showHelp(){
         helpOpen = true
     }
 }
-var lastHealthBeforeMarket; //keep track of health. If lower then, close market
+var lastHealthBeforeMarket; // Keep track of health. If lower then, close market
 function openMarket(){
     let market = document.getElementById("market")
     let marketBackground = document.getElementById("marketBackground")
@@ -1050,13 +1069,13 @@ window.addEventListener('beforeunload', function(event) {
     }*/
 })
 
-//WAIT SCREEN on
+// WAIT SCREEN on
 const waitDiv = document.getElementById("wait")
 const dotsSpan = document.getElementById('dots');
 const dotsCount = 3; // Number of dots to display
 let dotIndex = 0;
 var disconnectTimeout
-//reconnected
+// Reconnected
 socket.on('connect', () => {
     console.log('Connected to server');
     // Clear the timeout if the connection is established
@@ -1064,7 +1083,7 @@ socket.on('connect', () => {
     // Hide the "wait" div when connected
     waitDiv.style.display = 'none';
 });
-//disconnected
+// Disconnected...
 socket.on("disconnect", ()=>{
     console.log('Disconnected from server');
     waitDiv.style.display = 'block';
