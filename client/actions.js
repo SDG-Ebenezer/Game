@@ -47,6 +47,7 @@ var marketsList = []
 var helpOpen = false //
 var marketOpen = false //
 
+var speedFactor = 1 //updated later, 1 as default
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
@@ -69,6 +70,8 @@ socket.on("sendStartData", (data)=>{
     lakesList = data.lakes
     marketsList = data.markets
     holdables = data.holdables
+
+    speedFactor = data.speedFactor
 })
 socket.on("reupdate", (data)=>{
     borders = data.bordersObj
@@ -80,6 +83,7 @@ socket.on("reupdate", (data)=>{
     wallsList = data.walls
     lakesList = data.lakes
     marketsList = data.markets
+    speedFactor = data.speedFactor
 })
 
 
@@ -924,7 +928,10 @@ function startGame(){
                     document.getElementById("marketBackground").style.display = "none"
                     marketOpen = false //
                 }
-            } 
+            } else{
+                //Update death message [A4dh3dfDM9]
+                document.getElementById("deathMessageText").innerHTML = player.deathMessage
+            }
             socket.emit("requestUpdateDataFromServer", {
                 id: player.id,
                 x:player.x,
@@ -946,7 +953,9 @@ function exitGame(){
 
 // Show game over screen if dead
 socket.on("gameOver", ()=>{
+    // DEATH MESSAGE update found in the game loop search: [A4dh3dfDM9]
     console.log("Game over :(")
+
     //remove all event listeners
     document.removeEventListener("keydown", keydown)
     document.removeEventListener("keyup", keyup)
@@ -957,6 +966,8 @@ socket.on("gameOver", ()=>{
     document.removeEventListener("touchend", touchend)
     document.getElementById("exitGameBtn").style.display = "block"
     document.getElementById("gameOver").style.display = "block"
+
+    //reset variables
     speedTime = speedTimeMax //reset speed!!
     keySet = {} // reset keySet
     //close dem

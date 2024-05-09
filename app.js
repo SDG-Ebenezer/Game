@@ -25,8 +25,9 @@ function createID(){
     ids.push(id) //keep track of all ids
     return id
 }
-var pickables = {} //stuff, like XP, berries, etc.
 var maxLoad = 750 //most px a player can see (to cancel zoom out)
+const speedFactor = PORT===1111? 0.1:1 //adjust how fast the game goes (the lower the slower) 
+//ENTITIES speed not affected
 const holdableItems = {
     "Hand":{
         name:"Hand",
@@ -41,8 +42,8 @@ const holdableItems = {
         maxStackSize:0,
         cost: Infinity, //market value
         hitRange: null,
-        cooldownTime: 0, //ms till next use
-        cooldownTimer: 0
+        cooldownTime: 0 * 1/speedFactor, //ms till next use
+        cooldownTimer: 0 
     },
     "Iron Sword":{
         name:"Iron Sword",
@@ -57,8 +58,8 @@ const holdableItems = {
         maxStackSize:1,
         cost: 500, //market value
         hitRange: 175,
-        cooldownTime: 5, //mms till next use
-        cooldownTimer:0
+        cooldownTime: 5 * 1/speedFactor, //mms till next use
+        cooldownTimer: 0
     },
     "Gold Sword":{
         name:"Gold Sword",
@@ -73,7 +74,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1500, //market value
         hitRange: 150,
-        cooldownTime: 15, //ms till next use
+        cooldownTime: 15 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Diamond Sword":{
@@ -89,7 +90,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 3000, //market value
         hitRange: 150,
-        cooldownTime: 10, //ms till next use
+        cooldownTime: 10 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Plasma Sword":{
@@ -105,7 +106,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 10_000, //market value
         hitRange: 125,
-        cooldownTime: 50, //ms till next use
+        cooldownTime: 50 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Arrow":{
@@ -121,7 +122,7 @@ const holdableItems = {
         maxStackSize:64,
         cost: 25, //market value
         hitRange: null,
-        cooldownTime: 0, //ms till next use
+        cooldownTime: 0 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Bow":{
@@ -138,7 +139,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 30, //ms till next use
+        cooldownTime: 30 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Spear":{
@@ -155,7 +156,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 2500, //market value
         hitRange: maxLoad,
-        cooldownTime: 0, //ms till next use
+        cooldownTime: 0 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     }
 }
@@ -533,7 +534,8 @@ class Pickable{
        this.despawnIn = 10000 // * fps sec
    }
 }
-var pickablesID = 0
+var pickables = {} 
+var pickablesID = 0 //This is the KEY that will be used for each item in the object "pickables"
 //drop everything after death
 /**
  * This function copies the inventory of an entity
@@ -575,7 +577,7 @@ class Entity {
         this.isCircle = false;
         this.width = w;
         this.height = h;
-        this.speed = speed;
+        this.speed = speed
         this.maxSpeed = speed
         this.onWall = false //default
     }
@@ -603,17 +605,19 @@ class Player extends Entity{
          * server crashes and resets.
         */
         this.isDead = false
+        this.deathMessage = null
     }
 }
 class Enemy extends Entity{
-    constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize){
+    constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize, inventory=null, invSelected=null){
         super(type, imgSrc, speed, w, h, x, y, health)
         this.username = "BOT_Enemy"
         this.detectRange = detectRange
         this.damage = damage
         this.targetPlayer
         this.dx = 0;
-        this.dy = 0;      
+        this.dy = 0;   
+        this.moving = false   
         this.justAttacked = false
         this.cooldownTime = 0 //s
         this.cooldownDuration = reloadTime //ms
@@ -639,6 +643,9 @@ class Enemy extends Entity{
             this.xp = 75
         }
         
+        this.inventory = inventory
+        this.invSelected = invSelected
+
         this.targetX = 0
         this.targetY = 0
     }
@@ -659,16 +666,19 @@ class Enemy extends Entity{
     damageCoolDown(){
         if(this.justAttacked){
             this.cooldownTime ++
+            //adds up until over
             if(this.cooldownTime >= this.cooldownDuration) {
                 this.cooldownTime = 0
                 this.justAttacked = false
             }
         }
     }
+    //AI, decisions made here
     move() {
         this.findTargetPlayer()
         this.damageCoolDown()
         // Calculate the distance between the enemy and the user
+        //dx, dy = target x, y
         this.dx = this.dy = this.dist = 0
         var distanceToPlayer
         if(this.targetPlayer) {
@@ -700,6 +710,33 @@ class Enemy extends Entity{
                 this.targetY = random(mapSize/2,-mapSize/2)
             }
         }           
+        this.aMove()
+        // Check for damage
+        if(distanceToPlayer < entitySize/2 && !this.justAttacked){
+            let player = entities[this.targetPlayer.id]
+            player.health -= this.damage
+            //death message
+            //ALL MELEE ATTACKING MOBS THAT KILL PLAYERS INPUT THE PLAYER'S DEATH MESSAGE HERE!!!
+            if(player.health <= 0){
+                if(this.type == "Boss"){
+                    console.log(player.username, player.id, " was punished by the boss.")
+                    player.deathMessage = ["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."][random(2,0)] //pick one of these
+                } else if (this.type == "Summoned_Lord"){
+                    console.log(player.username, player.id, " hit by a guard.")
+                    player.deathMessage = ["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."][random(2,0)]
+                } else if (this.type == "Lord"){
+                    console.log(player.username, player.id, " hit by a leader.")
+                    player.deathMessage = ["You died from a monster leader.", "A monster lord killed you."][random(2,0)]
+                } else{
+                    console.log(player.username, player.id, " killed by a monster.")
+                    player.deathMessage = ["You died from a monster.", "A monster hit you.", "You were slain by a monster"][random(2,0)]
+                }
+            }
+            this.justAttacked = true
+        }
+    }
+    //the actual moving is done here
+    aMove(){
         this.dist = Math.sqrt(this.dx ** 2 + this.dy ** 2);
         // Normalize the distance
         if(this.dist > 0){
@@ -753,16 +790,6 @@ class Enemy extends Entity{
         this.x += this.xInc
         this.y += this.yInc
         this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
-        // Check for damage
-        if(distanceToPlayer < entitySize/2 && !this.justAttacked){
-            let player = entities[this.targetPlayer.id]
-            player.health -= this.damage
-            //death message
-            if(player.health <= 0){
-                console.log(player.username, player.id, this.type == "Boss"?"was bonked by the boss":"was slain by a monster")
-            }
-            this.justAttacked = true
-        }
     }
 }
 class Boss extends Enemy{
@@ -787,7 +814,7 @@ class Boss extends Enemy{
             }
         } else if (this.health < this.maxHealth){
             //regenerate!! >:)
-            this.health += 0.01
+            this.health += (0.01 * speedFactor) //regenerate based on how fast the game is running
         }
     }
     summonInGuards(){
@@ -807,6 +834,61 @@ class Boss extends Enemy{
         }
     }
 }
+class Archer extends Enemy{
+    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=null, detectRange=350, reloadTime=200, speed=0.8, health = 100, w=entitySize, h=entitySize){
+        super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
+    }
+    move(){
+        super.findTargetPlayer()
+        super.damageCoolDown()
+        
+        this.dx = this.dy = this.dist = 0
+        var distanceToPlayer
+        
+        if(this.targetPlayer) {
+            distanceToPlayer = Math.sqrt((this.targetPlayer.x - this.x) ** 2 + (this.targetPlayer.y - this.y) ** 2)
+        }
+        else {distanceToPlayer = 10**10}
+
+        if(distanceToPlayer <= this.detectRange) { // Is player within range?
+            this.status = "Attack"
+            this.dx = this.targetPlayer.x - this.x;
+            this.dy = this.targetPlayer.y - this.y;
+            this.speed = 0 //stop movement
+            this.moving = true; //aka, cant go away now...
+            this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
+            if(!this.justAttacked){
+                this.justAttacked = true
+                let arrowDirection = this.rotation + Math.PI
+                //SHOOT ARROW!
+                projectiles[createID()] = new Projectile("Arrow", this.x + Math.cos(arrowDirection) * entitySize, this.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, this, holdableItems["Arrow"].durability);
+            }
+        } else{ 
+            this.speed = this.maxSpeed
+            if (!this.moving) {
+                this.status = "Wander"
+                this.targetX = random(mapSize/2,-mapSize/2)
+                this.targetY = random(mapSize/2,-mapSize/2)
+                this.dx = this.targetX - this.x;
+                this.dy = this.targetY - this.y;
+                this.moving = true;
+                setTimeout(() => {
+                    this.moving = false;
+                }, 10000); // Stay at the target location for 10 seconds
+            } else {
+                this.dx = this.targetX - this.x;
+                this.dy = this.targetY - this.y;
+                // if at destination, find new one
+                if(this.dx < 1 && this.dy < 1) {
+                    this.targetX = random(mapSize/2,-mapSize/2)
+                    this.targetY = random(mapSize/2,-mapSize/2)
+                }
+            }  
+            super.aMove()
+        }
+        
+    }
+}
 
 /** @ENEMY_GENERATOR ************* */
 var currEnemyID = 0
@@ -820,6 +902,13 @@ function spawnNormal(){
 function spawnLord(){
     let nC = findSpawn(entitySize)
     enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 1/2, 500)
+    currEnemyID++
+    enemyCount++
+}
+function spawnArcher(){
+    //console.log("Archer spawned")
+    let nC = findSpawn(entitySize)
+    enemies[currEnemyID] = new Archer(nC.x, nC.y)
     currEnemyID++
     enemyCount++
 }
@@ -857,7 +946,7 @@ class Projectile{
 /** @SERVER_GAME_LOOOOOP ********** */
 var startedCountdown = false
 var amountOfBerries = 0
-var countDownTime = 0; //already spawned in?
+var countDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 setInterval(()=>{
     if (!enemies[bossID] && !startedCountdown){
         toggleOpeningsToArena(false);
@@ -881,6 +970,7 @@ setInterval(()=>{
     if(enemyCount < 10){
         if(random(100, 1) == 1){
             if(random(10,1) == 1) spawnLord()
+            else if (random(5,1) == 1) spawnArcher()
             else spawnNormal()
         }
     }
@@ -898,6 +988,15 @@ setInterval(()=>{
                 let loot = enemies[e].lootTable[pick]
                 pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, null, loot.name, 0, loot.durability, loot.stackSize)
                 pickablesID++
+            }
+            //does an enemy have an inventory?
+            if(enemies[e].inventory){
+                //for now, enemy drops everything in their inventory
+                for(let i in enemies[e].inventory){
+                    let loot = enemies[e].inventory[i]
+                    pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, null, loot.name, 0, loot.durability, loot.stackSize)
+                    pickablesID++
+                }
             }
             delete enemies[e]
         }
@@ -1022,19 +1121,25 @@ setInterval(()=>{
                     // Decrease entity health by projectile damage
                     entity.health -= projectile.damage;
                     if (entity.health <= 0) {
-                        // If entity is killed, update player's stats
-                        let whoShotIt = projectiles[key].whoShot.username;
-                        let messages = [
-                            `${whoShotIt} killed ${entity.username} with a ${projectile.type}.`,
-                            `${whoShotIt} shot ${entity.username}.`,
-                            `The ${projectile.type} from ${whoShotIt} found its mark on ${entity.username}.`,
-                            `${entity.username} was sniped from afar by ${whoShotIt} with an ${projectile.type}.`
-                        ];
-                        let deathMessage = messages[Math.floor(Math.random() * messages.length)];
-                        let player = entities[projectiles[key].whoShot.id];
-                        console.log(deathMessage);
-                        player.xp += entity.xp;
-                        player.kills++;
+                            if(projectiles[key].whoShot.id in Object.keys(entities)){
+                            // If entity is killed, update player's stats
+                            let whoShotIt = projectiles[key].whoShot.username;
+                            let messages = [
+                                `${whoShotIt} killed ${entity.username} with a ${projectile.type}.`,
+                                `${whoShotIt} shot ${entity.username}.`,
+                                `The ${projectile.type} from ${whoShotIt} found its mark on ${entity.username}.`,
+                                `${entity.username} was sniped from afar by ${whoShotIt} with an ${projectile.type}.`
+                            ];
+                            let deathMessage = messages[Math.floor(Math.random() * messages.length)];
+                            let player = entities[projectiles[key].whoShot.id];
+                            player.xp += entity.xp;
+                            player.kills++;
+                            entity.deathMessage = `${player.username} shot you.`
+                            console.log(deathMessage);
+                        } else{
+                            entity.deathMessage = ["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."][random(2,0)]
+                            console.log("An archer shot ", entity.username, entity.id)
+                        }
                     }
                     if(projectile.durability != Infinity 
                     && projectile.durability > 0){
@@ -1082,7 +1187,8 @@ io.sockets.on("connection", (socket)=>{
             walls: Object.values(structures),
             lakes: Object.values(lakes),
             markets: Object.values(markets),
-            holdables: holdableItems
+            holdables: holdableItems,
+            speedFactor: speedFactor
         })
         console.log("Player ", player.username, player.id, "joined the server.")
     }) 
@@ -1158,7 +1264,8 @@ io.sockets.on("connection", (socket)=>{
             }
         });
         
-        //delete killed players
+        //delete killed players 
+        //ONLY dies if send death message!!
         if(player && player.isDead){// player.health <= 0
             dropAll(id)
             delete entities[id]
@@ -1330,6 +1437,7 @@ io.sockets.on("connection", (socket)=>{
                             //give player xp for killed
                             player.xp += enemy.xp
                             player.kills ++
+                            enemy.deathMessage = "You were killed by " + player.username
                         }
                         didDamage = true // turn to true
                     }
@@ -1406,6 +1514,6 @@ io.sockets.on("connection", (socket)=>{
         }
     })
     socket.on("playerClosedTab", function(data){
-        if(data.player.id && entities[data.player.id]) dropAll(data.player.id)
+        if(data.player && data.player.id && entities[data.player.id]) dropAll(data.player.id)
     })
 })

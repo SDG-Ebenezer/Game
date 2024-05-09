@@ -234,6 +234,18 @@ input[type="radio"]:checked + img {
     justify-content: center;
     align-items: center;
 }
+#deathMessageText {
+    background-color: none;
+    color: white;
+    font-size: 2vw;
+    position: fixed;
+    top:55%;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
 .padText{
     padding-left:5px;
