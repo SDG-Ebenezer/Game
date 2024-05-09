@@ -549,8 +549,16 @@ function dropAll(id){
                 let scatterRange = entitySize * 2 // area of scattering items
                 let x = random(player.x + scatterRange, player.x - scatterRange)
                 let y = random(player.y + scatterRange, player.y - scatterRange)
-                if (x >= BORDERS.R || x <= BORDERS.L){x = 0}
-                if (y >= BORDERS.U || y <= BORDERS.D){y = 0}
+                if (x >= BORDERS.R){
+                    x = BORDERS.R
+                } else if(x <= BORDERS.L){
+                    x = BORDERS.L
+                }
+                if (y >= BORDERS.U){
+                    y = BORDERS.U
+                } else if (y <= BORDERS.D){
+                    y = BORDERS.D
+                }
                 pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.name,null,slot.name,0,slot.durability,slot.stackSize)
                 pickablesID ++
             }
@@ -835,7 +843,7 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=null, detectRange=350, reloadTime=200, speed=0.8, health = 100, w=entitySize, h=entitySize){
+    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=null, detectRange=400, reloadTime=200, speed=0.8, health = 100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
     }
     move(){
@@ -1121,7 +1129,7 @@ setInterval(()=>{
                     // Decrease entity health by projectile damage
                     entity.health -= projectile.damage;
                     if (entity.health <= 0) {
-                            if(projectiles[key].whoShot.id in Object.keys(entities)){
+                        if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
                             // If entity is killed, update player's stats
                             let whoShotIt = projectiles[key].whoShot.username;
                             let messages = [
@@ -1134,7 +1142,7 @@ setInterval(()=>{
                             let player = entities[projectiles[key].whoShot.id];
                             player.xp += entity.xp;
                             player.kills++;
-                            entity.deathMessage = `${player.username} shot you.`
+                            entity.deathMessage = `You were shot by ${player.username}`
                             console.log(deathMessage);
                         } else{
                             entity.deathMessage = ["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."][random(2,0)]
@@ -1204,7 +1212,7 @@ io.sockets.on("connection", (socket)=>{
                 Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
                 if (d.reorder) entity.inventory = inventory; //only update inventory if reordering...
             }
-        } else if(player.id && !entity){
+        } else if(player.id && !player.isDead && !entity){
             id = player.id
             entities[id] = player
             console.log(entities[id].username, id, "was added to pool")
@@ -1423,6 +1431,7 @@ io.sockets.on("connection", (socket)=>{
                             player.xp += Math.floor(entity.xp * 0.8 )// give player xp
                             console.log(entity.username, entity.id, "was slain by", player.username, player.id)
                             player.kills ++
+                            entity.deathMessage = `${entity.username} was slain by ${player.username}`
                         }
                         didDamage = true // turn to true
                     }
