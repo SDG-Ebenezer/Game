@@ -130,8 +130,8 @@ const holdableItems = {
         class:"Bow",
         pic:"/imgs/Bow.png",
         loadedBowPic:"/imgs/Bow_And_Arrow.png",
-        durability:4,
-        maxDurability:4,
+        durability:100,
+        maxDurability:100,
         damage:5,
         generationProbability:10, //out of 100
         rotation:270/57.1,
