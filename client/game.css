@@ -160,6 +160,7 @@ button{
     rotate: calc(90deg);
     transition: border-color 0.3s ease;
     cursor: url("/imgs/PointerCursor.cur"),pointer;
+    background-color: #032b06;
 }
 
 input[type="radio"] {

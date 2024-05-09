@@ -281,7 +281,7 @@ function gHealth(){
     gctx.fillText (`HEALTH ${Math.round(player.health)}`, 0, canvas.height-height+fontSize)
 }
 var xpImg = new Image()
-xpImg.src = "/imgs/XP.png"
+xpImg.src = "/imgs/Money.svg"
 function gXP(){
     let padding = 5
     let size = gBarHeight
@@ -293,9 +293,9 @@ function gXP(){
 var speedTime = 100 // Actual time
 var speedTimeMax = 100 // Max time (used as reference)
 var speedImg = new Image()
-speedImg.src = "/imgs/SP.png"
+speedImg.src = "/imgs/Speed.png"
 var sprint = false //aka speed on?
-socket.on("speed", ()=>{speedTime += 10})
+socket.on("speed", ()=>{speedTime += 25}) //1/4 of speed
 var spCircleRadius = canvas.width * 0.05;
 var spX = canvas.width - spCircleRadius * 2;
 var spY = canvas.height - (gBarHeight + 15) - spCircleRadius; // Give padding above health bar
@@ -929,8 +929,8 @@ function startGame(){
                     marketOpen = false //
                 }
             } else{
-                //Update death message [A4dh3dfDM9]
-                document.getElementById("deathMessageText").innerHTML = player.deathMessage
+                //Update death message ONLY IF IT EXISTS [A4dh3dfDM9]
+                if(player.deathMessage) document.getElementById("deathMessageText").innerHTML = player.deathMessage
             }
             socket.emit("requestUpdateDataFromServer", {
                 id: player.id,

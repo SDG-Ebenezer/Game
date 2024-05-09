@@ -130,8 +130,8 @@ const holdableItems = {
         class:"Bow",
         pic:"/imgs/Bow.png",
         loadedBowPic:"/imgs/Bow_And_Arrow.png",
-        durability:100,
-        maxDurability:100,
+        durability:4,
+        maxDurability:4,
         damage:5,
         generationProbability:10, //out of 100
         rotation:270/57.1,
@@ -572,8 +572,8 @@ var entities = {} //players info
 var enemies = {} //monsters info
 
 class Entity {
-    constructor(type, imgSrc, speed, w, h, x, y, health) {
-        this.id = createID();
+    constructor(type, imgSrc, speed, w, h, x, y, health, id=createID()) {
+        this.id = id;
         this.x = x;
         this.y = y;
         this.type = type;
@@ -592,7 +592,7 @@ class Entity {
 }
 class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, health = 100){
-        super(type, imgSrc, speed, w, h, x, y, health)
+        super(type, imgSrc, speed, w, h, x, y, health, "PLAYER"+createID())
         this.username = (username == "")?"Happy":username;
         this.xp = 0
         this.kills = 0
@@ -618,7 +618,7 @@ class Player extends Entity{
 }
 class Enemy extends Entity{
     constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize, inventory=null, invSelected=null){
-        super(type, imgSrc, speed, w, h, x, y, health)
+        super(type, imgSrc, speed, w, h, x, y, health, "ENEMY"+createID())
         this.username = "BOT_Enemy"
         this.detectRange = detectRange
         this.damage = damage
@@ -843,56 +843,76 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=null, detectRange=400, reloadTime=200, speed=0.8, health = 100, w=entitySize, h=entitySize){
+    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=100, speed=0.8, health = 100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
+        this.shootRange = detectRange>200?detectRange-200:200 // to walk closer before shooting...
     }
     move(){
-        super.findTargetPlayer()
-        super.damageCoolDown()
-        
-        this.dx = this.dy = this.dist = 0
-        var distanceToPlayer
-        
-        if(this.targetPlayer) {
-            distanceToPlayer = Math.sqrt((this.targetPlayer.x - this.x) ** 2 + (this.targetPlayer.y - this.y) ** 2)
-        }
-        else {distanceToPlayer = 10**10}
-
-        if(distanceToPlayer <= this.detectRange) { // Is player within range?
-            this.status = "Attack"
-            this.dx = this.targetPlayer.x - this.x;
-            this.dy = this.targetPlayer.y - this.y;
-            this.speed = 0 //stop movement
-            this.moving = true; //aka, cant go away now...
-            this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
-            if(!this.justAttacked){
-                this.justAttacked = true
-                let arrowDirection = this.rotation + Math.PI
-                //SHOOT ARROW!
-                projectiles[createID()] = new Projectile("Arrow", this.x + Math.cos(arrowDirection) * entitySize, this.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, this, holdableItems["Arrow"].durability);
+        //move normally if not holding bow
+        if(this.inventory[this.invSelected].name == "Bow"){
+            super.findTargetPlayer()
+            super.damageCoolDown()
+            
+            this.dx = this.dy = this.dist = 0
+            var distanceToPlayer
+            
+            if(this.targetPlayer) {
+                distanceToPlayer = Math.sqrt((this.targetPlayer.x - this.x) ** 2 + (this.targetPlayer.y - this.y) ** 2)
             }
-        } else{ 
-            this.speed = this.maxSpeed
-            if (!this.moving) {
-                this.status = "Wander"
-                this.targetX = random(mapSize/2,-mapSize/2)
-                this.targetY = random(mapSize/2,-mapSize/2)
-                this.dx = this.targetX - this.x;
-                this.dy = this.targetY - this.y;
-                this.moving = true;
-                setTimeout(() => {
-                    this.moving = false;
-                }, 10000); // Stay at the target location for 10 seconds
-            } else {
-                this.dx = this.targetX - this.x;
-                this.dy = this.targetY - this.y;
-                // if at destination, find new one
-                if(this.dx < 1 && this.dy < 1) {
+            else {distanceToPlayer = 10**10}
+
+            if(distanceToPlayer <= this.detectRange) { // Is player within range?
+                this.status = "Attack"
+                this.dx = this.targetPlayer.x - this.x;
+                this.dy = this.targetPlayer.y - this.y;
+                this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
+                this.moving = true; //aka, cant go away now...
+                if(distanceToPlayer > this.shootRange){
+                    //get closer to shoot
+                    this.speed = this.maxSpeed 
+                    super.aMove() 
+                } else {
+                    //attack!!
+                    if(!this.justAttacked){
+                        this.speed = 0 //stop movement
+                        this.justAttacked = true
+                        let arrowDirection = this.rotation + Math.PI + (Math.PI/36, -Math.PI/36)
+                        //SHOOT ARROW!
+                        projectiles[createID()] = new Projectile("Arrow", this.x + Math.cos(arrowDirection) * entitySize, this.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, this, holdableItems["Arrow"].durability);
+
+                        this.inventory[this.invSelected].durability -= 1
+                        //bow breaks !? O_O
+                        if(this.inventory[this.invSelected].durability <= 0){
+                            this.inventory[this.invSelected] = {...holdableItems["Hand"]}
+                        }
+                    }
+            }
+            } else{ 
+                this.speed = this.maxSpeed
+                if (!this.moving) {
+                    this.status = "Wander"
                     this.targetX = random(mapSize/2,-mapSize/2)
                     this.targetY = random(mapSize/2,-mapSize/2)
-                }
-            }  
-            super.aMove()
+                    this.dx = this.targetX - this.x;
+                    this.dy = this.targetY - this.y;
+                    this.moving = true;
+                    setTimeout(() => {
+                        this.moving = false;
+                    }, 10000); // Stay at the target location for 10 seconds
+                } else {
+                    this.dx = this.targetX - this.x;
+                    this.dy = this.targetY - this.y;
+                    // if at destination, find new one
+                    if(this.dx < 1 && this.dy < 1) {
+                        this.targetX = random(mapSize/2,-mapSize/2)
+                        this.targetY = random(mapSize/2,-mapSize/2)
+                    }
+                }  
+                super.aMove()
+            }
+        } else{
+            this.speed = this.maxSpeed
+            super.move()
         }
         
     }
@@ -900,6 +920,7 @@ class Archer extends Enemy{
 
 /** @ENEMY_GENERATOR ************* */
 var currEnemyID = 0
+var maxEnemyCount = 20
 var enemyCount = 0
 function spawnNormal(){
     let nC = findSpawn(entitySize)
@@ -953,7 +974,7 @@ class Projectile{
 
 /** @SERVER_GAME_LOOOOOP ********** */
 var startedCountdown = false
-var amountOfBerries = 0
+var amountOfEatables = 0
 var countDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 setInterval(()=>{
     if (!enemies[bossID] && !startedCountdown){
@@ -975,7 +996,7 @@ setInterval(()=>{
     }
     
     //Spawn in enemies (chance of)
-    if(enemyCount < 10){
+    if(enemyCount < maxEnemyCount){
         if(random(100, 1) == 1){
             if(random(10,1) == 1) spawnLord()
             else if (random(5,1) == 1) spawnArcher()
@@ -1002,8 +1023,10 @@ setInterval(()=>{
                 //for now, enemy drops everything in their inventory
                 for(let i in enemies[e].inventory){
                     let loot = enemies[e].inventory[i]
-                    pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, null, loot.name, 0, loot.durability, loot.stackSize)
-                    pickablesID++
+                    if(enemies[e].inventory[i].pic){
+                        pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, null, loot.name, 0, loot.durability, loot.stackSize)
+                        pickablesID++
+                    }
                 }
             }
             delete enemies[e]
@@ -1021,17 +1044,21 @@ setInterval(()=>{
         }
     }
 
-    //add berries, swords, etc.
-    if(random(1000,1)==1 && amountOfBerries < mapSize/entitySize){
-        let spawnLocation = findSpawn()
-        if(random(5, 1) == 1){
-            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Speed", "/imgs/SP.png")
+    //add eatables, swords, etc.
+    if(random(500,1)==1 && amountOfEatables < mapSize/50){ //50=max amount of eatables at one time
+        let spawnLocation = findSpawn() //find a suitable place to generate
+        if (random(4, 1) == 1){
+            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Health", "/imgs/Health_Coin.png")
             pickablesID ++
-            amountOfBerries ++
+            amountOfEatables ++
+        } else if(random(2, 1) == 1){
+            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Speed", "/imgs/Speed_Coin.png")
+            pickablesID ++
+            amountOfEatables ++
         } else{
-            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "XP", "/imgs/Berry.png")
+            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Coin", "/imgs/Coin.png")
             pickablesID ++
-            amountOfBerries ++
+            amountOfEatables ++
         }
     }
 
@@ -1129,7 +1156,9 @@ setInterval(()=>{
                     // Decrease entity health by projectile damage
                     entity.health -= projectile.damage;
                     if (entity.health <= 0) {
-                        if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
+                        if(projectiles[key].whoShot === undefined){
+                            console.log(projectiles[key].whoShot)
+                        } else if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
                             // If entity is killed, update player's stats
                             let whoShotIt = projectiles[key].whoShot.username;
                             let messages = [
@@ -1298,14 +1327,20 @@ io.sockets.on("connection", (socket)=>{
         let item = data.what
         let player = entities[id]
         if(player){
-            if(item.name == "XP"){
-                player.xp += random(10, 1)
-                amountOfBerries -= 1
+            if(item.name == "Coin"){
+                player.xp += 25
+                amountOfEatables -= 1
                 delete pickables[item.id]
             } else if(item.name == "Speed"){
-                player.xp += random(10, 1)
-                amountOfBerries -= 1
+                player.xp += 25
+                amountOfEatables -= 1
                 socket.emit("speed")
+                delete pickables[item.id]
+            } else if(item.name == "Health"){
+                player.xp += 25
+                if (player.health<player.maxHealth-25) player.health += 25 
+                else player.health = player.maxHealth//+ 25 health points
+                amountOfEatables -= 1
                 delete pickables[item.id]
             } else {
                 let inv = player.inventory;
