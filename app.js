@@ -861,22 +861,28 @@ class Archer extends Enemy{
             }
             else {distanceToPlayer = 10**10}
 
-            if(distanceToPlayer <= this.detectRange) { // Is player within range?
+            // Is player within detection range?
+            if(distanceToPlayer <= this.detectRange) { 
+                //Attack mode...ON!
                 this.status = "Attack"
                 this.dx = this.targetPlayer.x - this.x;
                 this.dy = this.targetPlayer.y - this.y;
                 this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
-                this.moving = true; //aka, cant go away now...
+                this.moving = true; //aka, dont stray from the player now...
+                //is the player still too far away to shoot?
                 if(distanceToPlayer > this.shootRange){
-                    //get closer to shoot
+                    //YES!...then get closer to shoot
                     this.speed = this.maxSpeed 
                     super.aMove() 
                 } else {
-                    //attack!!
+                    //NO!...attack!!
+                    //Did you just attack?
                     if(!this.justAttacked){
+                        //Apparently NO!...
                         this.speed = 0 //stop movement
-                        this.justAttacked = true
-                        let arrowDirection = this.rotation + Math.PI + (Math.PI/36, -Math.PI/36)
+                        this.justAttacked = true //you just attacked... -_-
+                        let arrowOffsetMaxDeg = 5//deg // how many IN DEGREES +- can be offset shot
+                        let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
                         //SHOOT ARROW!
                         projectiles[createID()] = new Projectile("Arrow", this.x + Math.cos(arrowDirection) * entitySize, this.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, this, holdableItems["Arrow"].durability);
 
