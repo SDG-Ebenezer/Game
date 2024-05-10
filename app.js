@@ -1162,7 +1162,7 @@ setInterval(()=>{
                     // Decrease entity health by projectile damage
                     entity.health -= projectile.damage;
                     if (entity.health <= 0) {
-                        if(projectiles[key].whoShot === undefined){
+                        if(!projectiles[key] || !projectiles[key].whoShot){
                             console.log(projectiles[key].whoShot)
                         } else if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
                             // If entity is killed, update player's stats
