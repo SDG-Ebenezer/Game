@@ -1163,7 +1163,7 @@ setInterval(()=>{
                     entity.health -= projectile.damage;
                     if (entity.health <= 0) {
                         if(!projectiles[key] || !projectiles[key].whoShot){
-                            console.log(projectiles[key].whoShot)
+                            continue
                         } else if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
                             // If entity is killed, update player's stats
                             let whoShotIt = projectiles[key].whoShot.username;
