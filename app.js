@@ -930,7 +930,7 @@ var maxEnemyCount = 20
 var enemyCount = 0
 function spawnNormal(){
     let nC = findSpawn(entitySize)
-    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 1)
+    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 0.8)
     currEnemyID++
     enemyCount++
 }
