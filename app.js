@@ -845,7 +845,7 @@ class Boss extends Enemy{
 class Archer extends Enemy{
     constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=100, speed=0.8, health = 100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
-        this.shootRange = detectRange>300?detectRange-150:150 // to walk closer before shooting...
+        this.shootRange = 200 // to walk closer before shooting...
     }
     move(){
         //move normally if not holding bow
