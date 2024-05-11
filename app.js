@@ -881,7 +881,7 @@ class Archer extends Enemy{
                         //Apparently NO!...
                         this.speed = 0 //stop movement
                         this.justAttacked = true //you just attacked... -_-
-                        let arrowOffsetMaxDeg = 5//deg // how many IN DEGREES +- can be offset shot
+                        let arrowOffsetMaxDeg = 10//deg // how many IN DEGREES +- can be offset shot
                         let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
                         //SHOOT ARROW!
                         projectiles[createID()] = new Projectile("Arrow", this.x + Math.cos(arrowDirection) * entitySize, this.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, this, holdableItems["Arrow"].durability);
