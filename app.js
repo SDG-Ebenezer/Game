@@ -845,7 +845,7 @@ class Boss extends Enemy{
 class Archer extends Enemy{
     constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=100, speed=0.8, health = 100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
-        this.shootRange = detectRange>200?detectRange-200:200 // to walk closer before shooting...
+        this.shootRange = detectRange>300?detectRange-150:150 // to walk closer before shooting...
     }
     move(){
         //move normally if not holding bow
@@ -1163,7 +1163,7 @@ setInterval(()=>{
                     entity.health -= projectile.damage;
                     if (entity.health <= 0) {
                         if(!projectiles[key] || !projectiles[key].whoShot){
-                            continue
+                            entity.deathMessage = "You were shot by an archer."
                         } else if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
                             // If entity is killed, update player's stats
                             let whoShotIt = projectiles[key].whoShot.username;
