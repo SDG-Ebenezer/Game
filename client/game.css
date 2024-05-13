@@ -327,3 +327,31 @@ input[type="radio"]:checked + img {
     color: white;
     line-height: 100vh; /* Center vertically */
 }
+
+/*"Key" images inside of the help page*/
+#keyImgTable {
+    color: white;
+    border-color: black; /* Change border color */
+    border-width: 1px; /* Reduce border width */
+    border-style: solid; /* Add border style */
+    padding: 15px;
+}
+
+.keyImgTDs{
+    padding-left:15px
+}
+.keyTDs{
+    padding-left:15px;
+    padding-right:15px;
+    align-items: center;
+    justify-content: center;
+    border-right-width: 2px;
+    border-right-color: white;
+}
+.keyImg{
+    width: 30px;
+    height: 30px
+}
+.longKeyImg{
+    width: 60px;
+}

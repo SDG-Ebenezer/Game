@@ -25,7 +25,7 @@ function createID(){
     ids.push(id) //keep track of all ids
     return id
 }
-var maxLoad = 750 //most px a player can see (to cancel zoom out)
+var maxLoad = 750 //most px a player can see 
 const speedFactor = PORT===1111? 0.1:1 //adjust how fast the game goes (the lower the slower) 
 //ENTITIES speed not affected
 const holdableItems = {
@@ -162,7 +162,7 @@ const holdableItems = {
 }
 
 var ids = [] //player ids
-const mapSize = 4096
+const mapSize = 10000
 var BORDERS = {
     "L" : -mapSize/2,
     "U" : mapSize/2,
@@ -297,27 +297,6 @@ for(let i = 0; i < lakeCount; i++){
     lakes[`LAKE${i}`] = new Lake(random(mapSize/2-size,-mapSize/2+size), random(mapSize/2-size,-mapSize/2+size), size)
 }
 
-/** @PARTICLES */
-/**
- * Particles are for animation, when an object steps
- * in water, climbs walls?, etc. For animation purposes.
- */
-var particles = {}
-var particleTimeouts = {}
-var particleFrequency = 400 // 
-class Particle{
-    constructor(x, y, radius=random(entitySize/2, entitySize/5)){
-        this.x = x
-        this.y = y
-        this.duration = 95
-        this.color = "#00000008"
-        this.size = radius
-        this.radius = radius
-
-        this.isCircle = true
-    }
-}
-
 /** @SPAWN_FINDER */
 /**
  * Everyone needs a home!
@@ -361,7 +340,7 @@ function findSpawn(size=0) {
 }
 
 /** @SMALL_STRUCTURE_GENERATOR ********** */
-var numOfRandomWalls = random(10, 5)
+var numOfRandomWalls = random(Math.ceil(mapSize/400), Math.floor(mapSize/1600))
 for(let i = 0; i < numOfRandomWalls; i++){
     let blueprintSize = random(4,1)
     //make blueprint
@@ -426,8 +405,6 @@ for(let i = 0; i < numOfRandomWalls; i++){
         structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
     }
 }
-
-
 //Function also in PLAYER js file~! But different
 //HIT WALLS?
 function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, particlesTF, size=entitySize) {
@@ -473,7 +450,28 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, particlesT
     return { tx, ty };
 }
 
-/** @MARKET *****/
+/** @PARTICLES */
+/**
+ * Particles are for animation, when an object steps
+ * in water, climbs walls?, etc. For animation purposes.
+ */
+var particles = {}
+var particleTimeouts = {}
+var particleFrequency = 400 // 
+class Particle{
+    constructor(x, y, radius=random(entitySize/2, entitySize/5)){
+        this.x = x
+        this.y = y
+        this.duration = 95
+        this.color = "#00000008"
+        this.size = radius
+        this.radius = radius
+
+        this.isCircle = true
+    }
+}
+
+/** @MARKETS *****/
 var markets = {} //multiple market places
 var marketID = 0
 var marketSize = 200

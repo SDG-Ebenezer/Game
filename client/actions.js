@@ -437,15 +437,17 @@ function gLeaderboardData(pc, leaderboard){
     gctx.font = `${fontSize}px ${defaultFontFamily}`
     gctx.fillText(text, x, y-padding)
 }
+var mapOff = true
 function gMap(){
-    let size = canvas.height * 1/6 //added pIcSize to balance out offset
+    let paddingForMapOn = 15
+    let size = mapOff?(canvas.height * 1/6):Math.min(canvas.height, canvas.width)-paddingForMapOn //added pIcSize to balance out offset
     let sf = size/mapSize //scale factor
     let pIcSize = (n)=>n*sf
-    let x = 0
-    let y = canvas.height - gBarHeight * 3.5 - size
+    let x = mapOff?0:canvas.width/2 - size/2 - paddingForMapOn/4
+    let y = mapOff?(canvas.height - gBarHeight * 3.5 - size):canvas.height/2 - size/2 - paddingForMapOn/4
 
     //background
-    gctx.fillStyle = "#000000aa"
+    gctx.fillStyle = "#000000dd"
     gctx.fillRect(x,y,size+pIcSize(player.width),size+pIcSize(player.height))
     gctx.lineWidth = 2.5
     gctx.strokeStyle = "#ffffffaa"
@@ -487,6 +489,7 @@ function gMap(){
     gctx.fillRect(player.x*sf,player.y*sf,pIcSize(100),pIcSize(100))
     gctx.restore()
 }
+
 var respawnTime = null
 function gShowCountdown() {
     socket.emit("GetCountdownInfo")
@@ -630,6 +633,12 @@ function performActions() {
             y: player.y - Math.sin(player.rotation) * entitySize * 2,
         });
         delete keySet["q"] //drop 1 only!
+    }
+
+    //mapOff toggle [Y]
+    if (keySet["y"]) {
+        mapOff = (mapOff === false)
+        delete keySet["y"] //drop 1 only!
     }
 
     //MOVEMENT
