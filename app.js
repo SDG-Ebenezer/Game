@@ -162,7 +162,7 @@ const holdableItems = {
 }
 
 var ids = [] //player ids
-const mapSize = 10000
+const mapSize = 8000 //px
 var BORDERS = {
     "L" : -mapSize/2,
     "U" : mapSize/2,
@@ -924,7 +924,7 @@ class Archer extends Enemy{
 
 /** @ENEMY_GENERATOR ************* */
 var currEnemyID = 0
-var maxEnemyCount = 20
+const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2-400**2)) //1 per 400 sq px
 var enemyCount = 0
 function spawnNormal(){
     let nC = findSpawn(entitySize)
