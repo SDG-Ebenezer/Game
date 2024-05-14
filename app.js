@@ -924,7 +924,7 @@ class Archer extends Enemy{
 
 /** @ENEMY_GENERATOR ************* */
 var currEnemyID = 0
-const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/1000**2)) //1 per 1000 sq px
+const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
 var enemyCount = 0
 function spawnNormal(){
     let nC = findSpawn(entitySize)
