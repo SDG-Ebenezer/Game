@@ -54,12 +54,15 @@
     <div class="no_selection">            
         <button onclick="exitGame()" id="exitGameBtn">Exit</button>
         <div id="marketBtnDiv">
-            <button onclick="openMarket()" id="showMarketBtn">Market</button>
+            <button onclick="toggleMarket()" id="showMarketBtn">Market</button>
         </div>
     </div>
     <div id="gameOver">
         <h1 id="gameOverText">GAME OVER</h1>
         <p id="deathMessageText"></p>
+    </div>
+    <div id="toolsList">
+
     </div>   
     <!-- Help Btn -->
     <button onclick="showHelp()" id="helpBtn">HELP</button> 
@@ -82,7 +85,11 @@
             </tr>
             <tr>
                 <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_Q.png" alt="[Q]" class="keyImg"/></td> 
-                <td class="keyImgTDs">Drop the item that you are currently holding</td>
+                <td class="keyImgTDs">Drop 1 of the item(s) that you are currently holding</td>
+            </tr>
+            <tr>
+                <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_Q.png" alt="[Q + CTRL]" class="keyImg"/><img src="/imgs/IconsK_Ctrl.png"class="keyImg"/></td> 
+                <td class="keyImgTDs">Drop ALL of the items that you are currently holding</td>
             </tr>
             <tr>
                 <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_Y.png" alt="[Y]" class="keyImg"/></td> 
@@ -92,36 +99,42 @@
                 <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_X.png" alt="[X]" class="keyImg"/></td> 
                 <td class="keyImgTDs">Sprint</td>
             </tr>
+            <tr>
+                <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_E.png" alt="[E]" class="keyImg"/></td> 
+                <td class="keyImgTDs">Open Market (when at a market)</td>
+            </tr>
         </table>
         <h2 class="padText">Objectives:</h2>
         <ul>
-            <li class="padText">Get the highest levels of XP <img src="/imgs/Money.svg" width="20" height="20" /> as you can.</li>
+            <li class="padText">Get the highest levels of XP <img src="/imgs/Money.svg" class="pplImgs" /> as you can.</li>
             <li class="padText">Get to the top of the leaderboard by kills.</li>
             <li class="padText">DON'T die!</li>
-            <li class="padText">Kill the boss mob.<img  class="rot90deg" src="/imgs/Enemy_Elder.png" width="20" height="20" /></li>
+            <li class="padText">Kill the boss mob.<img  class="rot90deg pplImgs" src="/imgs/Enemy_Elder.png" /></li>
             <li>
                 <b>How to beat the Boss Mob:</b>
                 <ul>
                     <li>
-                        The central structure is made up of walls <img src="/imgs/Wall.png" width="20" height="20"/>, which can be ascended via the stairs <img src="/imgs/Stairs.png" width="20" height="20"/>. There are no openings outside until defeating the boss mob <img  class="rot90deg" src="/imgs/Enemy_Elder.png" width="20" height="20" />.
+                        The central structure is made up of walls <img src="/imgs/Wall.png" class="pplImgs"/>, which can be ascended via the stairs <img src="/imgs/Stairs.png" class="pplImgs"/>. There are no openings outside until defeating the boss mob <img  class="rot90deg pplImgs" src="/imgs/Enemy_Elder.png"/>.
                     </li>
-                    <li>When the boss mob reaches less than 75% health, it summons in 4 enemy Lords. <img  class="rot90deg" src="/imgs/Enemy_Lord.png" width="20" height="20" /> Until these are defeated, the boss mob cannot take damage.</li> 
-                    <li>After being defeated, the boss mob will respawn in 60 seconds and stairs <img src="/imgs/Stairs.png" width="20" height="20"/> will appear to allow players (and entities) to go in and out. These will disappear after the boss respawns.</li>
+                    <li>When the boss mob reaches less than 75% health, it summons in 4 enemy Lords. <img  class="rot90deg pplImgs" src="/imgs/Enemy_Lord.png"/> Until these are defeated, the boss mob cannot take damage.</li> 
+                    <li>After being defeated, the boss mob will respawn in 60 seconds and stairs <img src="/imgs/Stairs.png" class="pplImgs"/> will appear to allow players (and entities) to go in and out. These will disappear after the boss respawns.</li>
                 </ul>
             </li>
         </ul>
         <h2 class="padText">Game mechanics:</h2>
         <ul>
-            <li class="padText">You start with a <b>sword</b> <img src="/imgs/Sword.png" width="20" height="20" /><img src="/imgs/Sword2.png" width="20" height="20" /><img src="/imgs/Sword3.png" width="20" height="20" /><img src="/imgs/Sword4.png" width="20" height="20" />. Each sword has a health, and will eventually break after enough uses. Swords can deal damage to enemies. A circle indicates when an enemy is within range to deal damage to enemies.</li>
-            <li class="padText">Click/tap <img src="/imgs/IconsK_Mouse.png" width="20" height="20"/> on enemies to deal damage.</li>
-            <li class="padText"><img src="/imgs/Coin.png" width="20" height="20"/> Coins give 25 XP.</li>
-            <li class="padText"><img src="/imgs/Speed_Coin.png" width="20" height="20"/>Speed power-ups increase your sprint duration [<img src="/imgs/IconsK_X.png" width="20" height="20" alt="X"/> + another key] and also give XP.</li>
-            <li class="padText"><img src="/imgs/Health_Coin.png" width="20" height="20"/>Health power-ups increase your health by 25 points and give you 25 XP.</li>
-            <li class="padText">You can go to markets <img src="/imgs/Market.png" width="20" height="20"/> to buy accessories with XP.</li>
+            <li class="padText">You start with 1000 XP/Coins<img src="/imgs/Money.svg" class="pplImgs" />. Go to a market and buy starting gear.</li>
+            <li class="padText">You can buy <b>swords</b> at markets<img src="/imgs/Sword.png" class="pplImgs" /><img src="/imgs/Sword2.png" class="pplImgs" /><img src="/imgs/Sword3.png" class="pplImgs" /><img src="/imgs/Sword4.png" class="pplImgs" />. Each sword has a health, and will eventually break after enough uses. Swords can deal damage to enemies. A circle indicates when an enemy is within range to deal damage to enemies.</li>
+            <li class="padText">Click/tap <img src="/imgs/IconsK_Mouse.png" class="keyIconsOrMouse"/> on enemies to deal damage.</li>
+            <li class="padText"><img src="/imgs/Coin.png" class="circleIcons"/> Coins give 25 XP.</li>
+            <li class="padText"><img src="/imgs/Speed_Coin.png" class="circleIcons"/>Speed power-ups increase your sprint duration [<img src="/imgs/IconsK_X.png" class="keyIconsOrMouse" alt="X"/> + another key] and also give XP.</li>
+            <li class="padText"><img src="/imgs/Health_Coin.png" class="circleIcons"/>Health power-ups increase your health by 25 points and give you 25 XP.</li>
+            <li class="padText"><img src="/imgs/Shield.png" class="circleIcons"/>Use Shields by clicking <img src="/imgs/IconsK_Mouse.png" class="keyIconsOrMouse"/> to activate a force shield. You are immune from damage as long as you are covered by your force shield.</li>
+            <li class="padText">You can go to markets <img src="/imgs/Market.png" class="pplImgs"/> to buy accessories with XP.</li>
         </ul>
         <h2 class="padText">WARNINGS:</h2>
         <p class="padText">
-            Look out for dangerous looking people! <img class="rot90deg" src="/imgs/Enemy.png" width="20" height="20"/> They want to turn you into a tree!
+            Look out for dangerous looking people! <img class="rot90deg pplImgs" src="/imgs/Enemy.png"/> They want to turn you into a tree!
         </p>
         <br><br><br>
     </div>

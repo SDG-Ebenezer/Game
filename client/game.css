@@ -251,7 +251,15 @@ input[type="radio"]:checked + img {
 .padText{
     padding-left:5px;
 }
-
+.circleIcons{
+    width:40px;
+    height: 40px
+}
+/*pplImgs are also entities or items or structures*/
+.pplImgs, .keyIconsOrMouse{
+    width:20px;
+    height: 20px;
+}
 #helpBtn {
     border:none;
     padding:10px;

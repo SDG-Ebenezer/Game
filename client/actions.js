@@ -25,10 +25,12 @@ window.addEventListener("resize", ()=>{
     minScale = maxScale - 0.2
 })
 
+/************* SOCKET CONNECT *************************/
 var socket = io()
 var defaultFontFamily = window.getComputedStyle(document.body).fontFamily;
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 
+/************* VARS *************************/
 //player
 var entitySize
 var player;
@@ -43,6 +45,8 @@ var mapSize //defined soon!
 var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
+var maxImmuneDuration
+var immuneDurationNotUpdatedYet = false
 
 var helpOpen = false //
 var marketOpen = false //
@@ -72,26 +76,32 @@ socket.on("sendStartData", (data)=>{
     holdables = data.holdables
 
     speedFactor = data.speedFactor
+    maxImmuneDuration = data.maxImmuneDuration
 })
+//Make sure added variables are also emitted from the server-side
 socket.on("reupdate", (data)=>{
+    canPlay = true
+    updateAgain = true
+
     borders = data.bordersObj
     walls = data.structuresObj
     mapSize = data.mapSize
     entitySize = data.entitySize
-    canPlay = true
-    updateAgain = true
     wallsList = data.walls
     lakesList = data.lakes
     marketsList = data.markets
     speedFactor = data.speedFactor
+    maxImmuneDuration = data.maxImmuneDuration
 })
 
 
+/************************************************/
 /** @UPDATE !! */
 // DRAWING FUNCTION
 var scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
 var maxScale = scale
 var minScale = maxScale - 0.2
+/******* DRAWING FUNCTION RIGHT HERE!! ************************************/
 function updateCanv(info, serverPlayerCount, leaderboard){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save();
@@ -171,10 +181,10 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         
         //SHOW HEALTH (formerly showHealth() method)
         if(item.health < item.maxHealth && item.showH){
-            let x = -item.width/2
-            let y = -entitySize *3/4
             let w = 50
             let h = 10
+            let x = -w/2
+            let y = -entitySize *3/4
             ctx.save()
             ctx.translate(item.x, item.y)
             ctx.fillStyle = "black"
@@ -206,7 +216,8 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.restore()
         }
 
-        //eat!
+        /***** EAT ***** EAT ***** EAT ***** EAT ***** EAT ******/
+        // initiate player eat!
         if(player && item.type=="pickable" 
         && Math.abs(item.x - player.x) < entitySize/2
         && Math.abs(item.y - player.y) < entitySize/2){
@@ -214,6 +225,29 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 who:player,
                 what:item
             })
+        }
+
+        if(item.immuneDuration && item.immuneDuration > 0){
+            //Draw an outline showing that this guy is immune
+            //idc = (immune duration circle)
+            let idcRadius = entitySize * 3/4;
+            let idcCenterX = item.x
+            let idcCenterY = item.y
+            let outlinePercentage = item.immuneDuration / maxImmuneDuration; 
+            {
+                // Circle
+                ctx.beginPath();
+                ctx.arc(idcCenterX, idcCenterY, idcRadius, 0, 2 * Math.PI);
+                ctx.fillStyle = "#718CC8AA";
+                ctx.fill();
+                // Draw the outline
+                let endAngle = outlinePercentage >= 0 ? (2 * Math.PI * outlinePercentage) : 0;
+                ctx.beginPath();
+                ctx.arc(idcCenterX, idcCenterY, idcRadius * 1.1, 0, endAngle);
+                ctx.strokeStyle = '#718CC8'; // Outline color
+                ctx.lineWidth = idcRadius * 0.1; // Outline width
+                ctx.stroke();
+            }
         }
         
     })
@@ -226,7 +260,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         gHealth()
         gXP()
         gActivateSpeedBar()
-        gShadow()
+        //gShadow()
         drawInventory()
         gAttackCursor()
         gShowCountdown()
@@ -238,15 +272,20 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     }
     updateAgain = true//allow update
 }
-// UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER
+// UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER 
+//(REGULAR UPDATE)
 socket.on("sendUpdateDataToClient", (info) => {
     // Don't update data if the player is dead
     if (player.health > 0) {
-        // Save the current inventory if needed
+        // Variables that should not be overriden by update
         let savedInv = player.inventory;
+        let savedImmuneDuration = player.immuneDuration
         // Update player data
         player = info.player;
-
+        if(immuneDurationNotUpdatedYet) {
+            player.immuneDuration = savedImmuneDuration
+            immuneDurationNotUpdatedYet = false
+        }
         // Restore the saved inventory if needed
         if (reorderInventory) player.inventory = savedInv;
 
@@ -300,6 +339,7 @@ var spCircleRadius = canvas.width * 0.05;
 var spX = canvas.width - spCircleRadius * 2;
 var spY = canvas.height - (gBarHeight + 15) - spCircleRadius; // Give padding above health bar
 var displayHelp = false
+/**************** SPEED BAR *********************** */
 function gActivateSpeedBar() {
     //update
     spCircleRadius = canvas.width * 0.05;
@@ -374,6 +414,8 @@ document.addEventListener("mousemove", function(event) {
     } else {displayHelp = false}
 })
 
+//SHADOW CURRENTLY REMOVED!
+/*
 function gShadow(){
     let radius = canvas.width > canvas.height ? canvas.width : canvas.height
     let startAngle = Math.PI / 4
@@ -390,7 +432,8 @@ function gShadow(){
     ctx.fill(); 
     ctx.closePath();
     ctx.restore()
-}
+}*/
+
 // This is the little circle that appears...where you hit 
 function gAttackCursor(){
     let hitRange = (player.inventory[player.invSelected].hitRange? player.inventory[player.invSelected].hitRange:entitySize) * scale
@@ -583,8 +626,9 @@ socket.on("giveInventoryItemCooldownTime", function(data){
     }
 })
 
+/***********************************************/
 /** @MOVEMENT_CONTROLS */
-//KEYS
+/************* KEYS *************************/
 var keyDown = false
 var pressedKeys = []
 var mouse = {
@@ -614,7 +658,7 @@ function keyup(event) {
     event.stopPropagation();
     delete keySet[event.key.toLowerCase()];
 };
-
+/************* KEYS  INTERPRETER ************/
 // Function to perform actions based on keys in the set
 function performActions() {
     // Handle other keys first
@@ -627,12 +671,19 @@ function performActions() {
     if (keySet["5"]) currInvSlot = 5 - 1;
 
     if (keySet["q"]) {
+        let allDrop = "control" in keySet //+ ctrl to drop all
         socket.emit("drop", {
             playerInvI: currInvSlot,
             x: player.x - Math.cos(player.rotation) * entitySize * 2,
             y: player.y - Math.sin(player.rotation) * entitySize * 2,
+            allDrop : allDrop
         });
         delete keySet["q"] //drop 1 only!
+    }
+
+    if (keySet["e"]) {
+        toggleMarket()
+        delete keySet["e"] //perform once only!
     }
 
     //mapOff toggle [Y]
@@ -660,6 +711,7 @@ function performActions() {
     }
 }
 
+/************* MOUSE ***********************/
 // Drag functions 
 var dragStartX = 0;
 var dragStartY = 0;
@@ -725,6 +777,14 @@ function mousedown(e) {
                 clickedInv = true;
             }
         }
+        //ACTIVATE FORCE SHIELD
+        if(player.inventory[player.invSelected].name == "Force Shield"){
+            if(player.inventory[player.invSelected].immuneDuration + player.immuneDuration > maxImmuneDuration) player.immuneDuration = maxImmuneDuration
+            else player.immuneDuration += player.inventory[player.invSelected].immuneDuration
+            console.log(player.immuneDuration)
+            immuneDurationNotUpdatedYet = true
+        }
+
         if (player.health > 0 && !clickedInv 
         && player.inventory[player.invSelected].cooldownTimer == 0){// Check if not in cooldown
             // Emit attack event
@@ -821,7 +881,9 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize
 var updateAgain = false
 socket.on("allowUpdate", ()=>{updateAgain = true})
 var gameLoopInt // TO BE THE GAME LOOPA! (currently undefined)
-// Function startGame() contains the game loop
+
+
+/************** START/STOP GAME  *************/
 function startGame(){
     {
         //zoom in spawn effect
@@ -829,20 +891,22 @@ function startGame(){
         //reset or set these:
         tx = ty = invSelected = 0
         //set these:
+        /************ RESET BTNS *********************/
         document.getElementById("exitGameBtn").style.display = "none"
         document.getElementById("preGame_Stuff").style.display = "none"
         document.getElementById("startGameBtn").style.display = "none"
         document.getElementById("gameOver").style.display = "none"
-        //begin listening
+        /************ ADD EVENT LISTENERS *********************/
         document.addEventListener("keydown", keydown)
         document.addEventListener("keyup", keyup)
         document.addEventListener("mousemove", mousemove)
         document.addEventListener("mousedown", mousedown)
         document.addEventListener("mouseup", mouseup)
-        //for mobile
+        // (for mobile)
         document.addEventListener("touchstart", touchstart)
         document.addEventListener("touchend", touchend)
         
+        /*****************************************************/
         //ask server for starting data and create new ID
         var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
         socket.emit("askForStartData", {
@@ -857,7 +921,7 @@ function startGame(){
             if(player.health > 0){ 
                 performActions() //get tx,ty from keys
                 //close market if attacked
-                if(lastHealthBeforeMarket > player.health) openMarket()
+                if(lastHealthBeforeMarket > player.health) toggleMarket()
                 //check if in border
                 if (player.x + tx >= borders.R 
                 || player.x + tx <= borders.L){
@@ -979,11 +1043,14 @@ socket.on("gameOver", ()=>{
     //reset variables
     speedTime = speedTimeMax //reset speed!!
     keySet = {} // reset keySet
+    mapOff = true
     //close dem
     if(helpOpen) showHelp() 
-    if(marketOpen) openMarket()
+    if(marketOpen) toggleMarket()
 })
 
+
+/***********************************************/
 function showHelp(){
     let help = document.getElementById("help")
     let helpBtn = document.getElementById("helpBtn")
@@ -999,7 +1066,7 @@ function showHelp(){
     }
 }
 var lastHealthBeforeMarket; // Keep track of health. If lower then, close market
-function openMarket(){
+function toggleMarket(){
     let market = document.getElementById("market")
     let marketBackground = document.getElementById("marketBackground")
     let marketBtn = document.getElementById("showMarketBtn")
@@ -1094,13 +1161,14 @@ window.addEventListener('beforeunload', function(event) {
     }*/
 })
 
+/************* WAIT SCREEN (SERVER LOADING...) ************/
 // WAIT SCREEN on
 const waitDiv = document.getElementById("wait")
 const dotsSpan = document.getElementById('dots');
 const dotsCount = 3; // Number of dots to display
 let dotIndex = 0;
 var disconnectTimeout
-// Reconnected
+/************ CONNECTED! *********************/
 socket.on('connect', () => {
     console.log('Connected to server');
     // Clear the timeout if the connection is established

@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 1111 //server PORT
 serv.listen(PORT)
 console.log("Online @ " +PORT)
 
+/************ CONSTS/VARS *********************/
 //RANDOM
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 //CREATE NEW IDs
@@ -28,9 +29,10 @@ function createID(){
 var maxLoad = 750 //most px a player can see 
 const speedFactor = PORT===1111? 0.1:1 //adjust how fast the game goes (the lower the slower) 
 //ENTITIES speed not affected
+const maxImmuneDuration = 100//
 const holdableItems = {
     "Hand":{
-        name:"Hand",
+        name:"Hand", // MUST MATCH KEY!
         class:"Hand",
         pic:false,
         durability:Infinity,
@@ -46,7 +48,7 @@ const holdableItems = {
         cooldownTimer: 0 
     },
     "Iron Sword":{
-        name:"Iron Sword",
+        name:"Iron Sword", // MUST MATCH KEY!
         class:"Sword",
         pic:"/imgs/Sword.png",
         durability:30,
@@ -62,7 +64,7 @@ const holdableItems = {
         cooldownTimer: 0
     },
     "Gold Sword":{
-        name:"Gold Sword",
+        name:"Gold Sword", // MUST MATCH KEY!
         class:"Sword",
         pic:"/imgs/Sword2.png",
         durability:20,
@@ -78,7 +80,7 @@ const holdableItems = {
         cooldownTimer:0
     },
     "Diamond Sword":{
-        name:"Diamond Sword",
+        name:"Diamond Sword", // MUST MATCH KEY!
         class:"Sword",
         pic:"/imgs/Sword3.png",
         durability:60,
@@ -94,7 +96,7 @@ const holdableItems = {
         cooldownTimer:0
     },
     "Plasma Sword":{
-        name:"Plasma Sword",
+        name:"Plasma Sword", // MUST MATCH KEY!
         class:"Sword",
         pic:"/imgs/Sword4.png",
         durability:100,
@@ -110,7 +112,7 @@ const holdableItems = {
         cooldownTimer:0
     },
     "Arrow":{
-        name:"Arrow",
+        name:"Arrow", // MUST MATCH KEY!
         class:"Arrow",
         pic:"/imgs/Arrow.png",
         durability:Infinity,
@@ -126,7 +128,7 @@ const holdableItems = {
         cooldownTimer:0
     },
     "Bow":{
-        name:"Bow",
+        name:"Bow",  // MUST MATCH KEY!
         class:"Bow",
         pic:"/imgs/Bow.png",
         loadedBowPic:"/imgs/Bow_And_Arrow.png",
@@ -143,10 +145,9 @@ const holdableItems = {
         cooldownTimer:0
     },
     "Spear":{
-        name:"Spear",
+        name:"Spear", // MUST MATCH KEY!
         class:"Spear",
         pic:"/imgs/Spear.png",
-        loadedBowPic:"/imgs/Spear.png",
         durability:5,
         maxDurability:5,
         damage:80,
@@ -158,11 +159,29 @@ const holdableItems = {
         hitRange: maxLoad,
         cooldownTime: 0 * 1/speedFactor, //ms till next use
         cooldownTimer:0
+    },
+    "Force Shield":{
+        name:"Force Shield", // MUST MATCH KEY!
+        class:"UseUpErs", //Use-Up-Ers are used upon click
+        pic:"/imgs/Shield.png",
+        durability:null,
+        maxDurability:null,
+        damage:0,
+        generationProbability:15, //out of 100
+        rotation:270/57.1, //how looks like when held
+        stackSize:1,
+        maxStackSize:4,
+        cost: 1000, //market value
+        hitRange: maxLoad,
+        cooldownTime: 0 * 1/speedFactor, //ms till next use
+        cooldownTimer:0,
+        immuneDuration: maxImmuneDuration//s
     }
 }
 
-var ids = [] //player ids
-const mapSize = 8000 //px
+var ids = [] //player ids list
+/************ MAP SIZE *********************/
+const mapSize = 4000 //px
 var BORDERS = {
     "L" : -mapSize/2,
     "U" : mapSize/2,
@@ -180,6 +199,7 @@ var borderRect = {
 }
 var fps = 1000/60 //
 
+/************ UNIVERSAL *********************/
 const entitySize = 75
 
 /** @STRUCTURES *****/
@@ -517,15 +537,15 @@ for(let i = 0; i < mapSize/25; i ++){
 
 /** @PICKABLES *****/
 class Pickable{
-   constructor(id,x,y,name,imgSrc,hold=null,rotation=0,durability=1,stackSize=1){
+   constructor(id, x, y, name, imgSrc, itemName=null, rotation=0, durability=1, stackSize=1){
        this.id = id
        this.x = x
        this.y = y
        this.name = name //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
        this.type = "pickable"
-       this.imgSrc = hold?holdableItems[hold].pic:imgSrc
+       this.imgSrc = itemName?holdableItems[itemName].pic:imgSrc
        this.width = this.height = 50
-       this.holdableItemsCorr = hold
+       this.itemName = itemName
        this.rotation = rotation
        this.durability = durability
        this.stackSize = stackSize
@@ -570,7 +590,7 @@ var entities = {} //players info
 var enemies = {} //monsters info
 
 class Entity {
-    constructor(type, imgSrc, speed, w, h, x, y, health, id=createID()) {
+    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID()) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -586,18 +606,19 @@ class Entity {
         this.speed = speed
         this.maxSpeed = speed
         this.onWall = false //default
+        this.immuneDuration = 0 //this > 0 == can't take damage (see MAX Immune Duration)
+        this.xp = xp
     }
 }
 class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, health = 100){
-        super(type, imgSrc, speed, w, h, x, y, health, "PLAYER"+createID())
+        super(type, imgSrc, speed, w, h, x, y, health, 1000, "PLAYER"+createID())
         this.username = (username == "")?"Happy":username;
-        this.xp = 0
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Iron Sword"]}, 
-            {...holdableItems["Bow"]},
-            {...holdableItems["Arrow"]},
+            {...holdableItems["Hand"]}, //Iron Sword
+            {...holdableItems["Hand"]},
+            {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
         ];
@@ -720,7 +741,7 @@ class Enemy extends Entity{
         // Check for damage
         if(distanceToPlayer < entitySize/2 && !this.justAttacked){
             let player = entities[this.targetPlayer.id]
-            player.health -= this.damage
+            if(player.immuneDuration <= 0) player.health -= this.damage
             //death message
             //ALL MELEE ATTACKING MOBS THAT KILL PLAYERS INPUT THE PLAYER'S DEATH MESSAGE HERE!!!
             if(player.health <= 0){
@@ -843,7 +864,7 @@ class Boss extends Enemy{
 class Archer extends Enemy{
     constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=150, speed=0.8, health = 100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
-        this.shootRange = 400 // to walk closer before shooting...
+        this.shootRange = 250 // to walk closer before shooting...
     }
     move(){
         //move normally if not holding bow
@@ -976,7 +997,7 @@ class Projectile{
     }
 }
 
-/** @SERVER_GAME_LOOOOOP ********** */
+/** @SERVER_GAME_LOOOOOP ***************************/
 var startedCountdown = false
 var amountOfEatables = 0
 var countDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
@@ -1007,10 +1028,13 @@ setInterval(()=>{
             else spawnNormal()
         }
     }
+    //the boss has no immune!...
+    if(enemies[bossID]) enemies[bossID].immuneDuration = 0
     //Move and update enemies' health
     for(let e in enemies){
-        if(enemies[e].type=="Summoned_Lord"){
-            enemies[bossID].health = enemies[bossID].maxHealth * 3/4
+        //...unless there is a lord...
+        if(enemies[e].type == "Summoned_Lord"){
+            enemies[bossID].immuneDuration = maxImmuneDuration
         }
         enemies[e].move()
         if(enemies[e].health <= 0) {
@@ -1037,7 +1061,7 @@ setInterval(()=>{
         }
     }
 
-    //players regenerate
+    //manage player vars
     for(let e in entities){
         let entity = entities[e]
         if(entity.health < entity.maxHealth){
@@ -1045,6 +1069,9 @@ setInterval(()=>{
         }
         if(entity.health <= 0){
             entities[e].isDead = true // This player is NOW dead!!
+        }
+        if(entity.immuneDuration > 0){
+            entities[e].immuneDuration -= 1
         }
     }
 
@@ -1158,7 +1185,7 @@ setInterval(()=>{
                     projectile.y > entity.y - entitySize / 2 &&
                     projectile.y < entity.y + entity.height - entitySize / 2) {
                     // Decrease entity health by projectile damage
-                    entity.health -= projectile.damage;
+                    if(entity.immuneDuration <= 0) entity.health -= projectile.damage;
                     if (entity.health <= 0) {
                         if(!projectiles[key] || !projectiles[key].whoShot){
                             entity.deathMessage = "You were shot by an archer."
@@ -1205,7 +1232,7 @@ setInterval(()=>{
 }, fps)
 
 
-/** @SOCKET *****/
+/************ @SOCKET *******************************/
 //what to do when a player connects
 var io = require("socket.io")(serv,{})
 io.sockets.on("connection", (socket)=>{
@@ -1229,7 +1256,8 @@ io.sockets.on("connection", (socket)=>{
             lakes: Object.values(lakes),
             markets: Object.values(markets),
             holdables: holdableItems,
-            speedFactor: speedFactor
+            speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
+            maxImmuneDuration:maxImmuneDuration //maximum immune time
         })
         console.log("Player ", player.username, player.id, "joined the server.")
     }) 
@@ -1240,9 +1268,10 @@ io.sockets.on("connection", (socket)=>{
         id = player.id //update!
         let entity = entities[id];
         if(entity) {
-            let { id, x, y, rotation, invSelected, speed, onWall, inventory } = player
+            //what is updated, the rest is locked (remember to put in IF as well)
+            let { id, x, y, rotation, invSelected, speed, onWall, inventory, immuneDuration } = player
             if (entity) {
-                Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
+                Object.assign(entity, { x, y, rotation, invSelected, speed, onWall, immuneDuration });
                 if (d.reorder) entity.inventory = inventory; //only update inventory if reordering...
             }
         } else if(player.id && !player.isDead && !entity){
@@ -1268,6 +1297,8 @@ io.sockets.on("connection", (socket)=>{
                 walls: Object.values(structures),
                 lakes: Object.values(lakes),
                 markets: Object.values(markets),
+                speedFactor, speedFactor,
+                maxImmuneDuration: maxImmuneDuration
             }) //re updates updated game data.
         }
     })
@@ -1373,7 +1404,7 @@ io.sockets.on("connection", (socket)=>{
                     for (let i in inv) {
                         if (inv[i].name === "Hand") {
                             // Replace with new item
-                            let nItem = { ...holdableItems[item.holdableItemsCorr]}
+                            let nItem = { ...holdableItems[item.itemName]}
                             nItem.stackSize = item.stackSize
                             player.inventory[i] = nItem;
                             player.inventory[i].durability = item.durability;
@@ -1404,9 +1435,10 @@ io.sockets.on("connection", (socket)=>{
         }
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
-            pickables[pickablesID] = new Pickable(pickablesID, x, y, item.name, null, item.name, 0, item.durability, item.stackSize)
+            pickables[pickablesID] = new Pickable(pickablesID, x, y, item.name, null, item.name, 0, item.durability, data.allDrop?item.stackSize:1)
             pickablesID++
-            entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
+            if(data.allDrop || entities[id].inventory[player.invSelected].stackSize == 1) entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
+            else entities[id].inventory[player.invSelected] = {...entities[id].inventory[player.invSelected], stackSize: entities[id].inventory[player.invSelected].stackSize - 1}
         }
     })
 
@@ -1465,7 +1497,7 @@ io.sockets.on("connection", (socket)=>{
                     && entity.id != id
                     && Math.abs(Math.abs(data.x) - Math.abs(entity.x)) < player.hitSize
                     && Math.abs(Math.abs(data.y) - Math.abs(entity.y)) < player.hitSize){
-                        entity.health -= damage
+                        if(entity.immuneDuration <= 0) entity.health -= damage
                         if(entity.health <= 0){
                             player.xp += Math.floor(entity.xp * 0.8 )// give player xp
                             console.log(entity.username, entity.id, "was slain by", player.username, player.id)
@@ -1480,7 +1512,7 @@ io.sockets.on("connection", (socket)=>{
                     if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < hitRange
                     && Math.abs(Math.abs(enemy.x) - Math.abs(data.x)) < player.hitSize
                     && Math.abs(Math.abs(enemy.y) - Math.abs(data.y)) < player.hitSize){
-                        enemy.health -= damage
+                        if(enemy.immuneDuration <= 0) enemy.health -= damage
                         if(enemy.health <= 0){
                             //give player xp for killed
                             player.xp += enemy.xp
@@ -1493,6 +1525,13 @@ io.sockets.on("connection", (socket)=>{
                 if(didDamage && tool.durability != null){
                     tool.durability -= 1 //DAMAGE Tool
                     usedItem = true // item was used!
+                }
+            }
+
+            if(tool.class == "UseUpErs"){
+                tool.stackSize -= 1
+                if(tool.stackSize == 0){
+                    player.inventory[player.invSelected] = {...holdableItems["Hand"]}
                 }
             }
 
