@@ -27,7 +27,8 @@ function createID(){
     return id
 }
 var maxLoad = 750 //most px a player can see 
-const speedFactor = PORT===1111? 0.1:1.5 //adjust how fast the game goes (the lower the slower) 
+const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
+//Render is slowerm so runs at x[speedFactor] as fast
 //ENTITIES speed not affected
 const maxImmuneDuration = 10000 * speedFactor//
 const holdableItems = {
@@ -44,7 +45,7 @@ const holdableItems = {
         maxStackSize:0,
         cost: Infinity, //market value
         hitRange: null,
-        cooldownTime: 0 * 1/speedFactor, //ms till next use
+        cooldownTime: 5 * 1/speedFactor, //ms till next use
         cooldownTimer: 0 
     },
     "Iron Sword":{
@@ -141,7 +142,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 30 * 1/speedFactor, //ms till next use
+        cooldownTime: 20 * 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Spear":{
@@ -306,7 +307,7 @@ class Lake{
         this.isCircle = true
         this.color = "#188B8F"
 
-        this.decreaseSpeedFactor = 0.5 //slow speed
+        this.decreaseSpeedFactor = 0.5 * speedFactor //slow speed
     }
 }
 //generate
@@ -603,8 +604,8 @@ class Entity {
         this.isCircle = false;
         this.width = w;
         this.height = h;
-        this.speed = speed
-        this.maxSpeed = speed
+        this.speed = speed * speedFactor
+        this.maxSpeed = speed * speedFactor //same as this.speed
         this.onWall = false //default
         this.immuneDuration = 0 //this > 0 == can't take damage (see MAX Immune Duration)
         this.xp = xp
