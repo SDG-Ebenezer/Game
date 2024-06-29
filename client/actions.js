@@ -46,7 +46,6 @@ var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
 var maxImmuneDuration
-var immuneDurationNotUpdatedYet = false
 
 var helpOpen = false //
 var marketOpen = false //
@@ -279,13 +278,8 @@ socket.on("sendUpdateDataToClient", (info) => {
     if (player.health > 0) {
         // Variables that should not be overriden by update
         let savedInv = player.inventory;
-        let savedImmuneDuration = player.immuneDuration
         // Update player data
         player = info.player;
-        if(immuneDurationNotUpdatedYet) {
-            player.immuneDuration = savedImmuneDuration
-            immuneDurationNotUpdatedYet = false
-        }
         // Restore the saved inventory if needed
         if (reorderInventory) player.inventory = savedInv;
 
@@ -777,17 +771,10 @@ function mousedown(e) {
                 clickedInv = true;
             }
         }
-        //ACTIVATE FORCE SHIELD
-        if(player.inventory[player.invSelected].name == "Force Shield"){
-            if(player.inventory[player.invSelected].immuneDuration + player.immuneDuration > maxImmuneDuration) player.immuneDuration = maxImmuneDuration
-            else player.immuneDuration += player.inventory[player.invSelected].immuneDuration
-            console.log(player.immuneDuration)
-            immuneDurationNotUpdatedYet = true
-        }
-
+        
         if (player.health > 0 && !clickedInv 
         && player.inventory[player.invSelected].cooldownTimer == 0){// Check if not in cooldown
-            // Emit attack event
+            //EMIT MOUSE DOWN EVENT (function performed in APP.Js (server-side))
             socket.emit("mousedown", {
                 x: mouse.x + player.x,
                 y: mouse.y + player.y,

@@ -1071,7 +1071,7 @@ setInterval(()=>{
             entities[e].isDead = true // This player is NOW dead!!
         }
         if(entity.immuneDuration > 0){
-            entities[e].immuneDuration -= 1
+            entities[e].immuneDuration -= 1 * speedFactor
         }
     }
 
@@ -1269,9 +1269,9 @@ io.sockets.on("connection", (socket)=>{
         let entity = entities[id];
         if(entity) {
             //what is updated, the rest is locked (remember to put in IF as well)
-            let { id, x, y, rotation, invSelected, speed, onWall, inventory, immuneDuration } = player
+            let { id, x, y, rotation, invSelected, speed, onWall, inventory } = player
             if (entity) {
-                Object.assign(entity, { x, y, rotation, invSelected, speed, onWall, immuneDuration });
+                Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
                 if (d.reorder) entity.inventory = inventory; //only update inventory if reordering...
             }
         } else if(player.id && !player.isDead && !entity){
@@ -1529,6 +1529,16 @@ io.sockets.on("connection", (socket)=>{
             }
 
             if(tool.class == "UseUpErs"){
+                //perform actions
+                //ACTIVATE FORCE SHIELD
+                if(player.inventory[player.invSelected].name == "Force Shield"){
+                    if(player.inventory[player.invSelected].immuneDuration + player.immuneDuration > maxImmuneDuration){ 
+                        player.immuneDuration = maxImmuneDuration
+                    } else {
+                        player.immuneDuration += player.inventory[player.invSelected].immuneDuration
+                    }
+                }
+                //decrease quantity
                 tool.stackSize -= 1
                 if(tool.stackSize == 0){
                     player.inventory[player.invSelected] = {...holdableItems["Hand"]}
