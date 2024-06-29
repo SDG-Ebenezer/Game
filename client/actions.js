@@ -50,7 +50,7 @@ var maxImmuneDuration
 var helpOpen = false //
 var marketOpen = false //
 
-var speedFactor = 1 //updated later, 1 as default
+//var speedFactor = 1 //updated later, 1 as default
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
@@ -74,7 +74,7 @@ socket.on("sendStartData", (data)=>{
     marketsList = data.markets
     holdables = data.holdables
 
-    speedFactor = data.speedFactor
+    //speedFactor = data.speedFactor
     maxImmuneDuration = data.maxImmuneDuration
 })
 //Make sure added variables are also emitted from the server-side
@@ -89,7 +89,7 @@ socket.on("reupdate", (data)=>{
     wallsList = data.walls
     lakesList = data.lakes
     marketsList = data.markets
-    speedFactor = data.speedFactor
+    //speedFactor = data.speedFactor
     maxImmuneDuration = data.maxImmuneDuration
 })
 
