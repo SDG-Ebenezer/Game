@@ -27,9 +27,9 @@ function createID(){
     return id
 }
 var maxLoad = 750 //most px a player can see 
-const speedFactor = PORT===1111? 0.1:1 //adjust how fast the game goes (the lower the slower) 
+const speedFactor = PORT===1111? 0.1:1.5 //adjust how fast the game goes (the lower the slower) 
 //ENTITIES speed not affected
-const maxImmuneDuration = 100//
+const maxImmuneDuration = 10000 * speedFactor//
 const holdableItems = {
     "Hand":{
         name:"Hand", // MUST MATCH KEY!
@@ -1071,7 +1071,7 @@ setInterval(()=>{
             entities[e].isDead = true // This player is NOW dead!!
         }
         if(entity.immuneDuration > 0){
-            entities[e].immuneDuration -= 1 * speedFactor
+            entities[e].immuneDuration -= 1 
         }
     }
 
