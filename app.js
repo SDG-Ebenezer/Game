@@ -604,8 +604,8 @@ class Entity {
         this.isCircle = false;
         this.width = w;
         this.height = h;
-        this.speed = speed * speedFactor
-        this.maxSpeed = speed * speedFactor //same as this.speed
+        this.speed = speed
+        this.maxSpeed = speed //same as this.speed
         this.onWall = false //default
         this.immuneDuration = 0 //this > 0 == can't take damage (see MAX Immune Duration)
         this.xp = xp
@@ -1001,16 +1001,17 @@ class Projectile{
 /** @SERVER_GAME_LOOOOOP ***************************/
 var startedCountdown = false
 var amountOfEatables = 0
-var countDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
+var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
+var bossCountDownTimeMax = 120 //s
 setInterval(()=>{
     if (!enemies[bossID] && !startedCountdown){
         toggleOpeningsToArena(false);
         startedCountdown = true
-        countDownTime = 60; // seconds  
+        bossCountDownTime = bossCountDownTimeMax; // seconds  
         let countdownInterval = setInterval(() => {
-            countDownTime--;
+            bossCountDownTime--;
     
-            if (countDownTime === 0) {
+            if (bossCountDownTime === 0) {
                 clearInterval(countdownInterval); // Stop the countdown interval
                 toggleOpeningsToArena(true);
                 enemies[bossID] = new Boss();
@@ -1571,7 +1572,7 @@ io.sockets.on("connection", (socket)=>{
     socket.on("GetCountdownInfo", function(){
         let player = entities[id]
         if(player){
-            let ret = countDownTime //emit value
+            let ret = bossCountDownTime //emit value
 
             //additional area (padding)
             let aPad = 1.5 //area x __ == actual area detection
@@ -1579,7 +1580,7 @@ io.sockets.on("connection", (socket)=>{
             && player.x < structureCenter.x + (structureW/2) * (wallSize * aPad)
             && player.y > structureCenter.y - (structureH/2) * (wallSize * aPad)
             && player.y < structureCenter.y + (structureH/2) * (wallSize * aPad) 
-            && countDownTime > 0)) ret = null //emit only when in range...
+            && bossCountDownTime > 0)) ret = null //emit only when in range...
             
             socket.emit("SendCountdownInfo", {
                 time:ret
