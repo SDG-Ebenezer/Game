@@ -27,10 +27,10 @@ function createID(){
     return id
 }
 var maxLoad = 750 //most px a player can see 
-const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
+//const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
 //Render is slowerm so runs at x[speedFactor] as fast
 //ENTITIES speed not affected
-const maxImmuneDuration = 10000 * speedFactor//
+const maxImmuneDuration = 10000 //* speedFactor//
 const holdableItems = {
     "Hand":{
         name:"Hand", // MUST MATCH KEY!
@@ -45,7 +45,7 @@ const holdableItems = {
         maxStackSize:0,
         cost: Infinity, //market value
         hitRange: null,
-        cooldownTime: 5 * 1/speedFactor, //ms till next use
+        cooldownTime: 5 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0 
     },
     "Iron Sword":{
@@ -61,7 +61,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 500, //market value
         hitRange: 175,
-        cooldownTime: 5 * 1/speedFactor, //mms till next use
+        cooldownTime: 5 , //* 1/speedFactor, //mms till next use
         cooldownTimer: 0
     },
     "Gold Sword":{
@@ -77,7 +77,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1500, //market value
         hitRange: 150,
-        cooldownTime: 15 * 1/speedFactor, //ms till next use
+        cooldownTime: 15 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Diamond Sword":{
@@ -93,7 +93,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 3000, //market value
         hitRange: 150,
-        cooldownTime: 10 * 1/speedFactor, //ms till next use
+        cooldownTime: 10 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Plasma Sword":{
@@ -109,7 +109,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 10_000, //market value
         hitRange: 125,
-        cooldownTime: 50 * 1/speedFactor, //ms till next use
+        cooldownTime: 50 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Arrow":{
@@ -125,7 +125,7 @@ const holdableItems = {
         maxStackSize:64,
         cost: 25, //market value
         hitRange: null,
-        cooldownTime: 0 * 1/speedFactor, //ms till next use
+        cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Bow":{
@@ -142,7 +142,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 20 * 1/speedFactor, //ms till next use
+        cooldownTime: 20 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Spear":{
@@ -158,7 +158,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 2500, //market value
         hitRange: maxLoad,
-        cooldownTime: 0 * 1/speedFactor, //ms till next use
+        cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
     "Force Shield":{
@@ -174,7 +174,7 @@ const holdableItems = {
         maxStackSize:4,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 0 * 1/speedFactor, //ms till next use
+        cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0,
         immuneDuration: maxImmuneDuration//s
     }
@@ -307,7 +307,7 @@ class Lake{
         this.isCircle = true
         this.color = "#188B8F"
 
-        this.decreaseSpeedFactor = 0.5 * speedFactor //slow speed
+        this.decreaseSpeedFactor = 0.5 //* speedFactor //slow speed
     }
 }
 //generate
@@ -471,7 +471,7 @@ function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, particlesT
     return { tx, ty };
 }
 
-/** @PARTICLES */
+/**************************** @PARTICLES *************/
 /**
  * Particles are for animation, when an object steps
  * in water, climbs walls?, etc. For animation purposes.
@@ -492,7 +492,7 @@ class Particle{
     }
 }
 
-/** @MARKETS *****/
+/**************************** @MARKETS *************/
 var markets = {} //multiple market places
 var marketID = 0
 var marketSize = 200
@@ -513,7 +513,7 @@ for(let i = 0; i < 3; i ++){
     marketID++
 }
 
-/** @TREES *****/
+/**************************** @TREES *************/
 class Tree {
     constructor(treesID, size=random(500,200)) {
         let thing = findSpawn(size)
@@ -536,7 +536,7 @@ for(let i = 0; i < mapSize/25; i ++){
    treesID++
 }
 
-/** @PICKABLES *****/
+/**************************** @PICKABLES *************/
 class Pickable{
    constructor(id, x, y, name, imgSrc, itemName=null, rotation=0, durability=1, stackSize=1){
        this.id = id
@@ -585,8 +585,7 @@ function dropAll(id){
     }
 }
 
-
-/** @ENTITIES *****/
+/**************************** @ENTITIES *************/
 var entities = {} //players info
 var enemies = {} //monsters info
 
@@ -842,7 +841,7 @@ class Boss extends Enemy{
             }
         } else if (this.health < this.maxHealth){
             //regenerate!! >:)
-            this.health += (0.01 * speedFactor) //regenerate based on how fast the game is running
+            this.health += 0.01 //* speedFactor
         }
     }
     summonInGuards(){
@@ -944,7 +943,7 @@ class Archer extends Enemy{
     }
 }
 
-/** @ENEMY_GENERATOR ************* */
+/*************************** @ENEMY_GENERATOR *************/
 var currEnemyID = 0
 const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
 var enemyCount = 0
@@ -974,7 +973,7 @@ toggleOpeningsToArena(true)
 enemies[bossID] = new Boss()
 enemyCount++
 
-/** @projectiles */
+/**************************** @PROJECTILES *************/
 var projectiles = {}
 class Projectile{
     constructor(type, x, y, w, h, damage, dir, whoShot, durability, flightDuration=50, speed=15, imgSrc="/imgs/Arrow.png"){
@@ -998,7 +997,7 @@ class Projectile{
     }
 }
 
-/** @SERVER_GAME_LOOOOOP ***************************/
+/*************************** @SERVER_GAME_LOOOOOP *************/
 var startedCountdown = false
 var amountOfEatables = 0
 var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
@@ -1234,7 +1233,7 @@ setInterval(()=>{
 }, fps)
 
 
-/************ @SOCKET *******************************/
+/*************************** @SOCKET *************/
 //what to do when a player connects
 var io = require("socket.io")(serv,{})
 io.sockets.on("connection", (socket)=>{
@@ -1258,7 +1257,7 @@ io.sockets.on("connection", (socket)=>{
             lakes: Object.values(lakes),
             markets: Object.values(markets),
             holdables: holdableItems,
-            speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
+            //speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
             maxImmuneDuration:maxImmuneDuration //maximum immune time
         })
         console.log("Player ", player.username, player.id, "joined the server.")
@@ -1299,7 +1298,7 @@ io.sockets.on("connection", (socket)=>{
                 walls: Object.values(structures),
                 lakes: Object.values(lakes),
                 markets: Object.values(markets),
-                speedFactor, speedFactor,
+                //speedFactor, speedFactor,
                 maxImmuneDuration: maxImmuneDuration
             }) //re updates updated game data.
         }
