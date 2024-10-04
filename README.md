@@ -1,7 +1,5 @@
 # Game
-A multiplayer game using Socket.io, Express, and Node.js. Has enemies and you can have usernames and skins. Currently, no XP, swords are being worked on as well as boss mobs.
-
-# Disclaimer
+A multiplayer game that uses Socket.io, Express, and Node.js.
 This import does not include the node.js automatically downloaded packages. So, in order to run, you must have node.js.
 Socket version is 4.7.4.
 Automatically generated .json files are also not included.
@@ -10,10 +8,12 @@ Commands like:
 `npm install express`
 
 # How the Game Works - A breakdown
-Define a canvas serving as a dynamic viewport, constantly centered around player.x, .y. Updates to this canvas occur upon data reception from the server, including World data. Loading data is conditional, based on proximity to the player's xy coordinates.
+**The Canvas**
+The main game canvas (ctx) is set as the actual drawing of the game play. 
+An additional canvas (gctx) is added to draw for game details, "game-ctx". This canvas controls things that are drawn in a canvas but not moving around with the player, such as a player's health bars and inventory slots.
+**The Server-Client Communication**
+In a loop, the client side constantly calls for information from the server to draw the canvas. This includes the player, enemies, trees, etc. The server responds by sending game data within the vinicity of the player as well as changing variables, such as the leaderboard. Data sent from the server is then used to draw on the client's (ctx) canvas and update game features.
+The server controls damaging**, enemy decisions, generation, and spawning. The user's control movement of their players which is updated on the server side during the game loop calls. This allows players to update during multiplayer situations.
+Each player is stored in the server by a custom ID in an "entities" object. This is the players database. Once a user presses the "Play" button, a new Player() is added to the database with an ID.
 
-Client-side controls manage movement and inventory organization. Server-side operations handle adversaries, projectiles, damage, experience points, and loot generation.
-
-In the server, all items are accounted for in objects, entities, drops, trees, etc. When a player asks for data, only the items within the vicinity of the player are sent back, to increase update speed and maintain faster gameplay.
-
-Player IDs are provided by the server upon socket entry. Updates are initiated by client request emittions, forwarding player data to the server. Server-side entity manipulation includes partial updates, with final player information relayed back. The server then sends back the corrosponding data to the player.
+**Damage is dealt by 1) a click -- all player/entities in the "clicked" region receive damage, 2) projectiles -- the server controls a projectile's path until it reaches a player where it collides and is deleted or it is dropped, 3) enemy damages by checking if a player is in front of/over an enemy (based on x,y)
