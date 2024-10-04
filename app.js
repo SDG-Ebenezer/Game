@@ -13,19 +13,29 @@ app.use("/client", express.static(__dirname + "/client"))
 
 const PORT = process.env.PORT || 1111 //server PORT
 serv.listen(PORT)
-console.log("Online @ " +PORT)
+console.log("Online @ " + PORT)
 
 /************ CONSTS/VARS *********************/
 //RANDOM
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
+
+function createRandomString(l=10){
+    var pool = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#?! '
+    var ret_string = ""
+    for(var i = 0; i < l; i ++){
+        ret_string += pool[random(0, pool.length)]
+    }
+    return ret_string
+}
 //CREATE NEW IDs
 function createID(){
     /*GENERATE ID*/
-    id = random(100000000000000, 0) //rand id
-    while (id in ids){id = random(100000000000000, 0)}
+    id = createRandomString() //rand id
+    while (id in ids){id = createRandomString()}
     ids.push(id) //keep track of all ids
     return id
 }
+
 var maxLoad = 750 //most px a player can see 
 //const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
 //Render is slowerm so runs at x[speedFactor] as fast
@@ -46,7 +56,7 @@ const holdableItems = {
         cost: Infinity, //market value
         hitRange: null,
         cooldownTime: 5 , //* 1/speedFactor, //ms till next use
-        cooldownTimer: 0 
+        cooldownTimer: 0
     },
     "Iron Sword":{
         name:"Iron Sword", // MUST MATCH KEY!
@@ -149,8 +159,8 @@ const holdableItems = {
         name:"Spear", // MUST MATCH KEY!
         class:"Spear",
         pic:"/imgs/Spear.png",
-        durability:5,
-        maxDurability:5,
+        durability:15,
+        maxDurability:15,
         damage:80,
         generationProbability:1, //out of 100
         rotation:270/57.1, //how looks like when held
@@ -198,7 +208,6 @@ var borderRect = {
     isRect:true,
     color:"rgb(34, 60, 33)"
 }
-var fps = 1000/60 //
 
 /************ UNIVERSAL *********************/
 const entitySize = 75
@@ -318,7 +327,7 @@ for(let i = 0; i < lakeCount; i++){
     lakes[`LAKE${i}`] = new Lake(random(mapSize/2-size,-mapSize/2+size), random(mapSize/2-size,-mapSize/2+size), size)
 }
 
-/** @SPAWN_FINDER */
+/************************** @SPAWN_FINDER *************/
 /**
  * Everyone needs a home!
  */
@@ -360,7 +369,7 @@ function findSpawn(size=0) {
     return { x, y };
 }
 
-/** @SMALL_STRUCTURE_GENERATOR ********** */
+/************************** @SMALL_STRUCTURE_GENERATOR *************/
 var numOfRandomWalls = random(Math.ceil(mapSize/400), Math.floor(mapSize/1600))
 for(let i = 0; i < numOfRandomWalls; i++){
     let blueprintSize = random(4,1)
@@ -603,8 +612,8 @@ class Entity {
         this.isCircle = false;
         this.width = w;
         this.height = h;
-        this.speed = speed
-        this.maxSpeed = speed //same as this.speed
+        this.speed = PORT==1111?(speed / 5):speed
+        this.maxSpeed = PORT==1111?(speed / 5):speed //same as this.speed
         this.onWall = false //default
         this.immuneDuration = 0 //this > 0 == can't take damage (see MAX Immune Duration)
         this.xp = xp
@@ -612,8 +621,8 @@ class Entity {
 }
 class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, health = 100){
-        super(type, imgSrc, speed, w, h, x, y, health, 1000, "PLAYER"+createID())
-        this.username = (username == "")?"Happy":username;
+        super(type, imgSrc, speed, w, h, x, y, health, 5000, "PLAYER"+createID())
+        this.username = (username == "")? createRandomString(5):username;
         this.kills = 0
         this.inventory = [
             {...holdableItems["Hand"]}, //Iron Sword
@@ -636,7 +645,7 @@ class Player extends Entity{
     }
 }
 class Enemy extends Entity{
-    constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=1, health = 100, w=entitySize, h=entitySize, inventory=null, invSelected=null){
+    constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=5, health = 100, w=entitySize, h=entitySize, inventory=null, invSelected=null){
         super(type, imgSrc, speed, w, h, x, y, health, "ENEMY"+createID())
         this.username = "BOT_Enemy"
         this.detectRange = detectRange
@@ -648,6 +657,7 @@ class Enemy extends Entity{
         this.justAttacked = false
         this.cooldownTime = 0 //s
         this.cooldownDuration = reloadTime //ms
+        this.cooldownSF = 1 //speed/decrease length of reloadTime in slower/faster servers
         /** @this.lootable - what it drops*/
         if(type == "Boss") {
             this.lootTable = [{...holdableItems["Diamond Sword"], generationProbability:100}] //boss mob gives diamond sword 100%
@@ -694,7 +704,7 @@ class Enemy extends Entity{
         if(this.justAttacked){
             this.cooldownTime ++
             //adds up until over
-            if(this.cooldownTime >= this.cooldownDuration) {
+            if(this.cooldownTime * this.cooldownSF >= this.cooldownDuration) {
                 this.cooldownTime = 0
                 this.justAttacked = false
             }
@@ -820,7 +830,7 @@ class Enemy extends Entity{
     }
 }
 class Boss extends Enemy{
-    constructor(x=0, y=0, type="Boss", imgSrc="/imgs/Enemy_Elder.png", damage=50, detectRange=500, reloadTime=100, speed=1, health = 1000, w=entitySize, h=entitySize){
+    constructor(x=0, y=0, type="Boss", imgSrc="/imgs/Enemy_Elder.png", damage=50, detectRange=500, reloadTime=100, speed=4, health = 1000, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h)
         this.summonGuards = false
         this.summoned = 0
@@ -862,7 +872,7 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=150, speed=0.8, health = 100, w=entitySize, h=entitySize){
+    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=150, speed=3.5, health = 100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
         this.shootRange = 250 // to walk closer before shooting...
     }
@@ -949,13 +959,13 @@ const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
 var enemyCount = 0
 function spawnNormal(){
     let nC = findSpawn(entitySize)
-    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 0.8)
+    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 5)
     currEnemyID++
     enemyCount++
 }
 function spawnLord(){
     let nC = findSpawn(entitySize)
-    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 1/2, 500)
+    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 2.5, 500)
     currEnemyID++
     enemyCount++
 }
@@ -976,7 +986,7 @@ enemyCount++
 /**************************** @PROJECTILES *************/
 var projectiles = {}
 class Projectile{
-    constructor(type, x, y, w, h, damage, dir, whoShot, durability, flightDuration=50, speed=15, imgSrc="/imgs/Arrow.png"){
+    constructor(type, x, y, w, h, damage, dir, whoShot, durability, flightDuration=50, imgSrc="/imgs/Arrow.png", speed=30){
         this.type = type //key inside holdable items!
         this.x = x
         this.y = y
@@ -1002,6 +1012,7 @@ var startedCountdown = false
 var amountOfEatables = 0
 var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
+const FPS = 25 //
 setInterval(()=>{
     if (!enemies[bossID] && !startedCountdown){
         toggleOpeningsToArena(false);
@@ -1230,7 +1241,7 @@ setInterval(()=>{
             delete pickables[key]
         }
     }
-}, fps)
+}, FPS)
 
 
 /*************************** @SOCKET *************/
@@ -1483,7 +1494,7 @@ io.sockets.on("connection", (socket)=>{
                 
                 tool.durability -= 1
 
-                projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, tool.durability, 75, 20, "/imgs/Spear.png");
+                projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, tool.durability, 75, "/imgs/Spear.png");
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
                 usedItem = true // item was used!
             } 

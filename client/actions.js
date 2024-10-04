@@ -1135,27 +1135,14 @@ function buy(boughtItem, btnID){
     }
 }
 
-// Detect when the user is leaving the page
-window.addEventListener('beforeunload', function(event) {
-    socket.emit("playerClosedTab", {player})
-    /*
-    var stillPlaying = confirm("You are still playing the game. Are you sure you want to leave?");
-    if (stillPlaying) {
-        return null;
-    } else {
-        event.preventDefault();
-        return event.returnValue = 'Are you sure you want to leave?';
-    }*/
-})
-
-/************* WAIT SCREEN (SERVER LOADING...) ************/
+/************* @WAIT_SCREEN (SERVER LOADING...) ************/
 // WAIT SCREEN on
 const waitDiv = document.getElementById("wait")
 const dotsSpan = document.getElementById('dots');
 const dotsCount = 3; // Number of dots to display
 let dotIndex = 0;
 var disconnectTimeout
-/************ CONNECTED! *********************/
+/************ @CONNECTED ***********************************/
 socket.on('connect', () => {
     console.log('Connected to server');
     // Clear the timeout if the connection is established
@@ -1180,3 +1167,42 @@ function addDot() {
         dotIndex = 0
     }
 }
+
+/********************************************************/
+// Detect when the user is leaving the page
+window.addEventListener('beforeunload', function(event) {
+    socket.emit("playerClosedTab", {player})
+    /*
+    var stillPlaying = confirm("You are still playing the game. Are you sure you want to leave?");
+    if (stillPlaying) {
+        return null;
+    } else {
+        event.preventDefault();
+        return event.returnValue = 'Are you sure you want to leave?';
+    }*/
+})
+
+/*
+// Detect when a player leaves the tab (open)
+var stillGone = false
+//he left the tab
+window.addEventListener("blur", () => {
+    stillGone = true
+    leaveTabConsequence()
+});
+//he's back
+window.addEventListener("focus", () => {
+    stillGone = false
+});
+//he shifted windows
+document.addEventListener("visibilitychange", () => {
+    //page hidden
+    if (document.hidden) {
+        stillGone = true
+        leaveTabConsequence()
+    } 
+    //page not hidden
+    else {
+        stillGone = false
+    }
+});*/
