@@ -863,7 +863,7 @@ class Boss extends Enemy{
                 for(let j = 0; j < 2; j ++){
                     let id = `@Summoned${i}${j}${random(65536,0)}`
                     let y = (j * spread) - spread
-                    enemies[id] = new Enemy(x, y, "Summoned_Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 1/2, 500)
+                    enemies[id] = new Enemy(x, y, "Summoned_Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 2, 500)
                     enemyCount++
                     this.summoned++
                 }
@@ -1502,13 +1502,21 @@ io.sockets.on("connection", (socket)=>{
             else {
                 let didDamage = false
                 let damage = (tool.durability === Infinity || !tool.durability)?holdableItems["Hand"].damage:holdableItems[tool.name].damage
-                let hitRange = player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize
+                
+                let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize) + 75
+                
+                let mouseX = data.x
+                let mouseY = data.y
+
                 for(let e in entities){    
                     let entity = entities[e]            
                     if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
                     && entity.id != id
-                    && Math.abs(Math.abs(data.x) - Math.abs(entity.x)) < player.hitSize
-                    && Math.abs(Math.abs(data.y) - Math.abs(entity.y)) < player.hitSize){
+                    && entity.x - entity.width/2 < mouseX 
+                    && entity.x + entity.width/2 > mouseX
+                    && entity.y - entity.height/2 < mouseY 
+                    && entity.y + entity.height/2 > mouseY
+                    ){
                         if(entity.immuneDuration <= 0) entity.health -= damage
                         if(entity.health <= 0){
                             player.xp += Math.floor(entity.xp * 0.8 )// give player xp
@@ -1520,16 +1528,18 @@ io.sockets.on("connection", (socket)=>{
                     }
                 }
                 for(let e in enemies){    
-                    let enemy = enemies[e]
-                    if(Math.sqrt(Math.pow(enemy.x - player.x, 2) + Math.pow(enemy.y - player.y, 2)) < hitRange
-                    && Math.abs(Math.abs(enemy.x) - Math.abs(data.x)) < player.hitSize
-                    && Math.abs(Math.abs(enemy.y) - Math.abs(data.y)) < player.hitSize){
-                        if(enemy.immuneDuration <= 0) enemy.health -= damage
-                        if(enemy.health <= 0){
+                    let entity = enemies[e]
+                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
+                    && entity.x - entity.width/2 < mouseX 
+                    && entity.x + entity.width/2 > mouseX
+                    && entity.y - entity.height/2 < mouseY 
+                    && entity.y + entity.height/2 > mouseY){
+                        if(entity.immuneDuration <= 0) entity.health -= damage
+                        if(entity.health <= 0){
                             //give player xp for killed
-                            player.xp += enemy.xp
+                            player.xp += entity.xp
                             player.kills ++
-                            enemy.deathMessage = "You were killed by " + player.username
+                            entity.deathMessage = "You were killed by " + player.username
                         }
                         didDamage = true // turn to true
                     }
