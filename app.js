@@ -620,7 +620,7 @@ class Entity {
     }
 }
 class Player extends Entity{
-    constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=5, w=entitySize, h=entitySize, health = 100){
+    constructor(x, y, username, imgSrc="/imgs/Player.png", type="player", speed=10, w=entitySize, h=entitySize, health = 100){
         super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID())
         this.username = (username == "")? createRandomString(5):username;
         this.kills = 0
