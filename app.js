@@ -612,8 +612,8 @@ class Entity {
         this.isCircle = false;
         this.width = w;
         this.height = h;
-        this.speed = PORT==1111?(speed / 10):speed
-        this.maxSpeed = PORT==1111?(speed / 10):speed //same as this.speed
+        this.speed = PORT==1111?(speed / 20):speed
+        this.maxSpeed = PORT==1111?(speed / 20):speed //same as this.speed
         this.onWall = false //default
         this.immuneDuration = 0 //this > 0 == can't take damage (see MAX Immune Duration)
         this.xp = xp
