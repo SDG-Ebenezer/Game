@@ -562,6 +562,23 @@ class Pickable{
        this.despawnIn = 10000 // * fps sec
    }
 }
+const coins = {
+    "Health":{
+        name:"Health", 
+        imgSrc:"/imgs/Health_Coin.png",
+        xpAmount:25,
+    },
+    "Speed":{
+        name:"Speed", 
+        imgSrc: "/imgs/Speed_Coin.png",
+        xpAmount:25,
+    },
+    "Coin":{
+        name:"Coin", 
+        imgSrc:"/imgs/Coin.png",
+        xpAmount:100,
+    }
+}
 var pickables = {} 
 var pickablesID = 0 //This is the KEY that will be used for each item in the object "pickables"
 //drop everything after death
@@ -913,7 +930,11 @@ class Archer extends Enemy{
                         let arrowOffsetMaxDeg = 10//deg // how many IN DEGREES +- can be offset shot
                         let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
                         //SHOOT ARROW!
-                        projectiles[createID()] = new Projectile("Arrow", this.x + Math.cos(arrowDirection) * entitySize, this.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, this, holdableItems["Arrow"].durability);
+                        projectiles[createID()] = new Projectile(
+                            "Arrow", 
+                            this.x + Math.cos(arrowDirection) * entitySize, 
+                            this.y + Math.sin(arrowDirection) * entitySize, 
+                            50, 50, arrowDirection, this, holdableItems["Arrow"].durability);
 
                         this.inventory[this.invSelected].durability -= 1
                         //bow breaks !? O_O
@@ -985,21 +1006,35 @@ enemyCount++
 
 /**************************** @PROJECTILES *************/
 var projectiles = {}
+const projectilesObj = {
+    "Arrow":{
+        damage:holdableItems["Arrow"].damage,
+        flightDuration:50,
+        imgSrc:"/imgs/Arrow.png",
+        speed:10
+    },
+    "Spear":{
+        damage:holdableItems["Spear"].damage,
+        flightDuration:50,
+        imgSrc:"/imgs/Spear.png", 
+        speed:20
+    }
+}
 class Projectile{
-    constructor(type, x, y, w, h, damage, dir, whoShot, durability, flightDuration=50, imgSrc="/imgs/Arrow.png", speed=30){
+    constructor(type, x, y, w, h, dir, whoShot, durability){
         this.type = type //key inside holdable items!
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
         this.direction = dir //for direction purposes
-        this.duration = flightDuration
-        this.speed = speed
+        this.duration = projectilesObj[type].flightDuration
+        this.speed = projectilesObj[type].speed
 
-        this.imgSrc = imgSrc
+        this.imgSrc = projectilesObj[type].imgSrc
         this.width = w
         this.height = h
 
-        this.damage = damage
+        this.damage = projectilesObj[type].damage
 
         this.whoShot = whoShot
 
@@ -1014,6 +1049,7 @@ var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
 const FPS = 25 //
 setInterval(()=>{
+    //spawn in boss?
     if (!enemies[bossID] && !startedCountdown){
         toggleOpeningsToArena(false);
         startedCountdown = true
@@ -1031,7 +1067,6 @@ setInterval(()=>{
             }
         }, 1000);
     }
-    
     //Spawn in enemies (chance of)
     if(enemyCount < maxEnemyCount){
         if(random(100, 1) == 1){
@@ -1090,19 +1125,17 @@ setInterval(()=>{
     //add eatables, swords, etc.
     if(random(500,1)==1 && amountOfEatables < mapSize/50){ //50=max amount of eatables at one time
         let spawnLocation = findSpawn() //find a suitable place to generate
+        let kind
         if (random(4, 1) == 1){
-            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Health", "/imgs/Health_Coin.png")
-            pickablesID ++
-            amountOfEatables ++
+            kind = "Health"
         } else if(random(2, 1) == 1){
-            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Speed", "/imgs/Speed_Coin.png")
-            pickablesID ++
-            amountOfEatables ++
+            kind = "Speed"
         } else{
-            pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, "Coin", "/imgs/Coin.png")
-            pickablesID ++
-            amountOfEatables ++
+            kind = "Coin"
         }
+        pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, coins[kind].name, coins[kind].imgSrc)
+        pickablesID ++
+        amountOfEatables ++
     }
 
     //add loot 0.1% chance
@@ -1374,22 +1407,30 @@ io.sockets.on("connection", (socket)=>{
         let item = data.what
         let player = entities[id]
         if(player){
+            //if it is a coin...
             if(item.name == "Coin"){
-                player.xp += 25
+                player.xp += coins[item.name].xpAmount
+
                 amountOfEatables -= 1
                 delete pickables[item.id]
             } else if(item.name == "Speed"){
-                player.xp += 25
-                amountOfEatables -= 1
+                player.xp += coins[item.name].xpAmount
+
                 socket.emit("speed")
+
+                amountOfEatables -= 1
                 delete pickables[item.id]
             } else if(item.name == "Health"){
-                player.xp += 25
-                if (player.health<player.maxHealth-25) player.health += 25 
-                else player.health = player.maxHealth//+ 25 health points
+                player.xp += coins[item.name].xpAmount
+                if (player.health<player.maxHealth-25) {
+                    player.health += 25 
+                } else {player.health = player.maxHealth} // +25 health points
+
                 amountOfEatables -= 1
                 delete pickables[item.id]
-            } else {
+            } 
+            //otherwise it must be an item
+            else {
                 let inv = player.inventory;
                 let taken = false //taken? picked up? etc.??
                 //see if you already have it and group together
@@ -1469,7 +1510,11 @@ io.sockets.on("connection", (socket)=>{
                 if (canShoot) {
                     let arrowDirection = player.rotation + Math.PI;
                     
-                    projectiles[createID()] = new Projectile("Arrow", player.x + Math.cos(arrowDirection) * entitySize, player.y + Math.sin(arrowDirection) * entitySize, 50, 50, holdableItems["Arrow"].damage, arrowDirection, player, holdableItems["Arrow"].durability);
+                    projectiles[createID()] = new Projectile(
+                        "Arrow", 
+                        player.x + Math.cos(arrowDirection) * entitySize, 
+                        player.y + Math.sin(arrowDirection) * entitySize, 
+                        50, 50, arrowDirection, player, holdableItems["Arrow"].durability);
             
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
@@ -1494,7 +1539,11 @@ io.sockets.on("connection", (socket)=>{
                 
                 tool.durability -= 1
 
-                projectiles[createID()] = new Projectile("Spear", player.x + Math.cos(spearDirection) * entitySize, player.y + Math.sin(spearDirection) * entitySize, 50, 50, holdableItems["Spear"].damage, spearDirection, player, tool.durability, 75, "/imgs/Spear.png");
+                projectiles[createID()] = new Projectile(
+                    "Spear", 
+                    player.x + Math.cos(spearDirection) * entitySize, 
+                    player.y + Math.sin(spearDirection) * entitySize, 
+                    50, 50, spearDirection, player, tool.durability);
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
                 usedItem = true // item was used!
             } 
@@ -1503,7 +1552,8 @@ io.sockets.on("connection", (socket)=>{
                 let didDamage = false
                 let damage = (tool.durability === Infinity || !tool.durability)?holdableItems["Hand"].damage:holdableItems[tool.name].damage
                 
-                let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize) + 75
+                let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize)
+                console.log(hitRange)
                 
                 let mouseX = data.x
                 let mouseY = data.y
