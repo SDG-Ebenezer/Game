@@ -1501,7 +1501,7 @@ io.sockets.on("connection", (socket)=>{
         if(player){
             let usedItem = false
             let tool = player.inventory[player.invSelected]
-            //shoot arrow IF bow
+            //ranged attack
             if (tool.name === "Bow") {
                 // Check for arrow in inventory
                 let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
@@ -1552,16 +1552,17 @@ io.sockets.on("connection", (socket)=>{
                 let didDamage = false
                 let damage = (tool.durability === Infinity || !tool.durability)?holdableItems["Hand"].damage:holdableItems[tool.name].damage
                 
-                let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize)
-                console.log(hitRange)
+                let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize) * data.scale
+                console.log( data.x, data.y)
                 
                 let mouseX = data.x
                 let mouseY = data.y
 
                 for(let e in entities){    
                     let entity = entities[e]            
-                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
-                    && entity.id != id
+                    if(//Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
+                    //&& 
+                    entity.id != id
                     && entity.x - entity.width/2 < mouseX 
                     && entity.x + entity.width/2 > mouseX
                     && entity.y - entity.height/2 < mouseY 
@@ -1579,8 +1580,9 @@ io.sockets.on("connection", (socket)=>{
                 }
                 for(let e in enemies){    
                     let entity = enemies[e]
-                    if(Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
-                    && entity.x - entity.width/2 < mouseX 
+                    if(//Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
+                    //&& 
+                    entity.x - entity.width/2 < mouseX 
                     && entity.x + entity.width/2 > mouseX
                     && entity.y - entity.height/2 < mouseY 
                     && entity.y + entity.height/2 > mouseY){

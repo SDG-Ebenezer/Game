@@ -428,10 +428,28 @@ function gShadow(){
     ctx.restore()
 }*/
 
+
+
+/**
+ * BUG <.Kj87dD @error> 
+ * Issue: 
+ * * When a player zooms out, their 
+ * * range increases. When they zoom in,
+ * * the range decreases. This creates
+ * * unfair advantage for people with zoomed
+ * * in devices...
+ * SOLUTIONS:
+ * ---
+ * 
+ *       HH:MM  MM/DD/YYYY   
+ * DATE: 10:34p 10/ 4/2024
+ */
 // This is the little circle that appears...where you hit 
+var attackCursorOn = false
 function gAttackCursor(){
-    let hitRange = (player.inventory[player.invSelected].hitRange? player.inventory[player.invSelected].hitRange:entitySize) / scale
-    if(mouse.x**2 + mouse.y**2 <= hitRange ** 2){
+    let hitRange = (player.inventory[player.invSelected].hitRange? player.inventory[player.invSelected].hitRange:entitySize) * scale
+    
+    if((mouse.x)**2 + (mouse.y)**2 <= hitRange ** 2){
         let rangeCursorX = mouse.x + ginfo.width/2
         let rangeCursorY = mouse.y + ginfo.height/2
         gctx.fillStyle = "rgba(0,0,0,0.2)"
@@ -441,7 +459,9 @@ function gAttackCursor(){
         gctx.arc(rangeCursorX, rangeCursorY, player.hitSize/2, 0, 2 * Math.PI)
         gctx.fill()
         gctx.stroke()
-    }
+
+        attackCursorOn = true //allows attack sends
+    } else {attackCursorOn = false}
 }
 function gLeaderboardData(pc, leaderboard){
     gctx.fillStyle = 'white'
@@ -541,7 +561,7 @@ function gShowCountdown() {
         gctx.fillStyle = "white";
         gctx.fillText("Boss respawning in ", x, y);
 
-        if(respawnTime <= 5) gctx.fillStyle = "red"; //5s red text warning
+        if(respawnTime <= 20) gctx.fillStyle = "red"; //20s red text warning
         gctx.fillText(`${respawnTime}s`, gctx.measureText("Boss respawning in ").width + x, y);
     }
 }
@@ -772,12 +792,17 @@ function mousedown(e) {
             }
         }
         
-        if (player.health > 0 && !clickedInv 
-        && player.inventory[player.invSelected].cooldownTimer == 0){// Check if not in cooldown
+        if (
+            player.health > 0 
+            && !clickedInv 
+            && player.inventory[player.invSelected].cooldownTimer == 0
+            && attackCursorOn
+        ){// Check if not in cooldown
             //EMIT MOUSE DOWN EVENT (function performed in APP.Js (server-side))
             socket.emit("mousedown", {
-                x: mouse.x + player.x,
-                y: mouse.y + player.y,
+                x: player.x + (mouse.x / scale),
+                y: player.y + (mouse.y / scale),
+                scale: scale,
                 invID: player.invSelected
             });
         }
