@@ -39,7 +39,7 @@ var currInvSlot = 0
 //w_vars (Wait Variables)
 var images = {} //loads images as needed
 var borders = {}
-var walls = {} //all of the walls
+//var walls = {} //all of the walls
 var holdables = {} //all things that you can hold
 var mapSize //defined soon!
 var wallsList = [] //only the values
@@ -50,13 +50,15 @@ var maxImmuneDuration
 var helpOpen = false //
 var marketOpen = false //
 
+var obstacles = {}
+
 //var speedFactor = 1 //updated later, 1 as default
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
 socket.on("sendStartData", (data)=>{
     borders = data.bordersObj
-    walls = data.structuresObj
+    //walls = data.structuresObj //send for map
     player = data.player
     mapSize = data.mapSize
     entitySize = data.entitySize
@@ -69,9 +71,9 @@ socket.on("sendStartData", (data)=>{
     canPlay = true
     updateAgain = true
 
-    wallsList = data.walls
-    lakesList = data.lakes
-    marketsList = data.markets
+    wallsList = data.walls //send for map
+    lakesList = data.lakes //send for map
+    marketsList = data.markets //send for map
     holdables = data.holdables
 
     //speedFactor = data.speedFactor
@@ -83,7 +85,7 @@ socket.on("reupdate", (data)=>{
     updateAgain = true
 
     borders = data.bordersObj
-    walls = data.structuresObj
+    //walls = data.structuresObj
     mapSize = data.mapSize
     entitySize = data.entitySize
     wallsList = data.walls
@@ -120,10 +122,11 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     let centerX = canvas.width/2 - player.x
     let centerY = canvas.height/2 - player.y
     if(player) ctx.translate(centerX, centerY);
-    
-    
+
     //draw!
     info.forEach(item=>{
+        //(NOT really drawing, but adding walls, obstacles to list)
+
         ctx.save()
         ctx.translate(item.x, item.y)
         if(item.isCircle){
@@ -137,13 +140,29 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.fillRect(item.x, item.y, item.width, item.height)
         }
         else{    
+            let imgSrc = item.imgSrc
+
+            //Draw tree opaque function
+            if(item.class == "Tree"){
+                if(Math.sqrt(Math.pow(player.x - item.x, 2) + Math.pow(player.y - item.y, 2)) > 250){ // dist till tree is not opaque
+                    imgSrc = item.opaqueImgSrc
+                } else{
+                    //draw stump (NEEDS WORK!!)
+                    ctx.fillStyle = "#654321";
+                    ctx.beginPath();
+                    ctx.arc(0, 0, item.obstructionRadius, 0, Math.PI * 2, true);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+
             //create a loaded image if not existant
-            if(!images[item.imgSrc]){
-                images[item.imgSrc] = new Image()
-                images[item.imgSrc].src = item.imgSrc
+            if(!images[imgSrc]){
+                images[imgSrc] = new Image()
+                images[imgSrc].src = imgSrc
             }
             ctx.rotate(item.rotation)
-            ctx.drawImage(images[item.imgSrc], -item.width/2, -item.height/2, item.width, item.height)
+            ctx.drawImage(images[imgSrc], -item.width/2, -item.height/2, item.width, item.height)
         }
         //draw held item
         if(item.inventory){
@@ -290,6 +309,7 @@ socket.on("sendUpdateDataToClient", (info) => {
 
         // Update walls list with provided structures
         wallsList = info.structures;
+        obstacles = info.updateContent.filter(item => item.class == "Tree" || item.class == "Wall")
     }
     /** @Note
      * The updateCanv function is outside of the "player.health > 0"
@@ -428,10 +448,8 @@ function gShadow(){
     ctx.restore()
 }*/
 
-
-
 /**
- * BUG <.Kj87dD @error> 
+ * BUG <.Kj87dD @error> FIXED!
  * Issue: 
  * * When a player zooms out, their 
  * * range increases. When they zoom in,
@@ -515,7 +533,7 @@ function gMap(){
     gctx.translate(x+size/2,y+size/2)
     
     
-    //draw lakes
+    //draw lakes on map
     for(let i in lakesList){
         let lake = lakesList[i]
         gctx.fillStyle = "#188B8F"
@@ -524,14 +542,14 @@ function gMap(){
         gctx.closePath();
         gctx.fill();
     }
-    //draw walls
+    //draw walls on map
     for(let i in wallsList){
         let wall = wallsList[i]
         if(wall.class == "Wall") {gctx.fillStyle = "gray"}
         else {gctx.fillStyle = "green"}
         gctx.fillRect(wall.x*sf,wall.y*sf,pIcSize(wall.width),pIcSize(wall.height))
     }
-    //draw markets
+    //draw markets on map
     for(let i in marketsList){
         let market = marketsList[i]
         gctx.fillStyle = "#1E90FF"
@@ -846,34 +864,41 @@ function touchend(e){
 }
 //Function also in APP js file~! But different
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty, onWall, size=entitySize) {
+function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, size=entitySize) {
     if(onWall) return { tx, ty }
-    let newX = playerX + tx;
-    let newY = playerY + ty;
-    for(let w in walls){
-        let wall = walls[w]
-        if(wall.class == "Wall" && !onWall){
-            let padding = size/2 
-            let width = wall.width + padding
-            let height = wall.height + padding 
-            let wallX = wall.x - width/2
-            let wallY = wall.y - height/2
-            if (newX >= wallX &&
-                newX <= wallX + width &&
-                wallY <= playerY && playerY <= wallY + height) {
+    var newX = playerX + tx;
+    var newY = playerY + ty;
+    for(let w in obstacles){
+        var obstacle = obstacles[w]
+        if(obstacle.class == "Wall" && !onWall){
+            var padding = size/2 
+            var width = obstacle.width + padding
+            var height = obstacle.height + padding 
+            var obstacleX = obstacle.x - width/2
+            var obstacleY = obstacle.y - height/2
+            if (newX >= obstacleX &&
+                newX <= obstacleX + width &&
+                obstacleY <= playerY && playerY <= obstacleY + height) {
                 tx = 0;
             }
-            if (newY >= wallY &&
-                newY <= wallY + height &&
-                wallX <= playerX && playerX <= wallX + width) {
+            if (newY >= obstacleY &&
+                newY <= obstacleY + height &&
+                obstacleX <= playerX && playerX <= obstacleX + width) {
                 ty = 0;
+            }
+        } else if(obstacle.class == "Tree"){
+            var treeCenterX = obstacle.x
+            var treeCenterY = obstacle.y
+            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(newY-treeCenterY,2)) < obstacle.obstructionRadius){
+                tx = 0
+                ty = 0
             }
         }
     }
     if (!onWall) {
         for (let l in lakesList) {
-            let lake = lakesList[l];
-            let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
+            var lake = lakesList[l];
+            var distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
             if (distanceSquared <= Math.pow(lake.radius, 2)) {
                     socket.emit("addParticles", {
                         id:player.id,
@@ -973,11 +998,11 @@ function startGame(){
 
                 //check if hit wall
                 let newCoords = this.onWall?
-                {
-                    tx:player.x+tx, 
-                    ty:player.y+ty,
-                }:
-                checkCollision(wallsList,player.x, player.y, tx, ty, player.onWall, player.width==player.height?player.width:Math.max(player.width, player.height))
+                    {
+                        tx:player.x+tx, 
+                        ty:player.y+ty,
+                    }:
+                    checkCollision(obstacles,player.x, player.y, tx, ty, player.onWall, player.width==player.height?player.width:Math.max(player.width, player.height))
                 tx = newCoords.tx
                 ty = newCoords.ty
 

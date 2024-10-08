@@ -337,8 +337,8 @@ function findSpawn(size=0) {
     let doNotPass = true;
     while (doNotPass) {
         doNotPass = false; // be optimistic, you know?
-        x = random(mapSize / 2 - s / 2, -mapSize / 2);
-        y = random(mapSize / 2 - s / 2, -mapSize / 2);
+        x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
+        y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
         //cannot spawn on structures or markets 
         let li1 = [structures, markets]
         li1.forEach(obj=>{
@@ -435,29 +435,36 @@ for(let i = 0; i < numOfRandomWalls; i++){
         structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
     }
 }
-//Function also in PLAYER js file~! But different
+//Function same in PLAYER js file~! 
 //HIT WALLS?
-function checkCollision(walls, playerX, playerY, tx, ty, onWall, who, particlesTF, size=entitySize) {
+function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize) {
     if(onWall) return { tx, ty }
     let newX = playerX + tx;
     let newY = playerY + ty;
-    for(let w in walls){
-        let wall = walls[w]
-        if(wall.class == "Wall" && !onWall){
+    for(let w in obstacles){
+        let obstacle = obstacles[w]
+        if(obstacle.class == "Wall" && !onWall){
             let padding = size/2 
-            let width = wall.width + padding
-            let height = wall.height + padding 
-            let wallX = wall.x - width/2
-            let wallY = wall.y - height/2
-            if (newX >= wallX &&
-                newX <= wallX + width &&
-                wallY <= playerY && playerY <= wallY + height) {
+            let width = obstacle.width + padding
+            let height = obstacle.height + padding 
+            let obstacleX = obstacle.x - width/2
+            let obstacleY = obstacle.y - height/2
+            if (newX >= obstacleX &&
+                newX <= obstacleX + width &&
+                obstacleY <= playerY && playerY <= obstacleY + height) {
                 tx = 0;
             }
-            if (newY >= wallY &&
-                newY <= wallY + height &&
-                wallX <= playerX && playerX <= wallX + width) {
+            if (newY >= obstacleY &&
+                newY <= obstacleY + height &&
+                obstacleX <= playerX && playerX <= obstacleX + width) {
                 ty = 0;
+            }
+        } else if(obstacle.class == "Tree"){
+            var treeCenterX = obstacle.x
+            var treeCenterY = obstacle.y
+            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(newY-treeCenterY,2)) < obstacle.obstructionRadius){
+                tx = 0
+                ty = 0
             }
         }
     }
@@ -526,24 +533,67 @@ for(let i = 0; i < 3; i ++){
 class Tree {
     constructor(treesID, size=random(500,200)) {
         let thing = findSpawn(size)
+        this.class = "Tree"
         this.x = thing.x;
         this.y = thing.y;
         this.id = `TREE${treesID}`;
         //this.color = "rgb(0, 95, 0, 0.3)";
         this.width = size
         this.height = size
-        this.imgSrc = `/imgs/Tree${random(1,3)}.png`
+        this.treeType = random(1,3)
+        this.imgSrc = `/imgs/Tree${this.treeType}.png`
+        this.opaqueImgSrc = `/imgs/Opaque_Tree${this.treeType}.png`
         this.rotation = random(0, 355) * (Math.PI/180)
+        this.obstructionRadius = 20
+    }
+    treeFindSpawn (s) {
+        let x, y;
+        let doNotPass = true;
+        while (doNotPass) {
+            doNotPass = false; // be optimistic, you know?
+            x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
+            y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2))
+            //cannot spawn on structures or markets 
+            let li1 = [structures, markets, trees]
+            li1.forEach(obj=>{
+                for (let sKey in obj) {
+                    let st = obj[sKey];
+                    let p = 20; // padding
+                    // Check for overlap
+                    if (
+                        x + s > st.x - p &&
+                        x - s < st.x + st.width + p &&
+                        y + s > st.y - p &&
+                        y - s < st.y + st.height + p
+                    ) {
+                        doNotPass = true; // aww
+                        break
+                    }
+                }
+            })
+            for(let l in lakes){
+                let lake = lakes[l]
+                let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
+                if(distance <= lake.radius){
+                    doNotPass = true; // aww
+                    break
+                }
+            }
+        }
+        return { x, y };
     }
 }
 var trees = {}
 var treesID = 0
-//Generate 1000 trees in the world...
-for(let i = 0; i < mapSize/25; i ++){
+//Generate trees in the world...
+for(let i = 0; i < mapSize/50; i ++){
    let newTree = new Tree(treesID)
    trees[treesID] = newTree
    treesID++
 }
+
+// DEFINE OBSTACLES OBJECT!
+var obstacles = { ...trees, ...structures}
 
 /**************************** @PICKABLES *************/
 class Pickable{
@@ -836,7 +886,7 @@ class Enemy extends Entity{
                 tx: this.xInc, 
                 ty: this.yInc,
             }:
-            checkCollision(structures, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height))
+            checkCollision(obstacles, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height))
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -1198,7 +1248,7 @@ setInterval(()=>{
         }
 
         // Check collision with walls
-        let collision = checkCollision(structures, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
+        let collision = checkCollision(obstacles, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
         
         // Check if the projectile goes out of bounds
         if (!(projectile.x + collision.tx > BORDERS.L && projectile.x + collision.tx < BORDERS.R && projectile.y + collision.ty > BORDERS.D && projectile.y + collision.ty < BORDERS.U)) {
@@ -1293,13 +1343,13 @@ io.sockets.on("connection", (socket)=>{
         entities[id] = player //add player to pool
         socket.emit("sendStartData", {
             bordersObj:BORDERS,
-            structuresObj: structures,
+            structuresObj: structures, //send for map
             player:player,
             mapSize:mapSize,
             entitySize:entitySize,
-            walls: Object.values(structures),
-            lakes: Object.values(lakes),
-            markets: Object.values(markets),
+            walls: Object.values(structures), //send for map
+            lakes: Object.values(lakes), //send for map
+            markets: Object.values(markets), //send for map
             holdables: holdableItems,
             //speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
             maxImmuneDuration:maxImmuneDuration //maximum immune time
