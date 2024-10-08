@@ -1602,8 +1602,7 @@ io.sockets.on("connection", (socket)=>{
                 let didDamage = false
                 let damage = (tool.durability === Infinity || !tool.durability)?holdableItems["Hand"].damage:holdableItems[tool.name].damage
                 
-                let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize) * data.scale
-                console.log( data.x, data.y)
+                //let hitRange = (player.inventory[player.invSelected].hitRange?player.inventory[player.invSelected].hitRange:entitySize) * data.scale
                 
                 let mouseX = data.x
                 let mouseY = data.y

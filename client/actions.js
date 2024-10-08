@@ -148,7 +148,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                     imgSrc = item.opaqueImgSrc
                 } else{
                     //draw stump (NEEDS WORK!!)
-                    ctx.fillStyle = "#654321";
+                    ctx.fillStyle = "#140d06AA";
                     ctx.beginPath();
                     ctx.arc(0, 0, item.obstructionRadius, 0, Math.PI * 2, true);
                     ctx.closePath();
