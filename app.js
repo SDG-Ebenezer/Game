@@ -270,7 +270,7 @@ for(let r = 0; r < structureW; r++){
             relY: c*wallSize-(structureH * wallSize)/2 + structureCenter.y
         }
         if(structureBlueprint[r][c] == "W"){
-            structures[structuresID] = new Wall(wall, structuresID, wallSize)
+            structures[`STRUCTURE${structuresID}`] = new Wall(wall, structuresID, wallSize)
             structuresID++;
         } else if(structureBlueprint[r][c] == "S"){
             structures[structuresID] = new Stairs(wall.relX, wall.relY, structuresID, wallSize, c==0?Math.PI:(Math.PI/180)) //make rotate based on corner
@@ -400,7 +400,7 @@ for(let i = 0; i < numOfRandomWalls; i++){
                 relY: a.y+r*wallSize 
             }
             if(blueprint[r][c] == "W"){
-                structures[structuresID] = new Wall(nC, structuresID, wallSize)
+                structures[`STRUCTURE${structuresID}`] = new Wall(nC, structuresID, wallSize)
                 structuresID++
             } else if(blueprint[r][c] == "S"){
                 allStairs.push({r:r,c:c,id:structuresID})
@@ -428,7 +428,7 @@ for(let i = 0; i < numOfRandomWalls; i++){
         else{ 
             //cant be a stair, because no adjacent walls!
             let old = structures[stair.id]
-            structures[stair.id] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
+            structures[`STRUCUTRE${stair.id}`] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
             console.log("Stairs replaced.")
         }
 
@@ -588,12 +588,13 @@ var treesID = 0
 //Generate trees in the world...
 for(let i = 0; i < mapSize/50; i ++){
    let newTree = new Tree(treesID)
-   trees[treesID] = newTree
+   trees[`Tree${treesID}`] = newTree
    treesID++
 }
 
 // DEFINE OBSTACLES OBJECT!
-var obstacles = { ...trees, ...structures}
+var obstacles = Object.assign({}, structures, trees)
+console.log(obstacles)
 
 /**************************** @PICKABLES *************/
 class Pickable{
