@@ -973,8 +973,9 @@ function startGame(){
 
                 //update onWall
                 let oW = false
-                for(let o in obstacles){
-                    let obstacle = obstacles[o]
+                var check = Object.assign({}, obstacles, wallsList)
+                for(let o in check){
+                    let obstacle = check[o]
                     let width = player.width/2
                     let height = player.height/2
                     if(obstacle.class == "Stairs"
