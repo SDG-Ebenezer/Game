@@ -973,7 +973,7 @@ function startGame(){
 
                 //update onWall
                 let oW = false
-                var check = Object.assign({}, obstacles, wallsList)
+                var check = Object.assign({}, obstacles, wallsList) //ascendables
                 for(let o in check){
                     let obstacle = check[o]
                     let width = player.width/2
@@ -995,8 +995,7 @@ function startGame(){
                                 && player.y < obstacle.y+obstacle.height/2+height)
                             ||
                             (obstacle.class=="Tree"
-                                && Math.abs(player.x-obstacle.x) < entitySize + obstacle.obstructionRadius
-                                && Math.abs(player.y-obstacle.y) < entitySize + obstacle.obstructionRadius
+                                && Math.sqrt(Math.pow(player.x-obstacle.x,2) + Math.pow(player.y-obstacle.y,2)) < entitySize + obstacle.obstructionRadius
                             )) {
                             oW = true
                             break;
