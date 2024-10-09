@@ -441,12 +441,12 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, partic
     if(onWall) return { tx, ty }
     let newX = playerX + tx;
     let newY = playerY + ty;
+    var obstructionPadding = size/2 
     for(let w in obstacles){
         let obstacle = obstacles[w]
         if(obstacle.class == "Wall" && !onWall){
-            let padding = size/2 
-            let width = obstacle.width + padding
-            let height = obstacle.height + padding 
+            let width = obstacle.width + obstructionPadding
+            let height = obstacle.height + obstructionPadding 
             let obstacleX = obstacle.x - width/2
             let obstacleY = obstacle.y - height/2
             if (newX >= obstacleX &&
@@ -462,8 +462,10 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, partic
         } else if(obstacle.class == "Tree"){
             var treeCenterX = obstacle.x
             var treeCenterY = obstacle.y
-            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(newY-treeCenterY,2)) < obstacle.obstructionRadius){
+            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
                 tx = 0
+            }
+            if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
                 ty = 0
             }
         }
@@ -594,7 +596,6 @@ for(let i = 0; i < mapSize/50; i ++){
 
 // DEFINE OBSTACLES OBJECT!
 var obstacles = Object.assign({}, structures, trees)
-console.log(obstacles)
 
 /**************************** @PICKABLES *************/
 class Pickable{

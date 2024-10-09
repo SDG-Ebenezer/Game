@@ -868,12 +868,12 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, size=entity
     if(onWall) return { tx, ty }
     var newX = playerX + tx;
     var newY = playerY + ty;
+    var obstructionPadding = size/2 
     for(let w in obstacles){
         var obstacle = obstacles[w]
         if(obstacle.class == "Wall" && !onWall){
-            var padding = size/2 
-            var width = obstacle.width + padding
-            var height = obstacle.height + padding 
+            var width = obstacle.width + obstructionPadding
+            var height = obstacle.height + obstructionPadding 
             var obstacleX = obstacle.x - width/2
             var obstacleY = obstacle.y - height/2
             if (newX >= obstacleX &&
@@ -889,8 +889,10 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, size=entity
         } else if(obstacle.class == "Tree"){
             var treeCenterX = obstacle.x
             var treeCenterY = obstacle.y
-            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(newY-treeCenterY,2)) < obstacle.obstructionRadius){
+            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
                 tx = 0
+            }
+            if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
                 ty = 0
             }
         }
