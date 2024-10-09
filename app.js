@@ -327,48 +327,6 @@ for(let i = 0; i < lakeCount; i++){
     lakes[`LAKE${i}`] = new Lake(random(mapSize/2-size,-mapSize/2+size), random(mapSize/2-size,-mapSize/2+size), size)
 }
 
-/************************** @SPAWN_FINDER *************/
-/**
- * Everyone needs a home!
- */
-function findSpawn(size=0) {
-    let s = size;
-    let x, y;
-    let doNotPass = true;
-    while (doNotPass) {
-        doNotPass = false; // be optimistic, you know?
-        x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
-        y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
-        //cannot spawn on structures or markets 
-        let li1 = [structures, markets]
-        li1.forEach(obj=>{
-            for (let sKey in obj) {
-                let st = obj[sKey];
-                let p = 3; // padding
-                // Check for overlap
-                if (
-                    x + s > st.x - p &&
-                    x - s < st.x + st.width + p &&
-                    y + s > st.y - p &&
-                    y - s < st.y + st.height + p
-                ) {
-                    doNotPass = true; // aww
-                    break
-                }
-            }
-        })
-        for(let l in lakes){
-            let lake = lakes[l]
-            let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
-            if(distance <= lake.radius){
-                doNotPass = true; // aww
-                break
-            }
-        }
-    }
-    return { x, y };
-}
-
 /************************** @SMALL_STRUCTURE_GENERATOR *************/
 var numOfRandomWalls = random(Math.ceil(mapSize/400), Math.floor(mapSize/1600))
 for(let i = 0; i < numOfRandomWalls; i++){
@@ -435,6 +393,161 @@ for(let i = 0; i < numOfRandomWalls; i++){
         structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
     }
 }
+
+/**************************** @PARTICLES *************/
+/**
+ * Particles are for animation, when an object steps
+ * in water, climbs walls?, etc. For animation purposes.
+ */
+var particles = {}
+var particleTimeouts = {}
+var particleFrequency = 400 // 
+class Particle{
+    constructor(x, y, radius=random(entitySize/2, entitySize/5)){
+        this.x = x
+        this.y = y
+        this.duration = 95
+        this.color = "#00000008"
+        this.size = radius
+        this.radius = radius
+
+        this.isCircle = true
+    }
+}
+
+/**************************** @MARKETS *************/
+var markets = {} //multiple market places
+var marketID = 0
+var marketSize = 200
+class Market{
+    constructor(x, y, ID, imgSize=marketSize) {
+        this.x = x;
+        this.y = y;
+        this.id = ID;
+        this.imgSrc = "/imgs/Market.png";
+        this.width = imgSize;
+        this.height = imgSize;
+    }
+}
+for(let i = 0; i < 3; i ++){
+    let coords = findSpawn(marketSize)
+    let newMarket = new Market(coords.x, coords.y, marketID)
+    markets[marketID] = newMarket
+    marketID++
+}
+
+/**************************** @TREES *************/
+class Tree {
+    constructor(treesID, size=random(500,200)) {
+        let thing = this.treeFindSpawn(size)
+        this.class = "Tree"
+        this.x = thing.x;
+        this.y = thing.y;
+        this.id = `TREE${treesID}`;
+        //this.color = "rgb(0, 95, 0, 0.3)";
+        this.width = size
+        this.height = size
+        this.treeType = random(1,3)
+        this.imgSrc = `/imgs/Tree${this.treeType}.png`
+        this.opaqueImgSrc = `/imgs/Opaque_Tree${this.treeType}.png`
+        this.rotation = random(0, 355) * (Math.PI/180)
+        this.obstructionRadius = 20
+    }
+    treeFindSpawn (s) {
+        let x, y;
+        let doNotPass = true;
+        while (doNotPass) {
+            doNotPass = false; // be optimistic, you know?
+            x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
+            y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2))
+            //cannot spawn on structures or markets 
+            let li1 = [structures, markets]
+            li1.forEach(obj=>{
+                for (let sKey in obj) {
+                    let st = obj[sKey];
+                    let p = 20; // padding
+                    // Check for overlap
+                    if (
+                        x + s > st.x - p &&
+                        x - s < st.x + st.width + p &&
+                        y + s > st.y - p &&
+                        y - s < st.y + st.height + p
+                    ) {
+                        doNotPass = true; // aww
+                        break
+                    }
+                }
+            })
+            for(let l in lakes){
+                let lake = lakes[l]
+                let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
+                if(distance <= lake.radius){
+                    doNotPass = true; // aww
+                    break
+                }
+            }
+        }
+        return { x, y };
+    }
+}
+var trees = {}
+var treesID = 0
+var treeCount = mapSize/50 // tree count
+//Generate trees in the world...
+for(let i = 0; i < treeCount; i ++){
+   let newTree = new Tree(treesID)
+   trees[`Tree${treesID}`] = newTree
+   treesID++
+}
+
+/************************** @SPAWN_FINDER *************/
+/**
+ * Everyone needs a home!
+ */
+function findSpawn(size=0) {
+    let s = size;
+    let x, y;
+    let doNotPass = true;
+    while (doNotPass) {
+        doNotPass = false; // be optimistic, you know?
+        x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
+        y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
+        //cannot spawn on structures or markets 
+        let li1 = [structures, markets]
+        li1.forEach(obj=>{
+            for (let sKey in obj) {
+                let st = obj[sKey];
+                let p = 3; // padding
+                // Check for overlap
+                if (
+                    x + s > st.x - p &&
+                    x - s < st.x + st.width + p &&
+                    y + s > st.y - p &&
+                    y - s < st.y + st.height + p
+                ) {
+                    doNotPass = true; // aww
+                    break
+                }
+            }
+        })
+        for(let t in trees){
+            let tree = trees[t]
+            if(Math.sqrt(Math.pow(x-tree.x,2) + Math.pow(y-tree.y,2)) < tree.obstructionRadius + entitySize){
+                doNotPass = true; // aww
+                break
+            }
+        }
+        for(let l in lakes){
+            let lake = lakes[l]
+            let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
+            if(distance <= lake.radius){
+                doNotPass = true; // aww
+                break
+            }
+        }
+    }
+    return { x, y };
+}
 //Function same in PLAYER js file~! 
 //HIT WALLS?
 function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize) {
@@ -488,112 +601,6 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, partic
     
     return { tx, ty };
 }
-
-/**************************** @PARTICLES *************/
-/**
- * Particles are for animation, when an object steps
- * in water, climbs walls?, etc. For animation purposes.
- */
-var particles = {}
-var particleTimeouts = {}
-var particleFrequency = 400 // 
-class Particle{
-    constructor(x, y, radius=random(entitySize/2, entitySize/5)){
-        this.x = x
-        this.y = y
-        this.duration = 95
-        this.color = "#00000008"
-        this.size = radius
-        this.radius = radius
-
-        this.isCircle = true
-    }
-}
-
-/**************************** @MARKETS *************/
-var markets = {} //multiple market places
-var marketID = 0
-var marketSize = 200
-class Market{
-    constructor(x, y, ID, imgSize=marketSize) {
-        this.x = x;
-        this.y = y;
-        this.id = ID;
-        this.imgSrc = "/imgs/Market.png";
-        this.width = imgSize;
-        this.height = imgSize;
-    }
-}
-for(let i = 0; i < 3; i ++){
-    let coords = findSpawn(marketSize)
-    let newMarket = new Market(coords.x, coords.y, marketID)
-    markets[marketID] = newMarket
-    marketID++
-}
-
-/**************************** @TREES *************/
-class Tree {
-    constructor(treesID, size=random(500,200)) {
-        let thing = findSpawn(size)
-        this.class = "Tree"
-        this.x = thing.x;
-        this.y = thing.y;
-        this.id = `TREE${treesID}`;
-        //this.color = "rgb(0, 95, 0, 0.3)";
-        this.width = size
-        this.height = size
-        this.treeType = random(1,3)
-        this.imgSrc = `/imgs/Tree${this.treeType}.png`
-        this.opaqueImgSrc = `/imgs/Opaque_Tree${this.treeType}.png`
-        this.rotation = random(0, 355) * (Math.PI/180)
-        this.obstructionRadius = 20
-    }
-    treeFindSpawn (s) {
-        let x, y;
-        let doNotPass = true;
-        while (doNotPass) {
-            doNotPass = false; // be optimistic, you know?
-            x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
-            y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2))
-            //cannot spawn on structures or markets 
-            let li1 = [structures, markets, trees]
-            li1.forEach(obj=>{
-                for (let sKey in obj) {
-                    let st = obj[sKey];
-                    let p = 20; // padding
-                    // Check for overlap
-                    if (
-                        x + s > st.x - p &&
-                        x - s < st.x + st.width + p &&
-                        y + s > st.y - p &&
-                        y - s < st.y + st.height + p
-                    ) {
-                        doNotPass = true; // aww
-                        break
-                    }
-                }
-            })
-            for(let l in lakes){
-                let lake = lakes[l]
-                let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
-                if(distance <= lake.radius){
-                    doNotPass = true; // aww
-                    break
-                }
-            }
-        }
-        return { x, y };
-    }
-}
-var trees = {}
-var treesID = 0
-//Generate trees in the world...
-for(let i = 0; i < mapSize/50; i ++){
-   let newTree = new Tree(treesID)
-   trees[`Tree${treesID}`] = newTree
-   treesID++
-}
-
 // DEFINE OBSTACLES OBJECT!
 var obstacles = Object.assign({}, structures, trees)
 
@@ -1376,13 +1383,23 @@ io.sockets.on("connection", (socket)=>{
             entities[id] = player
             console.log(entities[id].username, id, "was added to pool")
             // put on top of wall if regenerated
-            for (let w in structures) {
-                let wall = structures[w];
-                if (wall.x - wall.width / 2 < player.x && player.x > wall.x + wall.width / 2 
-                && wall.y - wall.height / 2 < player.y && player.y > wall.y + wall.height / 2) {
-                    console.log("Put player on wall.");
-                    player.onWall = true;
-                    break;
+            for (let w in obstacles) {
+                let obstacle = obstacles[w];
+                if(obstacle.class=="Wall"){
+                    if (obstacle.x - obstacle.width / 2 < player.x 
+                    && player.x > obstacle.x + obstacle.width / 2 
+                    && obstacle.y - obstacle.height / 2 < player.y 
+                    && player.y > obstacle.y + obstacle.height / 2) {
+                        console.log("Put player on wall.");
+                        player.onWall = true;
+                        break;
+                    }
+                } else if(obstacle.class=="Tree"){
+                    if (Math.sqrt(Math.pow(obstacle.x-player.x,2) + Math.pow(obstacle.y-player.y,2)) < obstacle.obstructionRadius + entitySize) {
+                        console.log("Put player on tree.");
+                        player.onWall = true;
+                        break;
+                    }
                 }
             }
             //

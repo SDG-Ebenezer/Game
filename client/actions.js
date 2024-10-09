@@ -886,7 +886,7 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, size=entity
                 obstacleX <= playerX && playerX <= obstacleX + width) {
                 ty = 0;
             }
-        } else if(obstacle.class == "Tree"){
+        } else if(obstacle.class == "Tree" && !onWall){
             var treeCenterX = obstacle.x
             var treeCenterY = obstacle.y
             if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
@@ -973,24 +973,30 @@ function startGame(){
 
                 //update onWall
                 let oW = false
-                for(let w in wallsList){
-                    let wall = wallsList[w]
+                for(let o in obstacles){
+                    let obstacle = obstacles[o]
                     let width = player.width/2
                     let height = player.height/2
-                    if(wall.class == "Stairs"
-                    && player.x > wall.x-wall.width/2 
-                    && player.x < wall.x+wall.width/2
-                    && player.y > wall.y-wall.height/2
-                    && player.y < wall.y+wall.height/2
+                    if(obstacle.class == "Stairs"
+                    && player.x > obstacle.x-obstacle.width/2 
+                    && player.x < obstacle.x+obstacle.width/2
+                    && player.y > obstacle.y-obstacle.height/2
+                    && player.y < obstacle.y+obstacle.height/2
                     && !player.onWall){
                         oW = true;
                         break;
                     } else if(player.onWall){
-                        if((wall.class == "Wall" || wall.class == "Stairs")
-                        && player.x > wall.x-wall.width/2-width 
-                        && player.x < wall.x+wall.width/2+width
-                        && player.y > wall.y-wall.height/2-height 
-                        && player.y < wall.y+wall.height/2+height) {
+                        if(
+                            ((obstacle.class == "Wall" || obstacle.class == "Stairs")
+                                && player.x > obstacle.x-obstacle.width/2-width 
+                                && player.x < obstacle.x+obstacle.width/2+width
+                                && player.y > obstacle.y-obstacle.height/2-height 
+                                && player.y < obstacle.y+obstacle.height/2+height)
+                            ||
+                            (obstacle.class=="Tree"
+                                && Math.abs(player.x-obstacle.x) < entitySize + obstacle.obstructionRadius
+                                && Math.abs(player.y-obstacle.y) < entitySize + obstacle.obstructionRadius
+                            )) {
                             oW = true
                             break;
                         }
