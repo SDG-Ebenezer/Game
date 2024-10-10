@@ -1597,7 +1597,8 @@ io.sockets.on("connection", (socket)=>{
                 // Shoot arrow
                 if (player.inventory.some(invSlot => invSlot.name === "Arrow")) //canShoot
                 {
-                    let holdDuration = ((data.holdDuration>=5)?4:data.holdDuration)+1 //max = Bow5.png
+                    let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
+                    console.log(holdDuration)
                     player.inventory[player.invSelected].pic = `/imgs/Bow${holdDuration}.png`
                 }
             } else if(tool.name === "Spear"){
@@ -1699,12 +1700,14 @@ io.sockets.on("connection", (socket)=>{
         let player = entities[id]
         if(player){
             let tool = player.inventory[player.invSelected]
-            if (tool.name === "Bow") {
+            let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
+            if (tool.name === "Bow"
+            && holdDuration > 0
+            ) {
                 // Check for arrow in inventory
                 let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
                 // Shoot arrow
                 if (canShoot) {
-                    let holdDuration = ((data.holdDuration>=5)?4:data.holdDuration)+1 //max = Bow5.png
                     player.inventory[player.invSelected].pic = `/imgs/Bow.png`
                     let arrowDirection = player.rotation + Math.PI;
                     

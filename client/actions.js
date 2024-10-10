@@ -797,8 +797,8 @@ function mousemove(e) {
     }
 }
 //is mouse down and still down?
-var holding
-var holdDuration = 0
+var holding = null
+var holdDuration = 1
 function mousedown(e) {
     //holding operations
     holding = setInterval(()=>{
