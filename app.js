@@ -128,7 +128,7 @@ const holdableItems = {
         pic:"/imgs/Arrow.png",
         durability:Infinity,
         maxDurability:Infinity,
-        damage:20,
+        damage:1,
         generationProbability:75, //out of 100
         rotation:0,
         stackSize:1, //start out stack Size
@@ -142,7 +142,7 @@ const holdableItems = {
         name:"Bow",  // MUST MATCH KEY!
         class:"Bow",
         pic:"/imgs/Bow.png",
-        loadedBowPic:"/imgs/Bow_And_Arrow.png",
+        //loadedBowPic:"/imgs/Bow_And_Arrow.png",
         durability:100,
         maxDurability:100,
         damage:5,
@@ -152,7 +152,7 @@ const holdableItems = {
         maxStackSize:1,
         cost: 1000, //market value
         hitRange: maxLoad,
-        cooldownTime: 20 , //* 1/speedFactor, //ms till next use
+        cooldownTime: 0, //20 bc now hold down for power/damage
         cooldownTimer:0
     },
     "Spear":{
@@ -948,9 +948,11 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=150, speed=3.5, health = 100, w=entitySize, h=entitySize){
+    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=150, speed=3.5, health=100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
-        this.shootRange = 250 // to walk closer before shooting...
+        this.shootRange = 350 // to walk closer before shooting...
+        this.holdDuration = 0
+        this.holdNum = 0
     }
     move(){
         //move normally if not holding bow
@@ -985,23 +987,19 @@ class Archer extends Enemy{
                     if(!this.justAttacked){
                         //Apparently NO!...
                         this.speed = 0 //stop movement
-                        this.justAttacked = true //you just attacked... -_-
-                        let arrowOffsetMaxDeg = 10//deg // how many IN DEGREES +- can be offset shot
-                        let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
-                        //SHOOT ARROW!
-                        projectiles[createID()] = new Projectile(
-                            "Arrow", 
-                            this.x + Math.cos(arrowDirection) * entitySize, 
-                            this.y + Math.sin(arrowDirection) * entitySize, 
-                            50, 50, arrowDirection, this, holdableItems["Arrow"].durability);
-
-                        this.inventory[this.invSelected].durability -= 1
-                        //bow breaks !? O_O
-                        if(this.inventory[this.invSelected].durability <= 0){
-                            this.inventory[this.invSelected] = {...holdableItems["Hand"]}
+                        
+                        //load up...
+                        this.holdNum += 1
+                        this.holdDuration = Math.floor(this.holdNum/(100*this.cooldownSF))>5?5:Math.floor(this.holdNum/10)+1
+                        //change pic
+                        this.inventory[this.invSelected].pic = `/imgs/Bow${this.holdDuration}.png`
+                        //fire!
+                        if(this.holdDuration == 5) {
+                            this.shootArrow(this.holdDuration) //FIRE!!
+                            this.holdNum = 0 //reset
                         }
                     }
-            }
+                }
             } else{ 
                 this.speed = this.maxSpeed
                 if (!this.moving) {
@@ -1029,7 +1027,29 @@ class Archer extends Enemy{
             this.speed = this.maxSpeed
             super.move()
         }
-        
+    }
+    shootArrow(holdDuration){
+        this.justAttacked = true //you just attacked... -_-
+        let arrowOffsetMaxDeg = 10//deg // how many IN DEGREES +- can be offset shot
+        let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
+        //SHOOT ARROW!
+        //make da arrow
+        projectiles[createID()] = new Projectile(
+            "Arrow", 
+            this.x + Math.cos(arrowDirection) * entitySize, 
+            this.y + Math.sin(arrowDirection) * entitySize, 
+            50, 50, arrowDirection, this, holdableItems["Arrow"].durability,
+            projectilesObj["Arrow"].speed + 1.5 * (holdDuration-1), //ZOOM
+            projectilesObj["Arrow"].flightDuration + 5 * (holdDuration-1), //wee! 
+            projectilesObj["Arrow"].damage + 2.5 * (holdDuration-1), //that's gotta hurt
+        )
+        this.inventory[this.invSelected].pic = "/imgs/Bow.png"
+
+        this.inventory[this.invSelected].durability -= 1
+        //bow breaks !? O_O
+        if(this.inventory[this.invSelected].durability <= 0){
+            this.inventory[this.invSelected] = {...holdableItems["Hand"]}
+        }
     }
 }
 
@@ -1068,7 +1088,7 @@ var projectiles = {}
 const projectilesObj = {
     "Arrow":{
         damage:holdableItems["Arrow"].damage,
-        flightDuration:50,
+        flightDuration:10,
         imgSrc:"/imgs/Arrow.png",
         speed:10
     },
@@ -1080,20 +1100,20 @@ const projectilesObj = {
     }
 }
 class Projectile{
-    constructor(type, x, y, w, h, dir, whoShot, durability){
+    constructor(type, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
         this.type = type //key inside holdable items!
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
         this.direction = dir //for direction purposes
-        this.duration = projectilesObj[type].flightDuration
-        this.speed = projectilesObj[type].speed
+        this.speed = speed?speed:projectilesObj[type].speed
+        this.duration = duration?duration:projectilesObj[type].flightDuration
+        this.damage = damage?damage:projectilesObj[type].damage
 
         this.imgSrc = projectilesObj[type].imgSrc
         this.width = w
         this.height = h
 
-        this.damage = projectilesObj[type].damage
 
         this.whoShot = whoShot
 
@@ -1303,10 +1323,12 @@ setInterval(()=>{
                                 `${entity.username} was sniped from afar by ${whoShotIt} with an ${projectile.type}.`
                             ];
                             let deathMessage = messages[Math.floor(Math.random() * messages.length)];
-                            let player = entities[projectiles[key].whoShot.id];
-                            player.xp += entity.xp;
-                            player.kills++;
-                            entity.deathMessage = `You were shot by ${player.username}`
+                            let p = entities[projectiles[key].whoShot.id];
+                            p.xp += entity.xp;
+                            p.kills++;
+                            let name = p.username
+                            if(entity.username) if(entity.username == p.username) name = "yourself."
+                            entity.deathMessage = `You were shot by ${name}`
                             console.log(deathMessage);
                         } else{
                             entity.deathMessage = ["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."][random(2,0)]
@@ -1564,7 +1586,7 @@ io.sockets.on("connection", (socket)=>{
         }
     })
 
-    //deal damage or other mousedown events O.O 
+    //deal damage or other mousedown/up events O.O 
     socket.on("mousedown", function(data){
         let player = entities[id]
         if(player){
@@ -1572,38 +1594,13 @@ io.sockets.on("connection", (socket)=>{
             let tool = player.inventory[player.invSelected]
             //ranged attack
             if (tool.name === "Bow") {
-                // Check for arrow in inventory
-                let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
-            
                 // Shoot arrow
-                if (canShoot) {
-                    let arrowDirection = player.rotation + Math.PI;
-                    
-                    projectiles[createID()] = new Projectile(
-                        "Arrow", 
-                        player.x + Math.cos(arrowDirection) * entitySize, 
-                        player.y + Math.sin(arrowDirection) * entitySize, 
-                        50, 50, arrowDirection, player, holdableItems["Arrow"].durability);
-            
-                    // Decrease arrow stack or remove from inventory
-                    for (let slot = 0; slot < player.inventory.length; slot++) {
-                        let invSlot = player.inventory[slot];
-                        if (invSlot.name === "Arrow") {
-                            if (invSlot.stackSize > 1) {
-                                invSlot.stackSize -= 1;
-                            } else {
-                                player.inventory[slot] = { ...holdableItems["Hand"]};
-                            }
-                            break;
-                        }
-                    }
-
-                    //damage bow
-                    tool.durability -= 1
-                    usedItem = true // item was used!
+                if (player.inventory.some(invSlot => invSlot.name === "Arrow")) //canShoot
+                {
+                    let holdDuration = ((data.holdDuration>=5)?4:data.holdDuration)+1 //max = Bow5.png
+                    player.inventory[player.invSelected].pic = `/imgs/Bow${holdDuration}.png`
                 }
-            }  
-            else if(tool.name === "Spear"){
+            } else if(tool.name === "Spear"){
                 let spearDirection = player.rotation + Math.PI;
                 
                 tool.durability -= 1
@@ -1698,7 +1695,50 @@ io.sockets.on("connection", (socket)=>{
             if (usedItem) {socket.emit("giveInventoryItemCooldownTime", {id:data.invID})}
         }
     })
+    socket.on("mouseup", function(data){
+        let player = entities[id]
+        if(player){
+            let tool = player.inventory[player.invSelected]
+            if (tool.name === "Bow") {
+                // Check for arrow in inventory
+                let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
+                // Shoot arrow
+                if (canShoot) {
+                    let holdDuration = ((data.holdDuration>=5)?4:data.holdDuration)+1 //max = Bow5.png
+                    player.inventory[player.invSelected].pic = `/imgs/Bow.png`
+                    let arrowDirection = player.rotation + Math.PI;
+                    
+                    //make da arrow
+                    projectiles[createID()] = new Projectile(
+                        "Arrow", 
+                        player.x + Math.cos(arrowDirection) * entitySize, 
+                        player.y + Math.sin(arrowDirection) * entitySize, 
+                        50, 50, arrowDirection, player, holdableItems["Arrow"].durability,
+                        projectilesObj["Arrow"].speed + 1.5 * (holdDuration-1), //ZOOM
+                        projectilesObj["Arrow"].flightDuration + 5 * (holdDuration-1), //wee! 
+                        projectilesObj["Arrow"].damage + 5 * (holdDuration-1), //that's gotta hurt
+                    )
 
+                    // Decrease arrow stack or remove from inventory
+                    for (let slot = 0; slot < player.inventory.length; slot++) {
+                        let invSlot = player.inventory[slot];
+                        if (invSlot.name === "Arrow") {
+                            if (invSlot.stackSize > 1) {
+                                invSlot.stackSize -= 1;
+                            } else {
+                                player.inventory[slot] = { ...holdableItems["Hand"]};
+                            }
+                            break;
+                        }
+                    }
+
+                    //damage bow
+                    tool.durability -= 1
+                    usedItem = true // item was used!
+                }
+            }
+        } 
+    })
     //buy
     socket.on("buy", function(data){
         let player = entities[id]

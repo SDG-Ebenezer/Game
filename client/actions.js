@@ -167,14 +167,15 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         //draw held item
         if(item.inventory){
             let heldItem = item.inventory[item.invSelected]
-            let pic;
+            let pic = heldItem.pic
             //if held is a bow, make it loaded if has arrow (the picture)
+            /*
             if(heldItem.name == "Bow"){
                 item.inventory.forEach(invSlot=>{
                     if(invSlot.name == "Arrow"){pic = heldItem.loadedBowPic}
                 })
-                if(!pic){pic = heldItem.pic}
-            } else pic = heldItem.pic
+            } 
+            */
             //when pic is defined...(hand has no pic)
             if(pic){//hand's pic is false, so...
                 if(!images[pic]){
@@ -795,7 +796,25 @@ function mousemove(e) {
         lastEnteredSlot = newIndex; // Update the last entered slot
     }
 }
+//is mouse down and still down?
+var holding
+var holdDuration = 0
 function mousedown(e) {
+    //holding operations
+    holding = setInterval(()=>{
+        holdDuration += 1
+        //console.log(holdDuration)
+        if(player.inventory[player.invSelected].name == "Bow"){
+            socket.emit("mousedown", {
+                x: player.x + (mouse.x / scale),
+                y: player.y + (mouse.y / scale),
+                scale: scale,
+                invID: player.invSelected,
+                holdDuration: holdDuration
+            });
+        }
+    }, 1000) // every  s
+
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
     if (!helpOpen && e.target.tagName.toLowerCase() !== 'button') {
@@ -810,18 +829,19 @@ function mousedown(e) {
             }
         }
         
-        if (
-            player.health > 0 
+        if (player.health > 0 
             && !clickedInv 
             && player.inventory[player.invSelected].cooldownTimer == 0
             && attackCursorOn
+            && player.inventory[player.invSelected].name !== "Bow"
         ){// Check if not in cooldown
             //EMIT MOUSE DOWN EVENT (function performed in APP.Js (server-side))
             socket.emit("mousedown", {
                 x: player.x + (mouse.x / scale),
                 y: player.y + (mouse.y / scale),
                 scale: scale,
-                invID: player.invSelected
+                invID: player.invSelected,
+                holdDuration: holdDuration
             });
         }
     }
@@ -841,6 +861,30 @@ function mousedown(e) {
     }
 }
 function mouseup(e) {
+    //check if clicked inv
+    let clickedInv = false;
+    for (let i = 0; i < player.inventory.length; i++) {
+        let x = i * invSize;
+        let y = invY;
+        if (x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize) {
+            currInvSlot = i;
+            i += player.inventory.length;
+            clickedInv = true;
+        }
+    }
+    //reset holding vars
+    if(holding){
+        if(!helpOpen && e.target.tagName.toLowerCase() !== 'button' 
+        && !clickedInv
+        && player.health > 0 
+        && player.inventory[player.invSelected].cooldownTimer == 0){
+            socket.emit("mouseup", {holdDuration:holdDuration})
+        }
+        holdDuration = 0
+        clearInterval(holding)
+    }
+
+    //
     if (!reorderInventory || draggedItemIndex === -1) return;
     draggedItemIndex = -1;
     reorderInventory = false;
