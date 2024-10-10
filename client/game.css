@@ -107,6 +107,7 @@ button{
     padding: 10px;
     margin-top: 10px; /* Add margin between header and table */
     overflow-y: auto; /* Enable vertical scrolling */
+    overflow-x: auto; /* Enable vertical scrolling */
     max-height: 400px; /* Set the maximum height to enable scrolling */
     /*position: relative; /* Set position to relative */
 }

@@ -1598,7 +1598,6 @@ io.sockets.on("connection", (socket)=>{
                 if (player.inventory.some(invSlot => invSlot.name === "Arrow")) //canShoot
                 {
                     let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
-                    console.log(holdDuration)
                     player.inventory[player.invSelected].pic = `/imgs/Bow${holdDuration}.png`
                 }
             } else if(tool.name === "Spear"){
@@ -1749,6 +1748,9 @@ io.sockets.on("connection", (socket)=>{
         player.xp -= boughtItem.cost
         pickables[pickablesID] = new Pickable(pickablesID, player.x, player.y, boughtItem.name, null, boughtItem.name, 0, boughtItem.durability, boughtItem.stackSize)
         pickablesID ++ 
+
+        //emit bought!
+        socket.emit("bought!", {newXp:player.xp})
     })
 
     //boss respawn?

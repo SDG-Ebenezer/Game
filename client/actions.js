@@ -593,6 +593,7 @@ socket.on("SendCountdownInfo", function(data){
 var invSize = 75*5<window.innerWidth?75:window.innerWidth/5 //5 bc of slots
 var invY = 0
 var reorderInventory = false; 
+// contains inventory drawing as well as item name displayer
 function drawInventory(){
     gctx.fillStyle = "#000000aa"
     gctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
@@ -650,6 +651,28 @@ function drawInventory(){
     gctx.lineWidth = invSize * 10/75;
     gctx.strokeStyle = "white"
     gctx.strokeRect(currInvSlot * invSize, invY, invSize, invSize)
+
+    //ITEM NAME DISPLAYER
+    //draw item name
+    var item = player.inventory[player.invSelected]
+    var name = item.name
+    if(name !== "Hand"){
+        var fontSize = gBarHeight - 2.5
+        var charSpace = fontSize/2 //10 spaces for every character
+        gctx.font = `${fontSize}px ${defaultFontFamily}`;
+        var len = gctx.measureText(name).width 
+        var paddingW = fontSize/2
+        var paddingH = fontSize/2
+        var x = ginfo.width/2 - paddingW - len/2
+        var y = ginfo.height - gBarHeight - charSpace - paddingH
+        //box 
+        gctx.fillStyle = `#00000099`
+        //note, the box is drawn negated, so + = -
+        gctx.fillRect(x-paddingW/2, y+paddingH/2, len+paddingW, -(fontSize+paddingH))
+        //HEADING name
+        gctx.fillStyle = `#ffffff`;
+        gctx.fillText(name, x, y);  
+    }
 }
 socket.on("giveInventoryItemCooldownTime", function(data){
     if(player.health > 0){
@@ -1091,6 +1114,9 @@ function startGame(){
                     marketOpen = false //
                 }
             } else{
+                //get rid of market btn if over
+                document.getElementById("showMarketBtn").style.display = "none"
+
                 //Update death message ONLY IF IT EXISTS [A4dh3dfDM9]
                 if(player.deathMessage) document.getElementById("deathMessageText").innerHTML = player.deathMessage
             }
@@ -1177,7 +1203,7 @@ function toggleMarket(){
         marketOpen = true
     }
 }
-function createMarketBtn(items) {
+function createMarketBtn(items, xxxp=player.xp) {
     var table = document.getElementById("marketBtnContainer"); 
     table.innerHTML = ''; 
    // table.style.top = 0
@@ -1198,35 +1224,53 @@ function createMarketBtn(items) {
             var cell2 = row.insertCell();
             var cell3 = row.insertCell();
             var cell4 = row.insertCell();
+            var cell5 = row.insertCell();
+            var cell6 = row.insertCell();
 
+            //CELL 1 -- IMAGE
             var img = document.createElement('img');
             img.src = value.pic;
             img.alt = value.name;
             cell1.appendChild(img);
             cell1.setAttribute('class', 'marketBtnImgs'); 
 
-            var name = document.createTextNode(value.name);
-            cell2.appendChild(name);
+            //CELL 2 -- NAME
+            cell2.innerHTML = value.name
             cell2.setAttribute('class', 'marketBtnText'); 
 
-            var cost = document.createTextNode(`${value.cost} XP`);
-            cell3.appendChild(cost);
-            cell3.setAttribute('class', 'marketBtnText'); 
+            //CELL 3 -- COST
+            cell3.innerHTML = `COST: <b>${value.cost}</b> XP`
+            cell3.setAttribute('class', 'marketBtnText');
 
+            //CELL 4 -- DAMAGE
+            var text = value.damage > 0?`+<b><span style="color:red"> ${value.damage}</span></b> Damage`:""
+            cell4.innerHTML = text
+            cell4.setAttribute('class', 'marketBtnText'); 
+
+            //CELL 5 -- DURABILITY
+            var text = value.durability?`${value.durability} Durability`:""
+            cell5.innerHTML = text
+            cell5.style.color = "green"; 
+
+            //CELL 6 -- BUY BTN
             var buyBtn = document.createElement('button');
             let id = `marketBuyBtnFor${key}`
             buyBtn.textContent = 'Buy';
-            buyBtn.onclick = function(){buy(value, id)}
-            /*if(player.xp < value.cost){
-                buyBtn.style.backgroundColor = "red"
-            } else{*/
+            buyBtn.onclick = function(){
+               buy(value, id)
+            }
+            console.log(xxxp)
+            if(!xxxp || xxxp < value.cost){
+                buyBtn.style.backgroundColor = "#777"
+                buyBtn.style.color = "#aaa"
+            } else{
                 buyBtn.style.backgroundColor = "007bff"
-            //}
-            cell4.appendChild(buyBtn);
-            cell4.setAttribute('class', 'buyBtn');
-            cell4.setAttribute('id', id);
+                buyBtn.style.color = "white"
+            }
+            cell6.appendChild(buyBtn);
+            cell6.setAttribute('class', 'buyBtn');
+            cell6.setAttribute('id', id);
             
-            /***** */
             k++
         } 
     });
@@ -1236,6 +1280,11 @@ function buy(boughtItem, btnID){
         socket.emit("buy", {item:boughtItem})
     }
 }
+socket.on("bought!", (data)=>{
+    console.log(data.newXp)
+    createMarketBtn(holdables, data.newXp)
+    
+}) //reupdate table after buying
 
 /************* @WAIT_SCREEN (SERVER LOADING...) ************/
 // WAIT SCREEN on
