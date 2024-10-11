@@ -1110,7 +1110,7 @@ function dealDamageTo(damage, from, to, projectileKey=null){
     if(to.immuneDuration <= 0) { to.health -= damage } 
     //they are, I guess...
     //bosses have an exception...
-    else if(to.type !== "Boss") { to.immuneDuration -= damage * 2 } //deal damage to immunity instead 
+    else if(to.type !== "Boss") { to.immuneDuration -= damage * 10 } //deal damage to immunity instead 
     
     // dead...?
     if(to.health <= 0){
