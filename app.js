@@ -1040,7 +1040,7 @@ class Archer extends Enemy{
             this.y + Math.sin(arrowDirection) * entitySize, 
             50, 50, arrowDirection, this, holdableItems["Arrow"].durability,
             projectilesObj["Arrow"].speed + 1.5 * (holdDuration-1), //ZOOM
-            projectilesObj["Arrow"].flightDuration + 5 * (holdDuration-1), //wee! 
+            projectilesObj["Arrow"].flightDuration + 10 * (holdDuration-1), //wee! 
             projectilesObj["Arrow"].damage + 2.5 * (holdDuration-1), //that's gotta hurt
         )
         this.inventory[this.invSelected].pic = "/imgs/Bow.png"

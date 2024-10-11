@@ -364,3 +364,17 @@ input[type="radio"]:checked + img {
 .longKeyImg{
     width: 60px;
 }
+
+/** Inventory durability display if hovering over */
+#floatingDurabilityDiv{
+    background-color: #000000aa;
+    color:white;
+    border:2px solid black;
+    top:0;
+    left:0;
+    position: absolute;
+    display: none;
+    z-index: 2;
+    padding: 10px;
+    font-size: 15px;
+}

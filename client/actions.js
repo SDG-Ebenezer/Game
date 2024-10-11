@@ -596,40 +596,51 @@ var reorderInventory = false;
 // contains inventory drawing as well as item name displayer
 function drawInventory(){
     gctx.fillStyle = "#000000aa"
-    gctx.fillRect(0, 0, invSize * player.inventory.length, invSize)
+    var inventoryX = 0
+    var inventoryY = 0
+    var inventoryW = invSize * player.inventory.length
+    var inventoryH = invSize
+    gctx.fillRect(inventoryX, inventoryY, inventoryW, inventoryH)
     gctx.save()
     for(let invSpot in player.inventory){
         let each = player.inventory[invSpot]
         let strokeWidth = invSize * 10/75 //how thick the inv slot is
         //outline // invSelected
         //PICTURE of icon (if any)
+        var x = invSpot * invSize
+        var y = invY
+        var w = invSize
+        var h = invSize
         if(each.pic){
             if(!images[each.pic]){
                 images[each.pic] = new Image()
                 images[each.pic].src = each.pic
             }
-            gctx.drawImage(images[each.pic], invSpot * invSize, invY, invSize, invSize)
+            gctx.drawImage(images[each.pic], x, y, w, h)
         }
         //DURABILITY bar
         if(each.durability < each.maxDurability){
-            let w = invSize - strokeWidth * 2
-            let h = 5
-            let x = invSpot * invSize + strokeWidth
-            let y = invSize - h*3
+            let durabilityW = w - strokeWidth * 2
+            let durabilityBarH = 5
+            let durabilityX = x + strokeWidth
+            let durabilityY = h - durabilityBarH*3
+            var tool = each
+            //background bar
             gctx.fillStyle = "#353535"
-            gctx.fillRect(x, y, w, h)
-            gctx.fillStyle = "rgb(0,235,0)"
-            gctx.fillRect(x, y, w * (each.durability/each.maxDurability), h)
+            gctx.fillRect(durabilityX, durabilityY, durabilityW, durabilityBarH)
+            //dur bar
+            gctx.fillStyle = getDurabilityColor(tool.durability, tool.maxDurability)
+            gctx.fillRect(durabilityX, durabilityY, durabilityW * (each.durability/each.maxDurability), durabilityBarH)
         }  
         //SHADED out if timer on
         let timerPercentage = each.cooldownTimer/each.cooldownTime
         gctx.fillStyle = "#ffffffaa"
-        gctx.fillRect(invSpot * invSize - strokeWidth/2, invY + invSize, invSize, -(invSize - strokeWidth) * timerPercentage)
+        gctx.fillRect(x - strokeWidth/2, y + invSize, w, -(h - strokeWidth) * timerPercentage)
 
         //OUTLINE
         gctx.lineWidth = strokeWidth;
         gctx.strokeStyle = "gray"
-        gctx.strokeRect(invSpot * invSize, invY, invSize, invSize)
+        gctx.strokeRect(x, y, w, h)        
 
         //(if stackable) give it a NUMBER to show how many you have
         if(each.maxStackSize > 1){
@@ -650,8 +661,42 @@ function drawInventory(){
     //selected
     gctx.lineWidth = invSize * 10/75;
     gctx.strokeStyle = "white"
-    gctx.strokeRect(currInvSlot * invSize, invY, invSize, invSize)
+    gctx.strokeRect(currInvSlot * invSize,y,w,h)
 
+    displayToolName()
+    // draw tool durability if mouse over
+    var durDiv = document.getElementById("floatingDurabilityDiv")
+    if(mouse.clientX > inventoryX && mouse.clientX < inventoryX + inventoryW
+    && mouse.clientY > inventoryY && mouse.clientY < inventoryY + inventoryH){
+        var tool = player.inventory[Math.floor(mouse.clientX/invSize)]
+        // only display durability if...there is durability
+        if(tool.durability){
+            // update the div
+            var text = `Durability: <b><span style="color:${getDurabilityColor(tool.durability, tool.maxDurability)}">${tool.durability}</span>/${tool.maxDurability}</b>`
+            durDiv.innerHTML = text
+            durDiv.style.display = "block"
+            durDiv.style.left = mouse.x+canvas.width/2
+            durDiv.style.top = mouse.y+canvas.height/2
+        }
+    } else if(durDiv.style.display == "block"){
+        durDiv.style.display = "none"
+    }
+}
+// get the color for a given durability (for dur bar & text)
+function getDurabilityColor(dur, maxDur){
+    if(dur < 0.1 * maxDur){
+        return "#CB4444"
+    } else if (dur < 0.25 * maxDur){
+        return "#CB6E44"
+    } else if (dur < 0.5 * maxDur){
+        return "#CBC044"
+    } else if (dur < 0.6 * maxDur){
+        return "#AFCA43"
+    }
+    return "#63CA43"
+}
+// display tool name on top of bar when holding
+function displayToolName(){
     //ITEM NAME DISPLAYER
     //draw item name
     var item = player.inventory[player.invSelected]
@@ -674,6 +719,7 @@ function drawInventory(){
         gctx.fillText(name, x, y);  
     }
 }
+// // //
 socket.on("giveInventoryItemCooldownTime", function(data){
     if(player.health > 0){
         let selectedTool = player.inventory[data.id];
@@ -690,6 +736,9 @@ var pressedKeys = []
 var mouse = {
     x: 0, 
     y: 0, 
+    // raw forms 0,0 = top corner
+    clientX: 0, 
+    clientY: 0, 
 }
 //defined when game starts
 // these are what each event listener will do
@@ -774,10 +823,18 @@ var dragStartY = 0;
 var draggedItemIndex = -1;
 var lastEnteredSlot = -1; // Track the last inventory slot entered by the mouse
 
-function mousemove(e) {
+function mousemove(e) {    
     // calculate the mouse position relative to the canvas center
+    mouse.clientX = e.clientX
+    mouse.clientY = e.clientY // raw forms 0,0 = top corner
     mouse.x = e.clientX - canvas.width / 2;
     mouse.y = e.clientY - canvas.height / 2;
+
+        
+        
+
+    //all others above this point ^^^
+    // reorder inventory
 
     if (!reorderInventory || draggedItemIndex === -1) return;
 
@@ -826,7 +883,6 @@ function mousedown(e) {
     //holding operations
     holding = setInterval(()=>{
         holdDuration += 1
-        //console.log(holdDuration)
         if(player.inventory[player.invSelected].name == "Bow"){
             socket.emit("mousedown", {
                 x: player.x + (mouse.x / scale),
@@ -1259,7 +1315,6 @@ function createMarketBtn(items, xxxp=player.xp) {
             buyBtn.onclick = function(){
                buy(value, id)
             }
-            console.log(xxxp)
             if(!xxxp || xxxp < value.cost){
                 buyBtn.style.backgroundColor = "#777"
                 buyBtn.style.color = "#aaa"
@@ -1281,9 +1336,7 @@ function buy(boughtItem, btnID){
     }
 }
 socket.on("bought!", (data)=>{
-    console.log(data.newXp)
     createMarketBtn(holdables, data.newXp)
-    
 }) //reupdate table after buying
 
 /************* @WAIT_SCREEN (SERVER LOADING...) ************/
