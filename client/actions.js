@@ -246,6 +246,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             })
         }
 
+        // this guy is immune!
         if(item.immuneDuration && item.immuneDuration > 0){
             //Draw an outline showing that this guy is immune
             //idc = (immune duration circle)

@@ -827,24 +827,8 @@ class Enemy extends Entity{
         // Check for damage
         if(distanceToPlayer < entitySize/2 && !this.justAttacked){
             let player = entities[this.targetPlayer.id]
-            if(player.immuneDuration <= 0) player.health -= this.damage
-            //death message
-            //ALL MELEE ATTACKING MOBS THAT KILL PLAYERS INPUT THE PLAYER'S DEATH MESSAGE HERE!!!
-            if(player.health <= 0){
-                if(this.type == "Boss"){
-                    console.log(player.username, player.id, " was punished by the boss.")
-                    player.deathMessage = ["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."][random(2,0)] //pick one of these
-                } else if (this.type == "Summoned_Lord"){
-                    console.log(player.username, player.id, " hit by a guard.")
-                    player.deathMessage = ["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."][random(2,0)]
-                } else if (this.type == "Lord"){
-                    console.log(player.username, player.id, " hit by a leader.")
-                    player.deathMessage = ["You died from a monster leader.", "A monster lord killed you."][random(2,0)]
-                } else{
-                    console.log(player.username, player.id, " killed by a monster.")
-                    player.deathMessage = ["You died from a monster.", "A monster hit you.", "You were slain by a monster"][random(2,0)]
-                }
-            }
+            var damage = this.damage
+            dealDamageTo(damage, this, player)
             this.justAttacked = true
         }
     }
@@ -1121,6 +1105,78 @@ class Projectile{
     }
 }
 
+function dealDamageTo(damage, from, to, projectileKey=null){
+    //deal initial damage...first...are they immune
+    if(to.immuneDuration <= 0) { to.health -= damage } 
+    //they are, I guess...
+    //bosses have an exception...
+    else if(to.type !== "Boss") { to.immuneDuration -= damage * 2 } //deal damage to immunity instead 
+    
+    // dead...?
+    if(to.health <= 0){
+        // from bots
+        if(from.type == "Boss"){
+            to.deathMessage = ["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."][random(2,0)] //pick one of these
+        } else if (from.type == "Summoned_Lord"){
+            to.deathMessage = ["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."][random(2,0)]
+        } else if (from.type == "Lord"){
+            to.deathMessage = ["You died from a monster leader.", "A monster lord killed you."][random(2,0)]
+        } else if (from.type == "Normal"){
+            to.deathMessage = ["You died from a monster.", "A monster hit you.", "You were slain by a monster"][random(2,0)]
+        } 
+        //all else...
+        else{
+            var key = projectileKey
+            // from projectiles...player + bot
+            if(projectileKey){
+                // death by arrow
+                if(!projectiles[key] || !projectiles[key].whoShot){
+                    to.deathMessage = "You were shot by an archer..."
+                } else if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
+                    /** IMPORTANT NOTE:
+                     * In this case, the "to" is who died because of
+                     * the "from", in this case, the projectile.
+                     * "whoShotIt" is defined as the archer/thrower
+                     */
+                    // If entity is killed, update player's stats
+                    let whoShotIt = projectiles[key].whoShot.username;
+                    //spear
+                    let messages = (from.type=="Spear")?[
+                        `${to.username} was impaled by a spear`,
+                        `${to.username} was impaled by ${whoShotIt}'s spear`,
+                    ]:[ //arrow...
+                        `${whoShotIt} killed ${to.username} with a ${from.type}.`,
+                        `${whoShotIt} shot ${to.username}.`,
+                        `The ${from.type} from ${whoShotIt} found its mark on ${to.username}.`,
+                        `${to.username} was sniped from afar by ${whoShotIt} with an ${from.type}.`
+                    ]
+                    let p = entities[projectiles[key].whoShot.id];
+                    p.xp += to.xp;
+                    p.kills++;
+                    let name = p.username
+                    if(to.username && to.username == p.username) name = "yourself."
+                    to.deathMessage = messages[Math.floor(Math.random() * messages.length)]
+                    //console.log(deathMessage);
+                } 
+                //archer!
+                else{
+                    to.deathMessage = ["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."][random(2,0)]
+                    //console.log("An archer shot ", to.username, to.id)
+                }
+            } 
+            // from player melee
+            else {
+                from.xp += Math.floor(to.xp * 0.8 )// give player xp
+                from.kills ++
+                to.deathMessage = `${to.username} was slain by ${from.username}`
+                //console.log(to.deathMessage)
+            }
+        }
+        console.log(to.deathMessage)
+    }
+}
+
+
 /*************************** @SERVER_GAME_LOOOOOP *************/
 var startedCountdown = false
 var amountOfEatables = 0
@@ -1309,32 +1365,8 @@ setInterval(()=>{
                     projectile.y > entity.y - entitySize / 2 &&
                     projectile.y < entity.y + entity.height - entitySize / 2) {
                     // Decrease entity health by projectile damage
-                    if(entity.immuneDuration <= 0) entity.health -= projectile.damage;
-                    if (entity.health <= 0) {
-                        if(!projectiles[key] || !projectiles[key].whoShot){
-                            entity.deathMessage = "You were shot by an archer."
-                        } else if (entities.hasOwnProperty(projectiles[key].whoShot.id)) {
-                            // If entity is killed, update player's stats
-                            let whoShotIt = projectiles[key].whoShot.username;
-                            let messages = [
-                                `${whoShotIt} killed ${entity.username} with a ${projectile.type}.`,
-                                `${whoShotIt} shot ${entity.username}.`,
-                                `The ${projectile.type} from ${whoShotIt} found its mark on ${entity.username}.`,
-                                `${entity.username} was sniped from afar by ${whoShotIt} with an ${projectile.type}.`
-                            ];
-                            let deathMessage = messages[Math.floor(Math.random() * messages.length)];
-                            let p = entities[projectiles[key].whoShot.id];
-                            p.xp += entity.xp;
-                            p.kills++;
-                            let name = p.username
-                            if(entity.username) if(entity.username == p.username) name = "yourself."
-                            entity.deathMessage = `You were shot by ${name}`
-                            console.log(deathMessage);
-                        } else{
-                            entity.deathMessage = ["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."][random(2,0)]
-                            console.log("An archer shot ", entity.username, entity.id)
-                        }
-                    }
+                    dealDamageTo(projectile.damage, projectile, entity, key)
+                    
                     if(projectile.durability != Infinity 
                     && projectile.durability > 0){
                         pickables[pickablesID] = new Pickable(pickablesID, projectile.x, projectile.y, projectile.type, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
@@ -1633,13 +1665,7 @@ io.sockets.on("connection", (socket)=>{
                     && entity.y - entity.height/2 < mouseY 
                     && entity.y + entity.height/2 > mouseY
                     ){
-                        if(entity.immuneDuration <= 0) entity.health -= damage
-                        if(entity.health <= 0){
-                            player.xp += Math.floor(entity.xp * 0.8 )// give player xp
-                            console.log(entity.username, entity.id, "was slain by", player.username, player.id)
-                            player.kills ++
-                            entity.deathMessage = `${entity.username} was slain by ${player.username}`
-                        }
+                        dealDamageTo(damage, player, entity)
                         didDamage = true // turn to true
                     }
                 }
@@ -1651,13 +1677,7 @@ io.sockets.on("connection", (socket)=>{
                     && entity.x + entity.width/2 > mouseX
                     && entity.y - entity.height/2 < mouseY 
                     && entity.y + entity.height/2 > mouseY){
-                        if(entity.immuneDuration <= 0) entity.health -= damage
-                        if(entity.health <= 0){
-                            //give player xp for killed
-                            player.xp += entity.xp
-                            player.kills ++
-                            entity.deathMessage = "You were killed by " + player.username
-                        }
+                        dealDamageTo(damage, player, entity)                      
                         didDamage = true // turn to true
                     }
                 }
