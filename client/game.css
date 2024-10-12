@@ -368,7 +368,7 @@ input[type="radio"]:checked + img {
 /** Inventory durability display if hovering over */
 #floatingDurabilityDiv{
     background-color: #000000aa;
-    color:white;
+    color:rgb(212, 212, 212);
     border:2px solid black;
     top:0;
     left:0;

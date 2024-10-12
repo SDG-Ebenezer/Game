@@ -665,23 +665,7 @@ function drawInventory(){
     gctx.strokeRect(currInvSlot * invSize,y,w,h)
 
     displayToolName()
-    // draw tool durability if mouse over
-    var durDiv = document.getElementById("floatingDurabilityDiv")
-    if(mouse.clientX > inventoryX && mouse.clientX < inventoryX + inventoryW
-    && mouse.clientY > inventoryY && mouse.clientY < inventoryY + inventoryH){
-        var tool = player.inventory[Math.floor(mouse.clientX/invSize)]
-        // only display durability if...there is durability
-        if(tool.durability){
-            // update the div
-            var text = `Durability: <b><span style="color:${getDurabilityColor(tool.durability, tool.maxDurability)}">${tool.durability}</span>/${tool.maxDurability}</b>`
-            durDiv.innerHTML = text
-            durDiv.style.display = "block"
-            durDiv.style.left = mouse.x+canvas.width/2
-            durDiv.style.top = mouse.y+canvas.height/2
-        }
-    } else if(durDiv.style.display == "block"){
-        durDiv.style.display = "none"
-    }
+    displayToolDurabilityOnHover(inventoryX, inventoryY, inventoryW, inventoryH)
 }
 // get the color for a given durability (for dur bar & text)
 function getDurabilityColor(dur, maxDur){
@@ -718,6 +702,41 @@ function displayToolName(){
         //HEADING name
         gctx.fillStyle = `#ffffff`;
         gctx.fillText(name, x, y);  
+    }
+}
+function displayToolDurabilityOnHover(inventoryX, inventoryY, inventoryW, inventoryH){
+    // draw tool durability if mouse over
+    var durDiv = document.getElementById("floatingDurabilityDiv")
+    var tool = player.inventory[Math.floor(mouse.clientX/invSize)]
+
+    if(mouse.clientX > inventoryX && mouse.clientX < inventoryX + inventoryW
+    && mouse.clientY > inventoryY && mouse.clientY < inventoryY + inventoryH
+    && tool.durability){
+        // update the div
+        var text = `
+        <!--Name-->
+        <span style="color:white">
+        <b>${tool.name}</b>
+        </span>
+
+        <br><br>
+
+        <!--Damage-->
+        <span style="color:#EC7E7E">
+        <b>+${tool.damage}</b>
+        </span> Damage
+
+        <br><br>
+
+        <!--Durability-->
+        <b><span style="color:${getDurabilityColor(tool.durability, tool.maxDurability)}">${tool.durability}</span>/${tool.maxDurability}</b> Durability
+        `
+        durDiv.innerHTML = text
+        durDiv.style.display = "block"
+        durDiv.style.left = mouse.x+canvas.width/2
+        durDiv.style.top = mouse.y+canvas.height/2
+    } else if(durDiv.style.display == "block"){
+        durDiv.style.display = "none"
     }
 }
 // // //
@@ -1300,7 +1319,7 @@ function createMarketBtn(items, xxxp=player.xp) {
             cell3.setAttribute('class', 'marketBtnText');
 
             //CELL 4 -- DAMAGE
-            var text = value.damage > 0?`+<b><span style="color:red"> ${value.damage}</span></b> Damage`:""
+            var text = value.damage?`+<b><span style="color:red"> ${value.damage}</span></b> Damage`:""
             cell4.innerHTML = text
             cell4.setAttribute('class', 'marketBtnText'); 
 

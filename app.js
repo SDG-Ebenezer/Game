@@ -128,7 +128,7 @@ const holdableItems = {
         pic:"/imgs/Arrow.png",
         durability:Infinity,
         maxDurability:Infinity,
-        damage:1,
+        damage: 1,
         generationProbability:75, //out of 100
         rotation:0,
         stackSize:1, //start out stack Size
@@ -145,7 +145,7 @@ const holdableItems = {
         //loadedBowPic:"/imgs/Bow_And_Arrow.png",
         durability:100,
         maxDurability:100,
-        damage:5,
+        damage: "Max 21", //check createArrow's damage
         generationProbability:10, //out of 100
         rotation:270/57.1,
         stackSize:1,
@@ -932,7 +932,7 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=150, speed=3.5, health=100, w=entitySize, h=entitySize){
+    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=100, speed=3.5, health=100, w=entitySize, h=entitySize){
         super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
         this.shootRange = 350 // to walk closer before shooting...
         this.holdDuration = 0
@@ -973,8 +973,9 @@ class Archer extends Enemy{
                         this.speed = 0 //stop movement
                         
                         //load up...
+                        //holdNum/30 = duration of loading
                         this.holdNum += 1
-                        this.holdDuration = Math.floor(this.holdNum/(100*this.cooldownSF))>5?5:Math.floor(this.holdNum/10)+1
+                        this.holdDuration = Math.floor(this.holdNum/(100*this.cooldownSF)) > 5?5:Math.floor(this.holdNum/30)+1
                         //change pic
                         this.inventory[this.invSelected].pic = `/imgs/Bow${this.holdDuration}.png`
                         //fire!
@@ -1018,15 +1019,7 @@ class Archer extends Enemy{
         let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
         //SHOOT ARROW!
         //make da arrow
-        projectiles[createID()] = new Projectile(
-            "Arrow", 
-            this.x + Math.cos(arrowDirection) * entitySize, 
-            this.y + Math.sin(arrowDirection) * entitySize, 
-            50, 50, arrowDirection, this, holdableItems["Arrow"].durability,
-            projectilesObj["Arrow"].speed + 1.5 * (holdDuration-1), //ZOOM
-            projectilesObj["Arrow"].flightDuration + 10 * (holdDuration-1), //wee! 
-            projectilesObj["Arrow"].damage + 2.5 * (holdDuration-1), //that's gotta hurt
-        )
+        createArrow(this, arrowDirection, holdDuration)
         this.inventory[this.invSelected].pic = "/imgs/Bow.png"
 
         this.inventory[this.invSelected].durability -= 1
@@ -1104,7 +1097,17 @@ class Projectile{
         this.durability = durability
     }
 }
-
+function createArrow(entity, arrowDirection, holdDuration){
+    projectiles[createID()] = new Projectile(
+        "Arrow", 
+        entity.x + Math.cos(arrowDirection) * entitySize, 
+        entity.y + Math.sin(arrowDirection) * entitySize, 
+        50, 50, arrowDirection, entity, holdableItems["Arrow"].durability,
+        projectilesObj["Arrow"].speed + 2.5 * (holdDuration-1), //ZOOM
+        projectilesObj["Arrow"].flightDuration + 10 * (holdDuration-1), //wee! 
+        projectilesObj["Arrow"].damage + 5 * (holdDuration-1), //that's gotta hurt
+    )
+}
 function dealDamageTo(damage, from, to, projectileKey=null){
     //deal initial damage...first...are they immune
     if(to.immuneDuration <= 0) { to.health -= damage } 
@@ -1731,15 +1734,7 @@ io.sockets.on("connection", (socket)=>{
                     let arrowDirection = player.rotation + Math.PI;
                     
                     //make da arrow
-                    projectiles[createID()] = new Projectile(
-                        "Arrow", 
-                        player.x + Math.cos(arrowDirection) * entitySize, 
-                        player.y + Math.sin(arrowDirection) * entitySize, 
-                        50, 50, arrowDirection, player, holdableItems["Arrow"].durability,
-                        projectilesObj["Arrow"].speed + 1.5 * (holdDuration-1), //ZOOM
-                        projectilesObj["Arrow"].flightDuration + 5 * (holdDuration-1), //wee! 
-                        projectilesObj["Arrow"].damage + 5 * (holdDuration-1), //that's gotta hurt
-                    )
+                    createArrow(player, arrowDirection, holdDuration)
 
                     // Decrease arrow stack or remove from inventory
                     for (let slot = 0; slot < player.inventory.length; slot++) {
