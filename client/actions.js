@@ -467,18 +467,34 @@ function gShadow(){
 // This is the little circle that appears...where you hit 
 var attackCursorOn = false
 function gAttackCursor(){
-    let hitRange = (player.inventory[player.invSelected].hitRange? player.inventory[player.invSelected].hitRange:entitySize) * scale
+    var tool = player.inventory[player.invSelected]
+    var hitRange = (tool.hitRange? tool.hitRange:entitySize) * scale
     
     if((mouse.x)**2 + (mouse.y)**2 <= hitRange ** 2){
         let rangeCursorX = mouse.x + ginfo.width/2
         let rangeCursorY = mouse.y + ginfo.height/2
-        gctx.fillStyle = "rgba(0,0,0,0.2)"
-        gctx.strokeStyle = "rgba(0,0,0,0.5)"
+
+        //assume...
+        var percent = 100
+        var fillColor = "rgba(0,0,0,0.2)"
+        var strokeColor = "rgba(0,0,0,0.5)"
+        //if cool down timer...
+        if(tool.cooldownTimer != 0){
+            //cooldown = true
+            percent = tool.cooldownTimer/tool.cooldownTime
+            fillColor = "rgba(136,136,136,0.2)"
+            strokeColor = "rgba(136,136,136,0.5)"
+        } 
+
+        gctx.fillStyle = fillColor
+        gctx.strokeStyle = strokeColor
         gctx.lineWidth = 5
         gctx.beginPath()
-        gctx.arc(rangeCursorX, rangeCursorY, player.hitSize/2, 0, 2 * Math.PI)
+        gctx.arc(rangeCursorX, rangeCursorY, player.hitSize/2, 0, 2 * Math.PI * percent)
         gctx.fill()
         gctx.stroke()
+
+        console.log(tool)
 
         attackCursorOn = true //allows attack sends
     } else {attackCursorOn = false}
