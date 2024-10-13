@@ -494,8 +494,6 @@ function gAttackCursor(){
         gctx.fill()
         gctx.stroke()
 
-        console.log(tool)
-
         attackCursorOn = true //allows attack sends
     } else {attackCursorOn = false}
 }
