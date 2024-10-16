@@ -166,18 +166,9 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         }
         //draw held item
         if(item.inventory){
-            let heldItem = item.inventory[item.invSelected]
-            let pic = heldItem.pic
-            //if held is a bow, make it loaded if has arrow (the picture)
-            /*
-            if(heldItem.name == "Bow"){
-                item.inventory.forEach(invSlot=>{
-                    if(invSlot.name == "Arrow"){pic = heldItem.loadedBowPic}
-                })
-            } 
-            */
-            //when pic is defined...(hand has no pic)
-            if(pic){//hand's pic is false, so...
+            var heldItem = item.inventory[item.invSelected]
+            var pic = heldItem.pic
+            if(pic !== null){
                 if(!images[pic]){
                     images[pic] = new Image()
                     images[pic].src = pic
