@@ -777,7 +777,7 @@ class Enemy extends Entity{
             this.xp = 75
         }
         
-        this.inventorySize = 3
+        this.inventorySize = 1
         this.inventory = inventory.length===0 ? Array.from(
             { length: this.inventorySize }, 
             () => (
@@ -1007,7 +1007,7 @@ class Boss extends Enemy{
 }
 class Archer extends Enemy{
     constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=100, speed=3.5, health=100, w=entitySize, h=entitySize){
-        super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}, {...holdableItems["Arrow"]}], 0)
+        super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}], 0)
         this.shootRange = 350 // to walk closer before shooting...
         this.holdDuration = 0
         this.holdNum = 0
