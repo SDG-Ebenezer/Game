@@ -1258,7 +1258,7 @@ var startedCountdown = false
 var amountOfEatables = 0
 var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
-const FPS = 25 //
+const FPS = 100 //
 setInterval(()=>{
     //spawn in boss?
     if (!enemies[bossID] && !startedCountdown){
