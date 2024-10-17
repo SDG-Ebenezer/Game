@@ -123,8 +123,8 @@ const holdableItems = {
         cooldownTime: 50 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
-    "Noctrite Sword":{
-        name:"Noctrite Sword", // MUST MATCH KEY!
+    "Vantacite Sword":{
+        name:"Vantacite Sword", // MUST MATCH KEY!
         class:"Sword",
         pic:"/imgs/Sword5.png",
         durability:200,
