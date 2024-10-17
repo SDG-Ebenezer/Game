@@ -855,9 +855,6 @@ function mousemove(e) {
     mouse.x = e.clientX - canvas.width / 2;
     mouse.y = e.clientY - canvas.height / 2;
 
-        
-        
-
     //all others above this point ^^^
     // reorder inventory
 

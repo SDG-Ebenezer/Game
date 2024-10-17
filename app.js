@@ -122,8 +122,8 @@ const holdableItems = {
         cooldownTime: 50 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
-    "Onyxalate Sword":{
-        name:"Onyxalate Sword", // MUST MATCH KEY!
+    "Noctrite Sword":{
+        name:"Noctrite Sword", // MUST MATCH KEY!
         class:"Sword",
         pic:"/imgs/Sword5.png",
         durability:200,
@@ -1702,11 +1702,12 @@ io.sockets.on("connection", (socket)=>{
             //ranged attack
             if (tool.name === "Bow") {
                 // Shoot arrow
-                if (player.inventory.some(invSlot => invSlot.name === "Arrow")) //canShoot
-                {
+                if (player.inventory.some(invSlot => invSlot.name === "Arrow")){
                     let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
                     player.inventory[player.invSelected].pic = `/imgs/Bow${holdDuration}.png`
                 }
+                    
+                
             } else if(tool.name === "Spear"){
                 let spearDirection = player.rotation + Math.PI;
                 
