@@ -41,6 +41,7 @@ var maxLoad = 750 //most px a player can see
 //Render is slowerm so runs at x[speedFactor] as fast
 //ENTITIES speed not affected
 const maxImmuneDuration = 10000 //* speedFactor//
+const swordRotation = 45/57.1
 const holdableItems = {
     "Hand":{
         name:"Hand", // MUST MATCH KEY!
@@ -66,7 +67,7 @@ const holdableItems = {
         maxDurability:30,
         damage:25,
         generationProbability:50, //out of 100
-        rotation:-45/57.1,
+        rotation:swordRotation,
         stackSize:1,
         maxStackSize:1,
         cost: 2000, //market value
@@ -82,7 +83,7 @@ const holdableItems = {
         maxDurability:20,
         damage:30,
         generationProbability:30, //out of 100
-        rotation:-45/57.1,
+        rotation:swordRotation,
         stackSize:1,
         maxStackSize:1,
         cost: 3500, //market value
@@ -98,7 +99,7 @@ const holdableItems = {
         maxDurability:60,
         damage:40,
         generationProbability:10, //out of 100
-        rotation:-45/57.1,
+        rotation:swordRotation,
         stackSize:1,
         maxStackSize:1,
         cost: 5000, //market value
@@ -114,7 +115,7 @@ const holdableItems = {
         maxDurability:100,
         damage:50,
         generationProbability:1, //out of 100
-        rotation:-45/57.1,
+        rotation:swordRotation,
         stackSize:1,
         maxStackSize:1,
         cost: 10_000, //market value
@@ -130,7 +131,7 @@ const holdableItems = {
         maxDurability:200,
         damage:80,
         generationProbability:0.1, // 1 in 1000
-        rotation:-45/57.1, //rad
+        rotation:swordRotation, //rad
         stackSize:1,
         maxStackSize:1,
         cost: 30_000, //market value
@@ -163,7 +164,7 @@ const holdableItems = {
         maxDurability:100,
         damage: "Max 21", //check createArrow's damage
         generationProbability:10, //out of 100
-        rotation:270/57.1,
+        rotation:0,
         stackSize:1,
         maxStackSize:1,
         cost: 1000, //market value
@@ -179,7 +180,7 @@ const holdableItems = {
         maxDurability:15,
         damage:80,
         generationProbability:1, //out of 100
-        rotation:270/57.1, //how looks like when held
+        rotation:0, //how looks like when held
         stackSize:1,
         maxStackSize:1,
         cost: 2500, //market value
@@ -195,7 +196,7 @@ const holdableItems = {
         maxDurability:null,
         damage:0,
         generationProbability:15, //out of 100
-        rotation:270/57.1, //how looks like when held
+        rotation:0, //how looks like when held
         stackSize:1,
         maxStackSize:2,
         cost: 2000, //market value
@@ -701,7 +702,11 @@ class Entity {
         this.x = x;
         this.y = y;
         this.type = type;
-        this.rotation = 0;
+        this.rotation = 0;               //changing this 
+                                         // changes nothing, 
+                                         //as rotation will be 
+                                         //set later...
+        this.defaultRotation = -Math.PI/2//...change this instead
         this.health = health; //current health
         this.maxHealth = health; //max health
         this.showH = true
@@ -960,7 +965,7 @@ class Enemy extends Entity{
         // UPDATE
         this.x += this.xInc
         this.y += this.yInc
-        this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
+        this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation
     }
 }
 class Boss extends Enemy{
@@ -1032,7 +1037,7 @@ class Archer extends Enemy{
                 this.status = "Attack"
                 this.dx = this.target.x - this.x;
                 this.dy = this.target.y - this.y;
-                this.rotation = Math.atan2(this.dy, this.dx) + Math.PI
+                this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation
                 this.moving = true; //aka, dont stray from the player now...
                 //is the player still too far away to shoot?
                 if(distanceToTarget > this.shootRange){
@@ -1090,7 +1095,7 @@ class Archer extends Enemy{
     shootArrow(holdDuration){
         this.justAttacked = true //you just attacked... -_-
         let arrowOffsetMaxDeg = 10//deg // how many IN DEGREES +- can be offset shot
-        let arrowDirection = this.rotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
+        let arrowDirection = this.rotation + this.defaultRotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
         //SHOOT ARROW!
         //make da arrow
         createArrow(this, arrowDirection, holdDuration)
@@ -1709,7 +1714,7 @@ io.sockets.on("connection", (socket)=>{
                     
                 
             } else if(tool.name === "Spear"){
-                let spearDirection = player.rotation + Math.PI;
+                let spearDirection = player.rotation + player.defaultRotation + Math.PI;
                 
                 tool.durability -= 1
 
@@ -1804,7 +1809,7 @@ io.sockets.on("connection", (socket)=>{
                 // Shoot arrow
                 if (canShoot) {
                     player.inventory[player.invSelected].pic = `/imgs/Bow.png`
-                    let arrowDirection = player.rotation + Math.PI;
+                    let arrowDirection = player.rotation + player.defaultRotation + Math.PI;
                     
                     //make da arrow
                     createArrow(player, arrowDirection, holdDuration)

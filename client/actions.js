@@ -173,17 +173,15 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                     images[pic] = new Image()
                     images[pic].src = pic
                 }
-                let x= -item.width/2
-                let y= -item.height/2
                 let holdingIconSize = 50
+                let x = -item.width/2
+                let y = item.height/2
                 ctx.translate(x,y)
-                ctx.rotate(heldItem.rotation)
-                if(false){ //debug
-                    ctx.fillStyle= "red"
-                    ctx.fillRect(0,0,10,10)
-                    ctx.strokeRect(-25,-25,holdingIconSize,holdingIconSize)
-                }
-                ctx.drawImage(images[pic],-25,-25,holdingIconSize,holdingIconSize)
+                //all items default rotated by Math.PI
+                ctx.rotate(Math.PI + heldItem.rotation)
+                //ctx.fillStyle="red"
+                //ctx.fillRect(-5,-5,10,10)
+                ctx.drawImage(images[pic],-holdingIconSize/2,-holdingIconSize/2,holdingIconSize,holdingIconSize)
                 
             }
         }
@@ -804,8 +802,8 @@ function performActions() {
         let allDrop = "control" in keySet //+ ctrl to drop all
         socket.emit("drop", {
             playerInvI: currInvSlot,
-            x: player.x - Math.cos(player.rotation) * entitySize * 2,
-            y: player.y - Math.sin(player.rotation) * entitySize * 2,
+            x: player.x - Math.cos(player.rotation + player.defaultRotation) * entitySize * 2,
+            y: player.y - Math.sin(player.rotation + player.defaultRotation) * entitySize * 2, //defaultRotation needs to be included because that's the default, etc. at 0. rotation is just the current rotation
             allDrop : allDrop
         });
         delete keySet["q"] //drop 1 only!
@@ -833,8 +831,8 @@ function performActions() {
         tx = ty = 0;
     } else if (keySet[" "]) { 
         //player rotation must be adjusted 180 deg (PI rad)
-        tx = Math.cos(player.rotation + Math.PI) * player.speed;
-        ty = Math.sin(player.rotation + Math.PI) * player.speed;
+        tx = Math.cos(player.rotation + player.defaultRotation + Math.PI) * player.speed;
+        ty = Math.sin(player.rotation + player.defaultRotation + Math.PI) * player.speed;
     } else { // If movement keys are pressed, handle movement
         tx = (keySet["d"] || keySet["arrowright"]) ? player.speed : (keySet["a"] || keySet["arrowleft"]) ? -player.speed : 0;
         ty = (keySet["s"] || keySet["arrowdown"]) ? player.speed : (keySet["w"] || keySet["arrowup"]) ? -player.speed : 0;
@@ -1162,7 +1160,7 @@ function startGame(){
                 player.x += tx
                 player.y += ty
                 player.invSelected = currInvSlot
-                player.rotation = (Math.atan2(mouse.y, mouse.x)) + Math.PI
+                player.rotation = (Math.atan2(mouse.y, mouse.x)) + player.defaultRotation
                 socket.emit("updatePlayer", {
                     player:player,
                     reorder: reorderInventory
