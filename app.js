@@ -1,5 +1,6 @@
 const { spawn } = require("child_process")
 const { log } = require("console")
+const { create } = require("domain")
 var express = require("express")
 const { Socket } = require("socket.io")
 var app = express()
@@ -46,7 +47,7 @@ const holdableItems = {
     "Hand":{
         name:"Hand", // MUST MATCH KEY!
         class:"Hand",
-        pic:null,
+        imgSrc:null,
         durability:Infinity,
         maxDurability:Infinity,
         damage:5,
@@ -62,7 +63,7 @@ const holdableItems = {
     "Iron Sword":{
         name:"Iron Sword", // MUST MATCH KEY!
         class:"Sword",
-        pic:"/imgs/Sword.png",
+        imgSrc:"/imgs/Sword.png",
         durability:30,
         maxDurability:30,
         damage:25,
@@ -78,7 +79,7 @@ const holdableItems = {
     "Gold Sword":{
         name:"Gold Sword", // MUST MATCH KEY!
         class:"Sword",
-        pic:"/imgs/Sword2.png",
+        imgSrc:"/imgs/Sword2.png",
         durability:20,
         maxDurability:20,
         damage:30,
@@ -94,7 +95,7 @@ const holdableItems = {
     "Diamond Sword":{
         name:"Diamond Sword", // MUST MATCH KEY!
         class:"Sword",
-        pic:"/imgs/Sword3.png",
+        imgSrc:"/imgs/Sword3.png",
         durability:60,
         maxDurability:60,
         damage:40,
@@ -110,7 +111,7 @@ const holdableItems = {
     "Plasma Sword":{
         name:"Plasma Sword", // MUST MATCH KEY!
         class:"Sword",
-        pic:"/imgs/Sword4.png",
+        imgSrc:"/imgs/Sword4.png",
         durability:100,
         maxDurability:100,
         damage:50,
@@ -126,7 +127,7 @@ const holdableItems = {
     "Vantacite Sword":{
         name:"Vantacite Sword", // MUST MATCH KEY!
         class:"Sword",
-        pic:"/imgs/Sword5.png",
+        imgSrc:"/imgs/Sword5.png",
         durability:200,
         maxDurability:200,
         damage:80,
@@ -142,7 +143,7 @@ const holdableItems = {
     "Arrow":{
         name:"Arrow", // MUST MATCH KEY!
         class:"Arrow",
-        pic:"/imgs/Arrow.png",
+        imgSrc:"/imgs/Arrow.png",
         durability:Infinity,
         maxDurability:Infinity,
         damage: 1,
@@ -158,7 +159,7 @@ const holdableItems = {
     "Bow":{
         name:"Bow",  // MUST MATCH KEY!
         class:"Bow",
-        pic:"/imgs/Bow.png",
+        imgSrc:"/imgs/Bow.png",
         //loadedBowPic:"/imgs/Bow_And_Arrow.png",
         durability:100,
         maxDurability:100,
@@ -175,7 +176,7 @@ const holdableItems = {
     "Spear":{
         name:"Spear", // MUST MATCH KEY!
         class:"Spear",
-        pic:"/imgs/Spear.png",
+        imgSrc:"/imgs/Spear.png",
         durability:15,
         maxDurability:15,
         damage:80,
@@ -191,7 +192,7 @@ const holdableItems = {
     "Force Shield":{
         name:"Force Shield", // MUST MATCH KEY!
         class:"UseUpErs", //Use-Up-Ers are used upon click
-        pic:"/imgs/Shield.png",
+        imgSrc:"/imgs/Shield.png",
         durability:null,
         maxDurability:null,
         damage:0,
@@ -624,16 +625,16 @@ var obstacles = Object.assign({}, structures, trees)
 /**************************** @PICKABLES *************/
 //need to update Pickable class
 class Pickable{
-   constructor(id, x, y, name, cl, imgSrc, itemName=null, rotation=0, durability=1, stackSize=1){
+   constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1){
        this.id = id
        this.x = x
        this.y = y
-       this.name = name //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
-       this.class = cl
+       this.name = obj.name //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
+       this.class = obj.class
        this.type = "pickable"
-       this.imgSrc = itemName?holdableItems[itemName].pic:imgSrc
+       this.imgSrc = obj.imgSrc?obj.imgSrc:null
        this.width = this.height = 50
-       this.itemName = itemName
+       this.itemName = obj.name
        this.rotation = rotation
        this.durability = durability
        this.stackSize = stackSize
@@ -661,20 +662,20 @@ const coins = {
     }
 }
 var pickables = {} 
-var pickablesID = 0 //This is the KEY that will be used for each item in the object "pickables"
 //drop everything after death
 /**
  * This function copies the inventory of an entity
  * in entities via the "id" parameter.
  */
-function dropAll(id){
-    let player = entities[id]
-    if(player){
-        player.inventory.forEach(slot=>{
+function dropAll(id, type="player"){
+    if (type == "player") from = entities[id]
+    else if (type == "enemy") from = enemies[id]
+    if(from){
+        from.inventory.forEach(slot=>{
             if(slot.name != "Hand"){
                 let scatterRange = entitySize * 2 // area of scattering items
-                let x = random(player.x + scatterRange, player.x - scatterRange)
-                let y = random(player.y + scatterRange, player.y - scatterRange)
+                let x = random(from.x + scatterRange, from.x - scatterRange)
+                let y = random(from.y + scatterRange, from.y - scatterRange)
                 if (x >= BORDERS.R){
                     x = BORDERS.R
                 } else if(x <= BORDERS.L){
@@ -685,8 +686,8 @@ function dropAll(id){
                 } else if (y <= BORDERS.D){
                     y = BORDERS.D
                 }
-                pickables[pickablesID] = new Pickable(pickablesID,x,y,slot.name,slot.class,null,slot.name,0,slot.durability,slot.stackSize)
-                pickablesID ++
+                var id = createID()
+                pickables[id] = new Pickable(id,x,y,slot,0,slot.durability,slot.stackSize)
             }
         })
     }
@@ -747,40 +748,24 @@ class Player extends Entity{
     }
 }
 class Enemy extends Entity{
-    constructor(x, y, type, imgSrc, damage, detectRange, reloadTime, speed=5, health = 100, w=entitySize, h=entitySize, inventory=[], invSelected=0){
-        super(type, imgSrc, speed, w, h, x, y, health, "ENEMY"+createID())
+    constructor(key, x, y, id, inventory=[], invSelected=0){
+        var enemy = enemyObj[key]
+        super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id)
+        this.size = (enemy.w==enemy.h)?enemy.w:Math.max(enemy.w, enemy.h)
         this.username = "BOT_Enemy"
-        this.detectRange = detectRange
-        this.damage = damage
+        this.detectRange = enemy.detectRange
+        this.damage = enemy.damage
         this.target
         this.dx = 0;
         this.dy = 0;   
         this.moving = false   
         this.justAttacked = false
         this.cooldownTime = 0 //s
-        this.cooldownDuration = reloadTime //ms
+        this.cooldownDuration = enemy.reloadTime //ms
         this.cooldownSF = 1 //speed/decrease length of reloadTime in slower/faster servers
         /** @this.lootable - what it drops*/
-        if(type == "Boss") {
-            this.lootTable = [{...holdableItems["Diamond Sword"], generationProbability:100}] //boss mob gives diamond sword 100%
-        } else{
-            this.lootTable = [
-                {...holdableItems["Iron Sword"]}, 
-                {...holdableItems["Gold Sword"]}, 
-                {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-                {...holdableItems["Bow"]}, 
-            ]
-        }
-        /** @this.xp - how much xp this gives*/
-        if(type == "Boss"){
-            this.xp = 2500
-        } else if(type == "Summoned_Lord"){
-            this.xp = 500
-        } else if(type == "Lord"){
-            this.xp = 250
-        } else{
-            this.xp = 75
-        }
+        this.lootTable = enemy.lootTable
+        this.xp = enemy.giveXP
         
         this.inventorySize = 1
         this.inventory = inventory.length===0 ? Array.from(
@@ -881,7 +866,7 @@ class Enemy extends Entity{
         }           
         this.moveMove()
         // Check for damage
-        if(distanceToTarget < entitySize/2 && !this.justAttacked){
+        if(distanceToTarget < this.width/2 && !this.justAttacked){
             if(this.targetType == "player"){    
                 let player = entities[this.target.id]
                 var damage = this.damage
@@ -969,8 +954,8 @@ class Enemy extends Entity{
     }
 }
 class Boss extends Enemy{
-    constructor(x=0, y=0, type="Boss", imgSrc="/imgs/Enemy_Elder.png", damage=50, detectRange=500, reloadTime=100, speed=4, health = 1000, w=entitySize, h=entitySize){
-        super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h)
+    constructor(x=0, y=0){
+        super("Boss", x, y, bossID)
         this.summonGuards = false
         this.summoned = 0
     }
@@ -982,7 +967,7 @@ class Boss extends Enemy{
 
         if(this.health == this.maxHealth){
             for(let e in enemies){
-                if (enemies[e].type=="Summoned_Lord"){
+                if (enemies[e].type=="Summoned Lord"){
                     delete enemies[e]
                     this.summonGuards = false
                     this.summoned = 0
@@ -1002,8 +987,7 @@ class Boss extends Enemy{
                 for(let j = 0; j < 2; j ++){
                     let id = `@Summoned${i}${j}${random(65536,0)}`
                     let y = (j * spread) - spread
-                    enemies[id] = new Enemy(x, y, "Summoned_Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 2, 500)
-                    enemyCount++
+                    enemies[id] = new Enemy("Summoned Lord", x, y, id)
                     this.summoned++
                 }
             }
@@ -1011,9 +995,10 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-    constructor(x, y, type="Archer", imgSrc="/imgs/Enemy_Archer.png", damage=10, detectRange=750, reloadTime=100, speed=3.5, health=100, w=entitySize, h=entitySize){
-        super(x, y, type, imgSrc, damage, detectRange, reloadTime, speed, health, w, h, [{...holdableItems["Bow"]}], 0)
-        this.shootRange = 350 // to walk closer before shooting...
+    constructor(x, y, id){
+        var data = enemyObj["Archer"]
+        super("Archer", x, y, id, data.inventory, data.invSelected)
+        this.shootRange = data.shootRange // to walk closer before shooting...
         this.holdDuration = 0
         this.holdNum = 0
     }
@@ -1055,8 +1040,8 @@ class Archer extends Enemy{
                         //holdNum/30 = duration of loading
                         this.holdNum += 1
                         this.holdDuration = Math.floor(this.holdNum/(100*this.cooldownSF)) > 5?5:Math.floor(this.holdNum/30)+1
-                        //change pic
-                        this.inventory[this.invSelected].pic = `/imgs/Bow${this.holdDuration}.png`
+                        //change imgSrc
+                        this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`
                         //fire!
                         if(this.holdDuration == 5) {
                             this.shootArrow(this.holdDuration) //FIRE!!
@@ -1099,7 +1084,7 @@ class Archer extends Enemy{
         //SHOOT ARROW!
         //make da arrow
         createArrow(this, arrowDirection, holdDuration)
-        this.inventory[this.invSelected].pic = "/imgs/Bow.png"
+        this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png"
 
         this.inventory[this.invSelected].durability -= 1
         //bow breaks !? O_O
@@ -1109,34 +1094,269 @@ class Archer extends Enemy{
     }
 }
 
-/*************************** @ENEMY_GENERATOR *************/
-var currEnemyID = 0
-const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
-var enemyCount = 0
-function spawnNormal(){
-    let nC = findSpawn(entitySize)
-    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Normal", "/imgs/Enemy.png", 5, 400, 50, 5)
-    currEnemyID++
-    enemyCount++
+/*
+const animalObj = {
+    "Bear":{
+        type:"Bear",
+        imgSrc:"imgs/Bear.png",
+        speed:3,
+        size:entitySize,
+        health:120,
+        characteristic: "Neutral", //Passive, Neutral, Hostile
+        damage:40, // if any
+        giveXp:0,
+        detectRange:200
+    }
 }
-function spawnLord(){
-    let nC = findSpawn(entitySize)
-    enemies[currEnemyID] = new Enemy(nC.x, nC.y, "Lord", "/imgs/Enemy_Lord.png", 20, 750, 100, 2.5, 500)
-    currEnemyID++
-    enemyCount++
-}
-function spawnArcher(){
-    let nC = findSpawn(entitySize)
-    enemies[currEnemyID] = new Archer(nC.x, nC.y)
-    currEnemyID++
-    enemyCount++
+var animals = {}
+class Animal extends Entity{
+    constructor(animalObjKey, x, y) {
+        var animal = animalObj[animalObjKey]
+        super(animal.type, animal.imgSrc, animal.speed, animal.size, animal.size, x, y, animal.health, animal.giveXp)
+        this.username = animal.type
+        this.damage = animal.damage
+        this.key = animalObjKey
+        this.characteristic = animal.characteristic
+        this.detectRange = animal.detectRange
+    }
+    findTarget(){
+        let minDist = this.detectRange//10**10;
+        let targetData;
+        for (let i in entities) {
+            let plyr = entities[i]
+            let dist = Math.sqrt(Math.pow(plyr.x - this.x, 2) + Math.pow(plyr.y - this.y, 2));
+            if (dist < minDist && plyr.type == "player" && plyr) {
+                minDist = dist;
+                targetData = {
+                    key:i,
+                    targetType:"player"
+                } //player target
+            }
+        }
+        if(targetData!=undefined) {
+            if(targetData.targetType == "player"){
+                this.target = entities[targetData.key]
+            }
+            this.targetType = targetData.targetType
+        }
+        else{this.target = null}
+    }
+    damageCoolDown(){
+        if(this.justAttacked){
+            this.cooldownTime ++
+            //adds up until over
+            if(this.cooldownTime * this.cooldownSF >= this.cooldownDuration) {
+                this.cooldownTime = 0
+                this.justAttacked = false
+            }
+        }
+    }
+    //AI, decisions made here
+    move() {
+        this.findTarget()
+        this.damageCoolDown()
+        // Calculate the distance between the enemy and the user
+        //dx, dy = target x, y
+        this.dx = this.dy = this.dist = 0
+        var distanceToTarget
+        if(this.target) {
+            distanceToTarget = Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2)
+        }
+        else {distanceToTarget = 10**10}
+
+        if(distanceToTarget <= this.detectRange) { // Is player within range?
+            this.status = "Attack"
+            this.dx = this.target.x - this.x;
+            this.dy = this.target.y - this.y;
+            this.moving = true;
+        } else if (!this.moving) {
+            this.status = "Wander"
+            this.targetX = random(mapSize/2,-mapSize/2)
+            this.targetY = random(mapSize/2,-mapSize/2)
+            this.dx = this.targetX - this.x;
+            this.dy = this.targetY - this.y;
+            this.moving = true;
+            setTimeout(() => {
+                this.moving = false;
+            }, 10000); // Stay at the target location for 10 seconds
+        } else {
+            this.dx = this.targetX - this.x;
+            this.dy = this.targetY - this.y;
+            // if at destination, find new one
+            if(this.dx < 1 && this.dy < 1) {
+                this.targetX = random(mapSize/2,-mapSize/2)
+                this.targetY = random(mapSize/2,-mapSize/2)
+            }
+        }           
+        this.moveMove()
+        // Check for damage
+        if(distanceToTarget < entitySize/2 && !this.justAttacked){
+            var target
+            if(this.target.username != "BOT_ENEMY") target = entities[this.target.id]
+            else target = enemies[this.target.id]
+            dealDamageTo(this.damage, this, target)
+            this.justAttacked = true
+        }
+    }
+    //the actual moving is done here
+    moveMove(){
+        this.dist = Math.sqrt(this.dx ** 2 + this.dy ** 2);
+        // Normalize the distance
+        if(this.dist > 0){
+            this.dx /= this.dist;
+            this.dy /= this.dist;
+        }
+        this.xInc = this.dx * this.speed
+        this.yInc = this.dy * this.speed
+        //Can't go out of frame
+        if (this.x + this.xInc > BORDERS.R || this.x + this.xInc < BORDERS.L){this.xInc = 0}
+        if (this.y + this.yInc > BORDERS.U || this.y + this.yInc < BORDERS.D){this.yInc = 0}
+        
+        //update onWall
+        let oW = false
+        for(let w in structures){
+            let wall = structures[w]
+            let width = this.width/2
+            let height = this.height/2
+            if(wall.class == "Stairs"
+            && this.x > wall.x-wall.width/2 
+            && this.x < wall.x+wall.width/2
+            && this.y > wall.y-wall.height/2
+            && this.y < wall.y+wall.height/2
+            && !this.onWall){
+                oW = true;
+                break;
+            } else if(this.onWall){
+                if((wall.class == "Wall" || wall.class == "Stairs")
+                && this.x > wall.x-wall.width/2-width 
+                && this.x < wall.x+wall.width/2+width
+                && this.y > wall.y-wall.height/2-height 
+                && this.y < wall.y+wall.height/2+height) {
+                    oW = true
+                    break;
+                }
+            }
+        }
+        this.onWall = oW
+
+        //update
+        let newCoords = this.onWall?
+            {
+                tx: this.xInc, 
+                ty: this.yInc,
+            }:
+            checkCollision(obstacles, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height))
+        this.xInc = newCoords.tx
+        this.yInc = newCoords.ty
+
+        // UPDATE
+        this.x += this.xInc
+        this.y += this.yInc
+        this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation
+    }
 }
 
+animals["Bear"] = new Animal("Bear", 0, 0)
+*/
+
+/*************************** @ENEMY_GENERATOR *************/
+const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
+const enemyObj = {
+    "Normal":{
+        type:"Normal",
+        imgSrc:"/imgs/Enemy.png",
+        damage: 5,
+        detectRange: 400,
+        reloadTime: 50,
+        speed: 5,
+        health: 100,
+        w:entitySize,
+        h:entitySize,
+        lootTable : [
+            {...holdableItems["Iron Sword"]}, 
+            {...holdableItems["Gold Sword"]}, 
+            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
+            {...holdableItems["Bow"]}
+        ], 
+        giveXP : 100,
+    },
+    "Lord":{
+        type:"Lord",
+        imgSrc:"/imgs/Enemy_Lord.png",
+        damage: 40,
+        detectRange: 750,
+        reloadTime: 100,
+        speed: 2.5,
+        health: 500,
+        w:entitySize * 4/3,
+        h:entitySize * 4/3,
+        lootTable : [
+            {...holdableItems["Iron Sword"]}, 
+            {...holdableItems["Gold Sword"]}, 
+            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
+            {...holdableItems["Bow"]}
+        ],  
+        giveXP : 500,
+    },
+    "Archer":{
+        type:"Archer", 
+        imgSrc:"/imgs/Enemy_Archer.png", 
+        damage:10, 
+        detectRange:750, 
+        reloadTime:100, 
+        speed:3.5, 
+        health:100, 
+        w:entitySize, 
+        h:entitySize,
+        inventory:[{...holdableItems["Bow"]}], 
+        invSelected:0,
+        shootRange:350,
+        lootTable : [
+            {...holdableItems["Iron Sword"]}, 
+            {...holdableItems["Gold Sword"]}, 
+            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
+            {...holdableItems["Bow"]}
+        ], 
+        giveXP : 150,
+    },
+    "Summoned Lord":{
+        type:"Summoned Lord", 
+        imgSrc:"/imgs/Enemy_Lord.png", 
+        damage:20, 
+        detectRange:750, 
+        reloadTime:100, 
+        speed:3, 
+        health:500, 
+        w:entitySize, 
+        h:entitySize,
+        lootTable : [
+            {...holdableItems["Iron Sword"]}, 
+            {...holdableItems["Gold Sword"]}, 
+            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
+            {...holdableItems["Bow"]}
+        ], 
+        giveXP : 500,
+    },
+    "Boss":{
+        type:"Boss", 
+        imgSrc:"/imgs/Enemy_Elder.png", 
+        damage:75, 
+        detectRange:500, 
+        reloadTime:100, 
+        speed:4, 
+        health : 1000, 
+        w:entitySize, 
+        h:entitySize,
+        lootTable : [{...holdableItems["Plasma Sword"], generationProbability:100}], 
+        giveXP : 2500,
+    }
+}
+
+//initialize boss
 var bossID = "Boss"
 //var bossSpawned = false
 toggleOpeningsToArena(true)
 enemies[bossID] = new Boss()
-enemyCount++
 
 /**************************** @PROJECTILES *************/
 var projectiles = {}
@@ -1198,7 +1418,7 @@ function dealDamageTo(damage, from, to, projectileKey=null){
         // from bots
         if(from.type == "Boss"){
             to.deathMessage = ["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."][random(2,0)] //pick one of these
-        } else if (from.type == "Summoned_Lord"){
+        } else if (from.type == "Summoned Lord"){
             to.deathMessage = ["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."][random(2,0)]
         } else if (from.type == "Lord"){
             to.deathMessage = ["You died from a monster leader.", "A monster lord killed you."][random(2,0)]
@@ -1260,7 +1480,6 @@ function dealDamageTo(damage, from, to, projectileKey=null){
 
 /*************************** @SERVER_GAME_LOOOOOP *************/
 var startedCountdown = false
-var amountOfEatables = 0
 var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
 const FPS = 50 //
@@ -1275,20 +1494,25 @@ setInterval(()=>{
     
             if (bossCountDownTime === 0) {
                 clearInterval(countdownInterval); // Stop the countdown interval
-                toggleOpeningsToArena(true);
-                enemies[bossID] = new Boss();
-                enemyCount++;
+                toggleOpeningsToArena(true)
+                enemies[bossID] = new Boss()
                 startedCountdown = false
                 console.log("The boss has entered the arena.");
             }
         }, 1000);
     }
     //Spawn in enemies (chance of)
-    if(enemyCount < maxEnemyCount){
+    if(Object.keys(enemies).length < maxEnemyCount){
         if(random(100, 1) == 1){
-            if(random(10,1) == 1) spawnLord()
-            else if (random(5,1) == 1) spawnArcher()
-            else spawnNormal()
+            var nC = findSpawn(entitySize)
+            let id = createRandomString(20)
+            if(random(10,1) == 1) {
+                enemies[id] = new Enemy("Lord", nC.x, nC.y, id)
+            } else if (random(5,1) == 1) {
+                enemies[id] = new Archer(nC.x, nC.y, id)
+            } else {
+                enemies[id] = new Enemy("Normal", nC.x, nC.y, id)
+            }
         }
     }
     //the boss has no immune!...
@@ -1296,30 +1520,20 @@ setInterval(()=>{
     //Move and update enemies' health
     for(let e in enemies){
         //...unless there is a lord...
-        if(enemies[e].type == "Summoned_Lord"){
+        if(enemies[e].type == "Summoned Lord"){
             enemies[bossID].immuneDuration = maxImmuneDuration
         }
         enemies[e].move()
         if(enemies[e].health <= 0) {
-            enemyCount -= 1
             let pick = random(enemies[e].lootTable.length-1, 0) 
             //find if percentage beats
+            //drop one thing...only one......
             if(random(100, 1) <= enemies[e].lootTable[pick].generationProbability){
                 let loot = enemies[e].lootTable[pick]
-                pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, loot.class, null, loot.name, 0, loot.durability, loot.stackSize)
-                pickablesID++
+                var id = createID()
+                pickables[id] = new Pickable(id, enemies[e].x, enemies[e].y, loot, 0, loot.durability, loot.stackSize)
             }
-            //does an enemy have an inventory?
-            if(enemies[e].inventory){
-                //for now, enemy drops everything in their inventory
-                for(let i in enemies[e].inventory){
-                    let loot = enemies[e].inventory[i]
-                    if(enemies[e].inventory[i].pic){
-                        pickables[pickablesID] = new Pickable(pickablesID, enemies[e].x, enemies[e].y, loot.name, loot.class, null, loot.name, 0, loot.durability, loot.stackSize)
-                        pickablesID++
-                    }
-                }
-            }
+            dropAll(enemies[e].id, "enemy")
             delete enemies[e]
         }
     }
@@ -1339,7 +1553,7 @@ setInterval(()=>{
     }
 
     //add eatables, swords, etc.
-    if(random(500,1)==1 && amountOfEatables < mapSize/50){ //50=max amount of eatables at one time
+    if(random(500,1)==1 && Object.keys(pickables).length < mapSize/50){ //50=max amount of eatables at one time
         let spawnLocation = findSpawn() //find a suitable place to generate
         let kind
         if (random(4, 1) == 1){
@@ -1349,9 +1563,8 @@ setInterval(()=>{
         } else{
             kind = "Coin"
         }
-        pickables[pickablesID] = new Pickable(pickablesID, spawnLocation.x, spawnLocation.y, coins[kind].name, coins[kind].class, coins[kind].imgSrc)
-        pickablesID ++
-        amountOfEatables ++
+        var pid = createRandomString(20)
+        pickables[pid] = new Pickable(pid, spawnLocation.x, spawnLocation.y, coins[kind])
     }
 
     //add loot 0.1% chance
@@ -1361,18 +1574,15 @@ setInterval(()=>{
         let gProb = holdableItems[randomKey].generationProbability;
         let gen = random(100, 1) < gProb
         if (gen) {
-            pickables[pickablesID] = new Pickable(
-                pickablesID,
+            var pid = createRandomString(20)
+            pickables[pid] = new Pickable(
+                pid,
                 spawnLocation.x,
                 spawnLocation.y,
-                holdableItems[randomKey].name,
-                holdableItems[randomKey].class,
-                null,
-                randomKey,
+                holdableItems[randomKey],
                 0,
                 holdableItems[randomKey].durability
             );
-            pickablesID++
         }
     }
 
@@ -1405,8 +1615,14 @@ setInterval(()=>{
         if ((projectileOut.x || projectileOut.y) || projectile.duration <= 0) {
             if(projectile.durability > 0){
                 // Create a pickable object at projectile's position
-                pickables[pickablesID] = new Pickable(pickablesID, projectileOut.x?projectileOut.x:projectile.x, projectileOut.y?projectileOut.y:projectile.y, projectile.type, projectile.class, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
-                pickablesID++;
+                var pid = createRandomString(20)
+                pickables[pid] = new Pickable(
+                    pid, 
+                    projectileOut.x?projectileOut.x:projectile.x, 
+                    projectileOut.y?projectileOut.y:projectile.y, 
+                    projectile,
+                    projectile.rotation, 
+                    projectile.durability);
             }
             delete projectiles[key];
             break;
@@ -1426,8 +1642,15 @@ setInterval(()=>{
         if (collision.tx === 0 || collision.ty === 0){
             if( projectile.durability > 0){
                 // Create a pickable object at projectile's position
-                pickables[pickablesID] = new Pickable(pickablesID, projectile.x, projectile.y, projectile.type, projectile.class, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
-                pickablesID++;
+                var pid = createRandomString(20)
+                pickables[pid] = new Pickable(
+                    pid, 
+                    projectile.x, 
+                    projectile.y, 
+                    projectile, 
+                    projectile.rotation, 
+                    projectile.durability
+                );
             }
             delete projectiles[key];
         }
@@ -1451,8 +1674,15 @@ setInterval(()=>{
                     
                     if(projectile.durability != Infinity 
                     && projectile.durability > 0){
-                        pickables[pickablesID] = new Pickable(pickablesID, projectile.x, projectile.y, projectile.type, projectile.class, null, holdableItems[projectile.type].name, projectile.rotation, projectile.durability);
-                        pickablesID++;
+                        var pid = createRandomString(20)
+                        pickables[pid] = new Pickable(
+                            pid, 
+                            projectile.x, 
+                            projectile.y, 
+                            projectile,
+                            projectile.rotation, 
+                            projectile.durability
+                        );
                     }
                     delete projectiles[key];
                     break;
@@ -1615,23 +1845,17 @@ io.sockets.on("connection", (socket)=>{
             //if it is a coin...
             if(item.name == "Coin"){
                 player.xp += coins[item.name].xpAmount
-
-                amountOfEatables -= 1
                 delete pickables[item.id]
             } else if(item.name == "Speed"){
                 player.xp += coins[item.name].xpAmount
 
                 socket.emit("speed")
-
-                amountOfEatables -= 1
                 delete pickables[item.id]
             } else if(item.name == "Health"){
                 player.xp += coins[item.name].xpAmount
                 if (player.health<player.maxHealth-25) {
                     player.health += 25 
                 } else {player.health = player.maxHealth} // +25 health points
-
-                amountOfEatables -= 1
                 delete pickables[item.id]
             } 
             //otherwise it must be an item
@@ -1691,8 +1915,9 @@ io.sockets.on("connection", (socket)=>{
         }
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
-            pickables[pickablesID] = new Pickable(pickablesID, x, y, item.name, item.class, null, item.name, 0, item.durability, data.allDrop?item.stackSize:1)
-            pickablesID++
+            var pid = createRandomString(20)
+            pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1)
+
             if(data.allDrop || entities[id].inventory[player.invSelected].stackSize == 1) entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             else entities[id].inventory[player.invSelected] = {...entities[id].inventory[player.invSelected], stackSize: entities[id].inventory[player.invSelected].stackSize - 1}
         }
@@ -1709,7 +1934,7 @@ io.sockets.on("connection", (socket)=>{
                 // Shoot arrow
                 if (player.inventory.some(invSlot => invSlot.name === "Arrow")){
                     let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
-                    player.inventory[player.invSelected].pic = `/imgs/Bow${holdDuration}.png`
+                    player.inventory[player.invSelected].imgSrc = `/imgs/Bow${holdDuration}.png`
                 }
                     
                 
@@ -1808,7 +2033,7 @@ io.sockets.on("connection", (socket)=>{
                 let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
                 // Shoot arrow
                 if (canShoot) {
-                    player.inventory[player.invSelected].pic = `/imgs/Bow.png`
+                    player.inventory[player.invSelected].imgSrc = `/imgs/Bow.png`
                     let arrowDirection = player.rotation + player.defaultRotation + Math.PI;
                     
                     //make da arrow
@@ -1837,10 +2062,11 @@ io.sockets.on("connection", (socket)=>{
     //buy
     socket.on("buy", function(data){
         let player = entities[id]
+        console.log(player, data.item)
         let boughtItem = data.item
         player.xp -= boughtItem.cost
-        pickables[pickablesID] = new Pickable(pickablesID, player.x, player.y, boughtItem.name, boughtItem.class, null, boughtItem.name, 0, boughtItem.durability, boughtItem.stackSize)
-        pickablesID ++ 
+        var pid = createRandomString(20)
+        pickables[pid] = new Pickable(pid, player.x, player.y, boughtItem, 0, boughtItem.durability, boughtItem.stackSize)
 
         //emit bought!
         socket.emit("bought!", {newXp:player.xp})

@@ -140,12 +140,12 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.fillRect(item.x, item.y, item.width, item.height)
         }
         else{    
-            let imgSrc = item.imgSrc
+            let pic = item.imgSrc
 
             //Draw tree opaque function
             if(item.class == "Tree"){
                 if(Math.sqrt(Math.pow(player.x - item.x, 2) + Math.pow(player.y - item.y, 2)) > 250){ // dist till tree is not opaque
-                    imgSrc = item.opaqueImgSrc
+                    pic = item.opaqueImgSrc
                 } else{
                     //draw stump (NEEDS WORK!!)
                     ctx.fillStyle = "#140d06AA";
@@ -157,21 +157,21 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             }
 
             //create a loaded image if not existant
-            if(!images[imgSrc]){
-                images[imgSrc] = new Image()
-                images[imgSrc].src = imgSrc
+            if(!images[pic]){
+                images[pic] = new Image()
+                images[pic].src = pic
             }
             ctx.rotate(item.rotation)
-            ctx.drawImage(images[imgSrc], -item.width/2, -item.height/2, item.width, item.height)
+            ctx.drawImage(images[pic], -item.width/2, -item.height/2, item.width, item.height)
         }
         //draw held item
         if(item.inventory){
             var heldItem = item.inventory[item.invSelected]
-            var pic = heldItem.pic
-            if(pic !== null){
-                if(!images[pic]){
-                    images[pic] = new Image()
-                    images[pic].src = pic
+            let p = heldItem.imgSrc
+            if(p !== null){
+                if(!images[p]){
+                    images[p] = new Image()
+                    images[p].src = p
                 }
                 let holdingIconSize = 50
                 let x = -item.width/2
@@ -181,7 +181,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 ctx.rotate(Math.PI + heldItem.rotation)
                 //ctx.fillStyle="red"
                 //ctx.fillRect(-5,-5,10,10)
-                ctx.drawImage(images[pic],-holdingIconSize/2,-holdingIconSize/2,holdingIconSize,holdingIconSize)
+                ctx.drawImage(images[p],-holdingIconSize/2,-holdingIconSize/2,holdingIconSize,holdingIconSize)
                 
             }
         }
@@ -615,12 +615,12 @@ function drawInventory(){
         var y = invY
         var w = invSize
         var h = invSize
-        if(each.pic){
-            if(!images[each.pic]){
-                images[each.pic] = new Image()
-                images[each.pic].src = each.pic
+        if(each.imgSrc){
+            if(!images[each.imgSrc]){
+                images[each.imgSrc] = new Image()
+                images[each.imgSrc].src = each.imgSrc
             }
-            gctx.drawImage(images[each.pic], x, y, w, h)
+            gctx.drawImage(images[each.imgSrc], x, y, w, h)
         }
         //DURABILITY bar
         if(each.durability < each.maxDurability){
@@ -1305,7 +1305,7 @@ function createMarketBtn(items, xxxp=player.xp) {
 
             //CELL 1 -- IMAGE
             var img = document.createElement('img');
-            img.src = value.pic;
+            img.src = value.imgSrc;
             img.alt = value.name;
             cell1.appendChild(img);
             cell1.setAttribute('class', 'marketBtnImgs'); 
