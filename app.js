@@ -1378,9 +1378,8 @@ const projectilesObj = {
     }
 }
 class Projectile{
-    constructor(type, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
-        this.name = type
-        this.type = type //key inside holdable items!
+    constructor(name, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
+        this.name = name //key inside holdable items!
         this.x = x
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
@@ -1446,14 +1445,14 @@ function dealDamageTo(damage, from, to, projectileKey=null){
                     // If entity is killed, update player's stats
                     let whoShotIt = projectiles[key].whoShot.username;
                     //spear
-                    let messages = (from.type=="Spear")?[
+                    let messages = (from.name=="Spear")?[
                         `${to.username} was impaled by a spear`,
                         `${to.username} was impaled by ${whoShotIt}'s spear`,
                     ]:[ //arrow...
-                        `${whoShotIt} killed ${to.username} with a ${from.type}.`,
+                        `${whoShotIt} killed ${to.username} with a ${from.name}.`,
                         `${whoShotIt} shot ${to.username}.`,
-                        `The ${from.type} from ${whoShotIt} found its mark on ${to.username}.`,
-                        `${to.username} was sniped from afar by ${whoShotIt} with an ${from.type}.`
+                        `The ${from.name} from ${whoShotIt} found its mark on ${to.username}.`,
+                        `${to.username} was sniped from afar by ${whoShotIt} with an ${from.name}.`
                     ]
                     let p = entities[projectiles[key].whoShot.id];
                     p.xp += to.xp;
