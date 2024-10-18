@@ -624,14 +624,15 @@ var obstacles = Object.assign({}, structures, trees)
 
 /**************************** @PICKABLES *************/
 //need to update Pickable class
-class Pickable{
-   constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1){
+class Pickable{//*&*&*&
+   constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1, indicator=null){
        this.id = id
        this.x = x
        this.y = y
        this.name = obj.name //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
        this.class = obj.class
        this.type = "pickable"
+       console.log(indicator, obj.imgSrc, obj)
        this.imgSrc = obj.imgSrc?obj.imgSrc:null
        this.width = this.height = 50
        this.itemName = obj.name
@@ -1362,12 +1363,14 @@ enemies[bossID] = new Boss()
 var projectiles = {}
 const projectilesObj = {
     "Arrow":{
+        name:"Arrow",
         damage:holdableItems["Arrow"].damage,
         flightDuration:10,
         imgSrc:"/imgs/Arrow.png",
         speed:10
     },
     "Spear":{
+        name:"Spear",
         damage:holdableItems["Spear"].damage,
         flightDuration:50,
         imgSrc:"/imgs/Spear.png", 
@@ -1376,6 +1379,7 @@ const projectilesObj = {
 }
 class Projectile{
     constructor(type, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
+        this.name = type
         this.type = type //key inside holdable items!
         this.x = x
         this.y = y
@@ -1531,7 +1535,12 @@ setInterval(()=>{
             if(random(100, 1) <= enemies[e].lootTable[pick].generationProbability){
                 let loot = enemies[e].lootTable[pick]
                 var id = createID()
-                pickables[id] = new Pickable(id, enemies[e].x, enemies[e].y, loot, 0, loot.durability, loot.stackSize)
+                pickables[id] = new Pickable(
+                    id, 
+                    enemies[e].x, 
+                    enemies[e].y, 
+                    loot, 
+                    0, loot.durability, loot.stackSize)
             }
             dropAll(enemies[e].id, "enemy")
             delete enemies[e]
@@ -1581,7 +1590,8 @@ setInterval(()=>{
                 spawnLocation.y,
                 holdableItems[randomKey],
                 0,
-                holdableItems[randomKey].durability
+                holdableItems[randomKey].durability,
+                "##%"
             );
         }
     }
@@ -1649,7 +1659,8 @@ setInterval(()=>{
                     projectile.y, 
                     projectile, 
                     projectile.rotation, 
-                    projectile.durability
+                    projectile.durability, 
+                    "&&A"
                 );
             }
             delete projectiles[key];
@@ -1681,7 +1692,8 @@ setInterval(()=>{
                             projectile.y, 
                             projectile,
                             projectile.rotation, 
-                            projectile.durability
+                            projectile.durability, 
+                    "&&B"
                         );
                     }
                     delete projectiles[key];
@@ -1840,6 +1852,7 @@ io.sockets.on("connection", (socket)=>{
     //player eat/pick up, etc.! ADD TO Inventory 
     socket.on("eat", (data)=>{
         let item = data.what
+        console.log("ITEM", item)
         let player = entities[id]
         if(player){
             //if it is a coin...
@@ -1883,9 +1896,10 @@ io.sockets.on("connection", (socket)=>{
                 }
                 //put in hand if not taken
                 if(!taken){
-                    for (let i in inv) {
+                    for (let i in inv) {//*&*&*&
                         if (inv[i].name === "Hand") {
                             // Replace with new item
+                            console.log(item.itemName)
                             let nItem = { ...holdableItems[item.itemName], stackSize:item.stackSize, durability:item.durability}
                             player.inventory[i] = nItem;
                             delete pickables[item.id];
@@ -1916,7 +1930,8 @@ io.sockets.on("connection", (socket)=>{
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
             var pid = createRandomString(20)
-            pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1)
+            pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1, 
+                "&&C")
 
             if(data.allDrop || entities[id].inventory[player.invSelected].stackSize == 1) entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             else entities[id].inventory[player.invSelected] = {...entities[id].inventory[player.invSelected], stackSize: entities[id].inventory[player.invSelected].stackSize - 1}
