@@ -192,7 +192,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             let w = 50
             let h = 10
             let x = -w/2
-            let y = -entitySize *3/4
+            let y = -item.size *3/4
             ctx.save()
             ctx.translate(item.x, item.y)
             ctx.fillStyle = "black"

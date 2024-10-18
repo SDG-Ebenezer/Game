@@ -625,14 +625,13 @@ var obstacles = Object.assign({}, structures, trees)
 /**************************** @PICKABLES *************/
 //need to update Pickable class
 class Pickable{//*&*&*&
-   constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1, indicator=null){
+   constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1){
        this.id = id
        this.x = x
        this.y = y
        this.name = obj.name //WARNING: THIS HAS TO EQUAL THE HOLDABLE ITEMS "KIND"/"NAME" IF A STACKABLE!! 
        this.class = obj.class
        this.type = "pickable"
-       console.log(indicator, obj.imgSrc, obj)
        this.imgSrc = obj.imgSrc?obj.imgSrc:null
        this.width = this.height = 50
        this.itemName = obj.name
@@ -716,6 +715,7 @@ class Entity {
         this.isCircle = false;
         this.width = w;
         this.height = h;
+        this.size = (w==h)?w:Math.max(w, h)
         this.speed = PORT==1111?(speed / 5):speed / 5
         this.maxSpeed = PORT==1111?(speed / 5):speed / 5 //same as this.speed
         this.onWall = false //default
@@ -752,7 +752,6 @@ class Enemy extends Entity{
     constructor(key, x, y, id, inventory=[], invSelected=0){
         var enemy = enemyObj[key]
         super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id)
-        this.size = (enemy.w==enemy.h)?enemy.w:Math.max(enemy.w, enemy.h)
         this.username = "BOT_Enemy"
         this.detectRange = enemy.detectRange
         this.damage = enemy.damage
@@ -1280,6 +1279,8 @@ const enemyObj = {
             {...holdableItems["Bow"]}
         ], 
         giveXP : 100,
+        generationProbability:60, //out of 100
+        deathMessages:["You died from a monster.", "A monster hit you.", "You were slain by a monster"],
     },
     "Lord":{
         type:"Lord",
@@ -1298,6 +1299,8 @@ const enemyObj = {
             {...holdableItems["Bow"]}
         ],  
         giveXP : 500,
+        generationProbability:30, //out of 100
+        deathMessages:["You died from a monster leader.", "A monster lord killed you."],
     },
     "Archer":{
         type:"Archer", 
@@ -1319,14 +1322,16 @@ const enemyObj = {
             {...holdableItems["Bow"]}
         ], 
         giveXP : 150,
+        generationProbability:25, //out of 100
+        deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."]
     },
     "Summoned Lord":{
         type:"Summoned Lord", 
-        imgSrc:"/imgs/Enemy_Lord.png", 
-        damage:20, 
+        imgSrc:"/imgs/Enemy_Summoned_Lord.png", 
+        damage:10, 
         detectRange:750, 
-        reloadTime:100, 
-        speed:3, 
+        reloadTime:20, 
+        speed:4, 
         health:500, 
         w:entitySize, 
         h:entitySize,
@@ -1334,22 +1339,51 @@ const enemyObj = {
             {...holdableItems["Iron Sword"]}, 
             {...holdableItems["Gold Sword"]}, 
             {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-            {...holdableItems["Bow"]}
+            {...holdableItems["Bow"]},
+            {...holdableItems["Diamond Sword"]}
         ], 
         giveXP : 500,
+        generationProbability:0, //spawns in special occasions
+        deathMessages:["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."],
     },
     "Boss":{
         type:"Boss", 
         imgSrc:"/imgs/Enemy_Elder.png", 
-        damage:75, 
+        damage:100, 
         detectRange:500, 
         reloadTime:100, 
         speed:4, 
-        health : 1000, 
+        health : 2000, 
         w:entitySize, 
         h:entitySize,
         lootTable : [{...holdableItems["Plasma Sword"], generationProbability:100}], 
         giveXP : 2500,
+        generationProbability:0, //spawns in special occasions
+        deathMessages:["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."],
+
+    },
+    "Vantacite Monster":{
+        type:"Vantacite Monster", 
+        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        damage:95, 
+        detectRange:500, 
+        reloadTime:100, 
+        speed:4, 
+        health:750, 
+        w:entitySize*2, 
+        h:entitySize*2,
+        lootTable : [
+            {...holdableItems["Vantacite Sword"], generationProbability:20},
+            {...holdableItems["Iron Sword"]},
+            {...holdableItems["Gold Sword"]},
+            {...holdableItems["Diamond Sword"]},
+            {...holdableItems["Plasma Sword"]},
+            {...holdableItems["Spear"]},
+        ], 
+        giveXP : 2000,
+        generationProbability:10, //spawns in special occasions
+        deathMessages:["You died from a vantacite monster.", "A vantacite monster squashed you.", "You saw a vantacite monster."],
+
     }
 }
 
@@ -1384,11 +1418,11 @@ class Projectile{
         this.y = y
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
         this.direction = dir //for direction purposes
-        this.speed = speed?speed:projectilesObj[type].speed
-        this.duration = duration?duration:projectilesObj[type].flightDuration
-        this.damage = damage?damage:projectilesObj[type].damage
+        this.speed = speed?speed:projectilesObj[name].speed
+        this.duration = duration?duration:projectilesObj[name].flightDuration
+        this.damage = damage?damage:projectilesObj[name].damage
 
-        this.imgSrc = projectilesObj[type].imgSrc
+        this.imgSrc = projectilesObj[name].imgSrc
         this.width = w
         this.height = h
 
@@ -1419,15 +1453,10 @@ function dealDamageTo(damage, from, to, projectileKey=null){
     // dead...?
     if(to.health <= 0){
         // from bots
-        if(from.type == "Boss"){
-            to.deathMessage = ["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."][random(2,0)] //pick one of these
-        } else if (from.type == "Summoned Lord"){
-            to.deathMessage = ["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."][random(2,0)]
-        } else if (from.type == "Lord"){
-            to.deathMessage = ["You died from a monster leader.", "A monster lord killed you."][random(2,0)]
-        } else if (from.type == "Normal"){
-            to.deathMessage = ["You died from a monster.", "A monster hit you.", "You were slain by a monster"][random(2,0)]
-        } 
+        if(from.username=="BOT_Enemy") {
+            let data = enemyObj[from.type]
+            to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
+        }
         //all else...
         else{
             var key = projectileKey
@@ -1460,11 +1489,11 @@ function dealDamageTo(damage, from, to, projectileKey=null){
                     let name = p.username
                     if(to.username && to.username == p.username) name = "yourself."
                     to.deathMessage = messages[Math.floor(Math.random() * messages.length)]
-                    //console.log(deathMessage);
                 } 
                 //archer!
                 else{
-                    to.deathMessage = ["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."][random(2,0)]
+                    let data = enemyObj["Archer"]
+                    to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
                     //console.log("An archer shot ", to.username, to.id)
                 }
             } 
@@ -1506,15 +1535,14 @@ setInterval(()=>{
     }
     //Spawn in enemies (chance of)
     if(Object.keys(enemies).length < maxEnemyCount){
-        if(random(100, 1) == 1){
+        var randomKey = Object.keys(enemyObj)[random(Object.keys(enemyObj).length-1, 0)]
+        if(random(100, 1) < enemyObj[randomKey].generationProbability){
             var nC = findSpawn(entitySize)
             let id = createRandomString(20)
-            if(random(10,1) == 1) {
-                enemies[id] = new Enemy("Lord", nC.x, nC.y, id)
-            } else if (random(5,1) == 1) {
+            if(randomKey === "Archer"){
                 enemies[id] = new Archer(nC.x, nC.y, id)
-            } else {
-                enemies[id] = new Enemy("Normal", nC.x, nC.y, id)
+            } else{
+                enemies[id] = new Enemy(randomKey, nC.x, nC.y, id)
             }
         }
     }
@@ -1589,8 +1617,7 @@ setInterval(()=>{
                 spawnLocation.y,
                 holdableItems[randomKey],
                 0,
-                holdableItems[randomKey].durability,
-                "##%"
+                holdableItems[randomKey].durability
             );
         }
     }
@@ -1658,8 +1685,7 @@ setInterval(()=>{
                     projectile.y, 
                     projectile, 
                     projectile.rotation, 
-                    projectile.durability, 
-                    "&&A"
+                    projectile.durability
                 );
             }
             delete projectiles[key];
@@ -1691,8 +1717,7 @@ setInterval(()=>{
                             projectile.y, 
                             projectile,
                             projectile.rotation, 
-                            projectile.durability, 
-                    "&&B"
+                            projectile.durability
                         );
                     }
                     delete projectiles[key];
@@ -1851,7 +1876,6 @@ io.sockets.on("connection", (socket)=>{
     //player eat/pick up, etc.! ADD TO Inventory 
     socket.on("eat", (data)=>{
         let item = data.what
-        console.log("ITEM", item)
         let player = entities[id]
         if(player){
             //if it is a coin...
@@ -1898,7 +1922,6 @@ io.sockets.on("connection", (socket)=>{
                     for (let i in inv) {//*&*&*&
                         if (inv[i].name === "Hand") {
                             // Replace with new item
-                            console.log(item.itemName)
                             let nItem = { ...holdableItems[item.itemName], stackSize:item.stackSize, durability:item.durability}
                             player.inventory[i] = nItem;
                             delete pickables[item.id];
@@ -1929,8 +1952,7 @@ io.sockets.on("connection", (socket)=>{
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
             var pid = createRandomString(20)
-            pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1, 
-                "&&C")
+            pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1)
 
             if(data.allDrop || entities[id].inventory[player.invSelected].stackSize == 1) entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             else entities[id].inventory[player.invSelected] = {...entities[id].inventory[player.invSelected], stackSize: entities[id].inventory[player.invSelected].stackSize - 1}
@@ -2027,7 +2049,6 @@ io.sockets.on("connection", (socket)=>{
             //BREAK TOOL? Is the tool too weak?
             if(player.inventory[player.invSelected].durability <= 0 
             && player.inventory[player.invSelected].durability!=null){
-                //console.log(player.inventory[player.invSelected])
                 player.inventory[player.invSelected] = {...holdableItems["Hand"]}
                 usedItem = false // item was used...but destroyed
             }
@@ -2076,7 +2097,6 @@ io.sockets.on("connection", (socket)=>{
     //buy
     socket.on("buy", function(data){
         let player = entities[id]
-        console.log(player, data.item)
         let boughtItem = data.item
         player.xp -= boughtItem.cost
         var pid = createRandomString(20)
