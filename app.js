@@ -676,14 +676,9 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, partic
 
 /**************************** @PICKABLES *************/
 //need to update Pickable class
-<<<<<<< HEAD
 const pickableSize = 10
 class Pickable{//*&*&*&
    constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1, worldID="Main"){
-=======
-class Pickable{//*&*&*&
-   constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1){
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
        this.id = id
        this.x = x
        this.y = y
@@ -721,42 +716,25 @@ const coins = {
         xpAmount:100,
     }
 }
-<<<<<<< HEAD
-=======
-var pickables = {} 
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
 //drop everything after death
 /**
  * This function copies the inventory of an entity
  * in entities via the "id" parameter.
  */
-<<<<<<< HEAD
 function dropAll(id, type="player", worldID="Main"){
     let world = worlds[worldID]
     if (type == "player") from = world.entities[id]
     else if (type == "enemy") from = world.enemies[id]
-=======
-function dropAll(id, type="player"){
-    if (type == "player") from = entities[id]
-    else if (type == "enemy") from = enemies[id]
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
     if(from){
         from.inventory.forEach(slot=>{
             if(slot.name != "Hand"){
                 let scatterRange = entitySize * 2 // area of scattering items
                 let x = random(from.x + scatterRange, from.x - scatterRange)
                 let y = random(from.y + scatterRange, from.y - scatterRange)
-<<<<<<< HEAD
                 if (x >= world.BORDERS.R){
                     x = world.BORDERS.R
                 } else if(x <= world.BORDERS.L){
                     x = world.BORDERS.L
-=======
-                if (x >= BORDERS.R){
-                    x = BORDERS.R
-                } else if(x <= BORDERS.L){
-                    x = BORDERS.L
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
                 }
                 if (y >= world.BORDERS.U){
                     y = world.BORDERS.U
@@ -764,11 +742,7 @@ function dropAll(id, type="player"){
                     y = world.BORDERS.D
                 }
                 var id = createID()
-<<<<<<< HEAD
                 world.pickables[id] = new Pickable(id,x,y,slot,0,slot.durability,slot.stackSize)
-=======
-                pickables[id] = new Pickable(id,x,y,slot,0,slot.durability,slot.stackSize)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
             }
         })
     }
@@ -829,15 +803,9 @@ class Player extends Entity{
     }
 }
 class Enemy extends Entity{
-<<<<<<< HEAD
     constructor(key, x, y, id, worldID="Main", inventory=[], invSelected=0,){
         var enemy = enemyObj[key]
         super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, worldID)
-=======
-    constructor(key, x, y, id, inventory=[], invSelected=0){
-        var enemy = enemyObj[key]
-        super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
         this.username = "BOT_Enemy"
         this.detectRange = enemy.detectRange
         this.damage = enemy.damage
@@ -1058,15 +1026,9 @@ class Boss extends Enemy{
 
         let world = worlds[this.worldID]
         if(this.health == this.maxHealth){
-<<<<<<< HEAD
             for(let e in world.enemies){
                 if (world.enemies[e].type=="Summoned Lord"){
                     delete world.enemies[e]
-=======
-            for(let e in enemies){
-                if (enemies[e].type=="Summoned Lord"){
-                    delete enemies[e]
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
                     this.summonGuards = false
                     this.summoned = 0
                 }
@@ -1085,11 +1047,7 @@ class Boss extends Enemy{
                 for(let j = 0; j < 2; j ++){
                     let id = `@Summoned${i}${j}${random(65536,0)}`
                     let y = (j * spread) - spread
-<<<<<<< HEAD
                     worlds[this.worldID].enemies[id] = new Enemy("Summoned Lord", x, y, id)
-=======
-                    enemies[id] = new Enemy("Summoned Lord", x, y, id)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
                     this.summoned++
                 }
             }
@@ -1097,15 +1055,9 @@ class Boss extends Enemy{
     }
 }
 class Archer extends Enemy{
-<<<<<<< HEAD
     constructor(x, y, id, worldID){
         var data = enemyObj["Archer"]
         super("Archer", x, y, id, worldID, data.inventory, data.invSelected)
-=======
-    constructor(x, y, id){
-        var data = enemyObj["Archer"]
-        super("Archer", x, y, id, data.inventory, data.invSelected)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
         this.shootRange = data.shootRange // to walk closer before shooting...
         this.holdDuration = 0
         this.holdNum = 0
@@ -1191,11 +1143,7 @@ class Archer extends Enemy{
         let arrowDirection = this.rotation + this.defaultRotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
         //SHOOT ARROW!
         //make da arrow
-<<<<<<< HEAD
         createArrow(this, arrowDirection, holdDuration, thiw.worldID)
-=======
-        createArrow(this, arrowDirection, holdDuration)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
         this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png"
 
         this.inventory[this.invSelected].durability -= 1
@@ -1206,7 +1154,6 @@ class Archer extends Enemy{
     }
 }
 
-<<<<<<< HEAD
 /*************************** @ENEMY_GENERATOR *************/
 const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
 const enemyObj = {
@@ -1335,310 +1282,11 @@ const enemyObj = {
     }
 }
 
-=======
-/*
-const animalObj = {
-    "Bear":{
-        type:"Bear",
-        imgSrc:"imgs/Bear.png",
-        speed:3,
-        size:entitySize,
-        health:120,
-        characteristic: "Neutral", //Passive, Neutral, Hostile
-        damage:40, // if any
-        giveXp:0,
-        detectRange:200
-    }
-}
-var animals = {}
-class Animal extends Entity{
-    constructor(animalObjKey, x, y) {
-        var animal = animalObj[animalObjKey]
-        super(animal.type, animal.imgSrc, animal.speed, animal.size, animal.size, x, y, animal.health, animal.giveXp)
-        this.username = animal.type
-        this.damage = animal.damage
-        this.key = animalObjKey
-        this.characteristic = animal.characteristic
-        this.detectRange = animal.detectRange
-    }
-    findTarget(){
-        let minDist = this.detectRange//10**10;
-        let targetData;
-        for (let i in entities) {
-            let plyr = entities[i]
-            let dist = Math.sqrt(Math.pow(plyr.x - this.x, 2) + Math.pow(plyr.y - this.y, 2));
-            if (dist < minDist && plyr.type == "player" && plyr) {
-                minDist = dist;
-                targetData = {
-                    key:i,
-                    targetType:"player"
-                } //player target
-            }
-        }
-        if(targetData!=undefined) {
-            if(targetData.targetType == "player"){
-                this.target = entities[targetData.key]
-            }
-            this.targetType = targetData.targetType
-        }
-        else{this.target = null}
-    }
-    damageCoolDown(){
-        if(this.justAttacked){
-            this.cooldownTime ++
-            //adds up until over
-            if(this.cooldownTime * this.cooldownSF >= this.cooldownDuration) {
-                this.cooldownTime = 0
-                this.justAttacked = false
-            }
-        }
-    }
-    //AI, decisions made here
-    move() {
-        this.findTarget()
-        this.damageCoolDown()
-        // Calculate the distance between the enemy and the user
-        //dx, dy = target x, y
-        this.dx = this.dy = this.dist = 0
-        var distanceToTarget
-        if(this.target) {
-            distanceToTarget = Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2)
-        }
-        else {distanceToTarget = 10**10}
-
-        if(distanceToTarget <= this.detectRange) { // Is player within range?
-            this.status = "Attack"
-            this.dx = this.target.x - this.x;
-            this.dy = this.target.y - this.y;
-            this.moving = true;
-        } else if (!this.moving) {
-            this.status = "Wander"
-            this.targetX = random(mapSize/2,-mapSize/2)
-            this.targetY = random(mapSize/2,-mapSize/2)
-            this.dx = this.targetX - this.x;
-            this.dy = this.targetY - this.y;
-            this.moving = true;
-            setTimeout(() => {
-                this.moving = false;
-            }, 10000); // Stay at the target location for 10 seconds
-        } else {
-            this.dx = this.targetX - this.x;
-            this.dy = this.targetY - this.y;
-            // if at destination, find new one
-            if(this.dx < 1 && this.dy < 1) {
-                this.targetX = random(mapSize/2,-mapSize/2)
-                this.targetY = random(mapSize/2,-mapSize/2)
-            }
-        }           
-        this.moveMove()
-        // Check for damage
-        if(distanceToTarget < entitySize/2 && !this.justAttacked){
-            var target
-            if(this.target.username != "BOT_ENEMY") target = entities[this.target.id]
-            else target = enemies[this.target.id]
-            dealDamageTo(this.damage, this, target)
-            this.justAttacked = true
-        }
-    }
-    //the actual moving is done here
-    moveMove(){
-        this.dist = Math.sqrt(this.dx ** 2 + this.dy ** 2);
-        // Normalize the distance
-        if(this.dist > 0){
-            this.dx /= this.dist;
-            this.dy /= this.dist;
-        }
-        this.xInc = this.dx * this.speed
-        this.yInc = this.dy * this.speed
-        //Can't go out of frame
-        if (this.x + this.xInc > BORDERS.R || this.x + this.xInc < BORDERS.L){this.xInc = 0}
-        if (this.y + this.yInc > BORDERS.U || this.y + this.yInc < BORDERS.D){this.yInc = 0}
-        
-        //update onWall
-        let oW = false
-        for(let w in structures){
-            let wall = structures[w]
-            let width = this.width/2
-            let height = this.height/2
-            if(wall.class == "Stairs"
-            && this.x > wall.x-wall.width/2 
-            && this.x < wall.x+wall.width/2
-            && this.y > wall.y-wall.height/2
-            && this.y < wall.y+wall.height/2
-            && !this.onWall){
-                oW = true;
-                break;
-            } else if(this.onWall){
-                if((wall.class == "Wall" || wall.class == "Stairs")
-                && this.x > wall.x-wall.width/2-width 
-                && this.x < wall.x+wall.width/2+width
-                && this.y > wall.y-wall.height/2-height 
-                && this.y < wall.y+wall.height/2+height) {
-                    oW = true
-                    break;
-                }
-            }
-        }
-        this.onWall = oW
-
-        //update
-        let newCoords = this.onWall?
-            {
-                tx: this.xInc, 
-                ty: this.yInc,
-            }:
-            checkCollision(obstacles, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height))
-        this.xInc = newCoords.tx
-        this.yInc = newCoords.ty
-
-        // UPDATE
-        this.x += this.xInc
-        this.y += this.yInc
-        this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation
-    }
-}
-
-animals["Bear"] = new Animal("Bear", 0, 0)
-*/
-
-/*************************** @ENEMY_GENERATOR *************/
-const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
-const enemyObj = {
-    "Normal":{
-        type:"Normal",
-        imgSrc:"/imgs/Enemy.png",
-        damage: 5,
-        detectRange: 400,
-        reloadTime: 50,
-        speed: 5,
-        health: 100,
-        w:entitySize,
-        h:entitySize,
-        lootTable : [
-            {...holdableItems["Iron Sword"]}, 
-            {...holdableItems["Gold Sword"]}, 
-            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-            {...holdableItems["Bow"]}
-        ], 
-        giveXP : 100,
-        generationProbability:60, //out of 100
-        deathMessages:["You died from a monster.", "A monster hit you.", "You were slain by a monster"],
-    },
-    "Lord":{
-        type:"Lord",
-        imgSrc:"/imgs/Enemy_Lord.png",
-        damage: 40,
-        detectRange: 750,
-        reloadTime: 100,
-        speed: 2.5,
-        health: 500,
-        w:entitySize * 4/3,
-        h:entitySize * 4/3,
-        lootTable : [
-            {...holdableItems["Iron Sword"]}, 
-            {...holdableItems["Gold Sword"]}, 
-            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-            {...holdableItems["Bow"]}
-        ],  
-        giveXP : 500,
-        generationProbability:30, //out of 100
-        deathMessages:["You died from a monster leader.", "A monster lord killed you."],
-    },
-    "Archer":{
-        type:"Archer", 
-        imgSrc:"/imgs/Enemy_Archer.png", 
-        damage:10, 
-        detectRange:750, 
-        reloadTime:100, 
-        speed:3.5, 
-        health:100, 
-        w:entitySize, 
-        h:entitySize,
-        inventory:[{...holdableItems["Bow"]}], 
-        invSelected:0,
-        shootRange:350,
-        lootTable : [
-            {...holdableItems["Iron Sword"]}, 
-            {...holdableItems["Gold Sword"]}, 
-            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-            {...holdableItems["Bow"]}
-        ], 
-        giveXP : 150,
-        generationProbability:25, //out of 100
-        deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."]
-    },
-    "Summoned Lord":{
-        type:"Summoned Lord", 
-        imgSrc:"/imgs/Enemy_Summoned_Lord.png", 
-        damage:10, 
-        detectRange:750, 
-        reloadTime:20, 
-        speed:4, 
-        health:500, 
-        w:entitySize, 
-        h:entitySize,
-        lootTable : [
-            {...holdableItems["Iron Sword"]}, 
-            {...holdableItems["Gold Sword"]}, 
-            {...holdableItems["Arrow"], stackSize:random(holdableItems["Arrow"].maxStackSize, 1)},
-            {...holdableItems["Bow"]},
-            {...holdableItems["Diamond Sword"]}
-        ], 
-        giveXP : 500,
-        generationProbability:0, //spawns in special occasions
-        deathMessages:["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."],
-    },
-    "Boss":{
-        type:"Boss", 
-        imgSrc:"/imgs/Enemy_Elder.png", 
-        damage:100, 
-        detectRange:500, 
-        reloadTime:100, 
-        speed:4, 
-        health : 2000, 
-        w:entitySize, 
-        h:entitySize,
-        lootTable : [{...holdableItems["Plasma Sword"], generationProbability:100}], 
-        giveXP : 2500,
-        generationProbability:0, //spawns in special occasions
-        deathMessages:["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."],
-
-    },
-    "Vantacite Monster":{
-        type:"Vantacite Monster", 
-        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
-        damage:95, 
-        detectRange:500, 
-        reloadTime:100, 
-        speed:4, 
-        health:750, 
-        w:entitySize*2, 
-        h:entitySize*2,
-        lootTable : [
-            {...holdableItems["Vantacite Sword"], generationProbability:20},
-            {...holdableItems["Iron Sword"]},
-            {...holdableItems["Gold Sword"]},
-            {...holdableItems["Diamond Sword"]},
-            {...holdableItems["Plasma Sword"]},
-            {...holdableItems["Spear"]},
-        ], 
-        giveXP : 2000,
-        generationProbability:10, //spawns in special occasions
-        deathMessages:["You died from a vantacite monster.", "A vantacite monster squashed you.", "You saw a vantacite monster."],
-
-    }
-}
-
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
 //initialize boss
 var bossID = "Boss"
 //var bossSpawned = false
 toggleOpeningsToArena(true)
-<<<<<<< HEAD
 worlds["Main"].enemies[bossID] = new Boss()
-=======
-enemies[bossID] = new Boss()
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
 
 /**************************** @PROJECTILES *************/
 const projectilesObj = {
@@ -1764,7 +1412,6 @@ var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
 const FPS = 50 //
 setInterval(()=>{
-<<<<<<< HEAD
     for(let worldID in worlds){
         let world = worlds[worldID]
         //spawn in boss?
@@ -1822,214 +1469,6 @@ setInterval(()=>{
                         world.enemies[e].y, 
                         loot, 
                         0, loot.durability, loot.stackSize)
-=======
-    //spawn in boss?
-    if (!enemies[bossID] && !startedCountdown){
-        toggleOpeningsToArena(false);
-        startedCountdown = true
-        bossCountDownTime = bossCountDownTimeMax; // seconds  
-        let countdownInterval = setInterval(() => {
-            bossCountDownTime--;
-    
-            if (bossCountDownTime === 0) {
-                clearInterval(countdownInterval); // Stop the countdown interval
-                toggleOpeningsToArena(true)
-                enemies[bossID] = new Boss()
-                startedCountdown = false
-                console.log("The boss has entered the arena.");
-            }
-        }, 1000);
-    }
-    //Spawn in enemies (chance of)
-    if(Object.keys(enemies).length < maxEnemyCount){
-        var randomKey = Object.keys(enemyObj)[random(Object.keys(enemyObj).length-1, 0)]
-        if(random(100, 1) < enemyObj[randomKey].generationProbability){
-            var nC = findSpawn(entitySize)
-            let id = createRandomString(20)
-            if(randomKey === "Archer"){
-                enemies[id] = new Archer(nC.x, nC.y, id)
-            } else{
-                enemies[id] = new Enemy(randomKey, nC.x, nC.y, id)
-            }
-        }
-    }
-    //the boss has no immune!...
-    if(enemies[bossID]) enemies[bossID].immuneDuration = 0
-    //Move and update enemies' health
-    for(let e in enemies){
-        //...unless there is a lord...
-        if(enemies[e].type == "Summoned Lord"){
-            enemies[bossID].immuneDuration = maxImmuneDuration
-        }
-        enemies[e].move()
-        if(enemies[e].health <= 0) {
-            let pick = random(enemies[e].lootTable.length-1, 0) 
-            //find if percentage beats
-            //drop one thing...only one......
-            if(random(100, 1) <= enemies[e].lootTable[pick].generationProbability){
-                let loot = enemies[e].lootTable[pick]
-                var id = createID()
-                pickables[id] = new Pickable(
-                    id, 
-                    enemies[e].x, 
-                    enemies[e].y, 
-                    loot, 
-                    0, loot.durability, loot.stackSize)
-            }
-            dropAll(enemies[e].id, "enemy")
-            delete enemies[e]
-        }
-    }
-
-    //manage player vars
-    for(let e in entities){
-        let entity = entities[e]
-        if(entity.health < entity.maxHealth){
-            entities[e].health += 0.01
-        }
-        if(entity.health <= 0){
-            entities[e].isDead = true // This player is NOW dead!!
-        }
-        if(entity.immuneDuration > 0){
-            entities[e].immuneDuration -= 1 
-        }
-    }
-
-    //add eatables, swords, etc.
-    if(random(500,1)==1 && Object.keys(pickables).length < mapSize/50){ //50=max amount of eatables at one time
-        let spawnLocation = findSpawn() //find a suitable place to generate
-        let kind
-        if (random(4, 1) == 1){
-            kind = "Health"
-        } else if(random(2, 1) == 1){
-            kind = "Speed"
-        } else{
-            kind = "Coin"
-        }
-        var pid = createRandomString(20)
-        pickables[pid] = new Pickable(pid, spawnLocation.x, spawnLocation.y, coins[kind])
-    }
-
-    //add loot 0.1% chance
-    if (random(1000, 1) == 1) {
-        let spawnLocation = findSpawn()
-        let randomKey = Object.keys(holdableItems)[Math.floor(Math.random() * Object.keys(holdableItems).length)] // rand key in holdableItems
-        let gProb = holdableItems[randomKey].generationProbability;
-        let gen = random(100, 1) < gProb
-        if (gen) {
-            var pid = createRandomString(20)
-            pickables[pid] = new Pickable(
-                pid,
-                spawnLocation.x,
-                spawnLocation.y,
-                holdableItems[randomKey],
-                0,
-                holdableItems[randomKey].durability
-            );
-        }
-    }
-
-    // Update particles
-    for (let key in particles) {
-        let particle = particles[key];
-        if(particle.duration > 1){
-            particles[key].duration -= 1
-        } else{
-            delete particles[key]
-        }
-
-    }
-
-    // Update projectiles
-    for (let key in projectiles) {
-        let projectile = projectiles[key];
-        // Check if projectile is out of the world
-        let projectileOut = {x:null,y:null}
-        if(projectile.x < BORDERS.L){
-            projectileOut.x = BORDERS.L
-        } else if(projectile.x > BORDERS.R){
-            projectileOut.x = BORDERS.R
-        }
-        if(projectile.y < BORDERS.D){
-            projectileOut.y = BORDERS.D
-        } else if(projectile.y > BORDERS.U){
-            projectileOut.y = BORDERS.U
-        }
-        if ((projectileOut.x || projectileOut.y) || projectile.duration <= 0) {
-            if(projectile.durability > 0){
-                // Create a pickable object at projectile's position
-                var pid = createRandomString(20)
-                pickables[pid] = new Pickable(
-                    pid, 
-                    projectileOut.x?projectileOut.x:projectile.x, 
-                    projectileOut.y?projectileOut.y:projectile.y, 
-                    projectile,
-                    projectile.rotation, 
-                    projectile.durability);
-            }
-            delete projectiles[key];
-            break;
-        } else {
-            projectile.duration -= 1; // Update projectile duration
-        }
-
-        // Check collision with walls
-        let collision = checkCollision(obstacles, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height));
-        
-        // Check if the projectile goes out of bounds
-        if (!(projectile.x + collision.tx > BORDERS.L && projectile.x + collision.tx < BORDERS.R && projectile.y + collision.ty > BORDERS.D && projectile.y + collision.ty < BORDERS.U)) {
-            collision = { tx: 0, ty: 0 };
-        }
-        
-        // Drop projectile if it stops
-        if (collision.tx === 0 || collision.ty === 0){
-            if( projectile.durability > 0){
-                // Create a pickable object at projectile's position
-                var pid = createRandomString(20)
-                pickables[pid] = new Pickable(
-                    pid, 
-                    projectile.x, 
-                    projectile.y, 
-                    projectile, 
-                    projectile.rotation, 
-                    projectile.durability
-                );
-            }
-            delete projectiles[key];
-        }
-
-        // Update projectile position
-        projectile.x += collision.tx;
-        projectile.y += collision.ty;
-
-        // Damage entities and enemies
-        let damageables = [entities, enemies];
-        damageables.forEach(obj => {
-            for (let k in obj) {
-                let entity = obj[k];
-                // Check if projectile hits entity
-                if (projectile.x > entity.x - entitySize / 2 &&
-                    projectile.x < entity.x + entity.width - entitySize / 2 &&
-                    projectile.y > entity.y - entitySize / 2 &&
-                    projectile.y < entity.y + entity.height - entitySize / 2) {
-                    // Decrease entity health by projectile damage
-                    dealDamageTo(projectile.damage, projectile, entity, key)
-                    
-                    if(projectile.durability != Infinity 
-                    && projectile.durability > 0){
-                        var pid = createRandomString(20)
-                        pickables[pid] = new Pickable(
-                            pid, 
-                            projectile.x, 
-                            projectile.y, 
-                            projectile,
-                            projectile.rotation, 
-                            projectile.durability
-                        );
-                    }
-                    delete projectiles[key];
-                    break;
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
                 }
                 dropAll(world.enemies[e].id, "enemy")
                 delete world.enemies[e]
@@ -2365,30 +1804,18 @@ io.sockets.on("connection", (socket)=>{
             //if it is a coin...
             if(item.name == "Coin"){
                 player.xp += coins[item.name].xpAmount
-<<<<<<< HEAD
                 delete world.pickables[item.id]
-=======
-                delete pickables[item.id]
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
             } else if(item.name == "Speed"){
                 player.xp += coins[item.name].xpAmount
 
                 socket.emit("speed")
-<<<<<<< HEAD
                 delete world.pickables[item.id]
-=======
-                delete pickables[item.id]
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
             } else if(item.name == "Health"){
                 player.xp += coins[item.name].xpAmount
                 if (player.health<player.maxHealth-25) {
                     player.health += 25 
                 } else {player.health = player.maxHealth} // +25 health points
-<<<<<<< HEAD
                 delete world.pickables[item.id]
-=======
-                delete pickables[item.id]
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
             } 
             //otherwise it must be an item
             else {
@@ -2451,11 +1878,7 @@ io.sockets.on("connection", (socket)=>{
         let item = player.inventory[data.playerInvI]
         if(item.name != "Hand"){
             var pid = createRandomString(20)
-<<<<<<< HEAD
             world.pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1)
-=======
-            pickables[pid] = new Pickable(pid, x, y, item, 0, item.durability, data.allDrop?item.stackSize:1)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
 
             if(data.allDrop || entities[id].inventory[player.invSelected].stackSize == 1) entities[id].inventory[player.invSelected] = {...holdableItems["Hand"]}
             else entities[id].inventory[player.invSelected] = {...entities[id].inventory[player.invSelected], stackSize: entities[id].inventory[player.invSelected].stackSize - 1}
@@ -2613,11 +2036,7 @@ io.sockets.on("connection", (socket)=>{
 
         player.xp -= boughtItem.cost
         var pid = createRandomString(20)
-<<<<<<< HEAD
         world.pickables[pid] = new Pickable(pid, player.x, player.y, boughtItem, 0, boughtItem.durability, boughtItem.stackSize)
-=======
-        pickables[pid] = new Pickable(pid, player.x, player.y, boughtItem, 0, boughtItem.durability, boughtItem.stackSize)
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
 
         //emit bought!
         socket.emit("bought!", {newXp:player.xp})

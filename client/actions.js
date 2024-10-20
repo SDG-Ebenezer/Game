@@ -809,12 +809,8 @@ function performActions() {
             playerInvI: currInvSlot,
             x: player.x - Math.cos(player.rotation + player.defaultRotation) * entitySize * 2,
             y: player.y - Math.sin(player.rotation + player.defaultRotation) * entitySize * 2, //defaultRotation needs to be included because that's the default, etc. at 0. rotation is just the current rotation
-<<<<<<< HEAD
             allDrop : allDrop,
             worldID: player.worldID
-=======
-            allDrop : allDrop
->>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
         });
         delete keySet["q"] //drop 1 only!
     }
