@@ -231,7 +231,9 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         && Math.abs(item.y - player.y) < entitySize/2){
             socket.emit("eat", {
                 who:player,
-                what:item
+                what:item,
+                id:player.id,
+                worldID:player.worldID,
             })
         }
 
@@ -572,7 +574,10 @@ function gMap(){
 
 var respawnTime = null
 function gShowCountdown() {
-    socket.emit("GetCountdownInfo")
+    socket.emit("GetCountdownInfo", {
+        id:player.id,
+        worldID:player.worldID
+    })
     if (respawnTime) {
         let fontSize = 20
         gctx.font = `bold ${fontSize}px ${defaultFontFamily}`;
@@ -804,7 +809,12 @@ function performActions() {
             playerInvI: currInvSlot,
             x: player.x - Math.cos(player.rotation + player.defaultRotation) * entitySize * 2,
             y: player.y - Math.sin(player.rotation + player.defaultRotation) * entitySize * 2, //defaultRotation needs to be included because that's the default, etc. at 0. rotation is just the current rotation
+<<<<<<< HEAD
+            allDrop : allDrop,
+            worldID: player.worldID
+=======
             allDrop : allDrop
+>>>>>>> fc1e36fd677a35dc83374291d82ace4f07fb53a8
         });
         delete keySet["q"] //drop 1 only!
     }
@@ -904,13 +914,7 @@ function mousedown(e) {
     holding = setInterval(()=>{
         holdDuration += 1
         if(player.inventory[player.invSelected].name == "Bow"){
-            socket.emit("mousedown", {
-                x: player.x + (mouse.x / scale),
-                y: player.y + (mouse.y / scale),
-                scale: scale,
-                invID: player.invSelected,
-                holdDuration: holdDuration
-            });
+            emitMousedownEvent()
         }
     }, 1000) // every  s
 
@@ -935,13 +939,7 @@ function mousedown(e) {
             && player.inventory[player.invSelected].name !== "Bow"
         ){// Check if not in cooldown
             //EMIT MOUSE DOWN EVENT (function performed in APP.Js (server-side))
-            socket.emit("mousedown", {
-                x: player.x + (mouse.x / scale),
-                y: player.y + (mouse.y / scale),
-                scale: scale,
-                invID: player.invSelected,
-                holdDuration: holdDuration
-            });
+            emitMousedownEvent()
         }
     }
 
@@ -959,6 +957,18 @@ function mousedown(e) {
         lastEnteredSlot = clickedItemIndex; // Update the last entered slot
     }
 }
+function emitMousedownEvent(){
+    socket.emit("mousedown", {
+        x: player.x + (mouse.x / scale),
+        y: player.y + (mouse.y / scale),
+        scale: scale,
+        invID: player.invSelected,
+        holdDuration: holdDuration,
+        id:player.id,
+        worldID: player.worldID,
+    });    
+}
+
 function mouseup(e) {
     //check if clicked inv
     let clickedInv = false;
@@ -977,7 +987,11 @@ function mouseup(e) {
         && !clickedInv
         && player.health > 0 
         && player.inventory[player.invSelected].cooldownTimer == 0){
-            socket.emit("mouseup", {holdDuration:holdDuration})
+            socket.emit("mouseup", {
+                holdDuration:holdDuration,
+                id:player.id,
+                worldID: player.worldID
+            })
         }
         holdDuration = 0
         clearInterval(holding)
@@ -1049,6 +1063,7 @@ function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, size=entity
                         id:player.id,
                         x:player.x,
                         y:player.y,
+                        worldID:player.worldID
                     })
                 return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor };
             }
@@ -1093,7 +1108,8 @@ function startGame(){
         var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
         socket.emit("askForStartData", {
             username: document.getElementById("username").value,
-            img:selectedValue
+            img:selectedValue,
+            worldID:"Main"//"1"
         })
     }
     //start game loop
@@ -1163,7 +1179,9 @@ function startGame(){
                 player.rotation = (Math.atan2(mouse.y, mouse.x)) + player.defaultRotation
                 socket.emit("updatePlayer", {
                     player:player,
-                    reorder: reorderInventory
+                    id:player.id,
+                    reorder: reorderInventory,
+                    worldID:player.worldID,
                 })  
 
                 let inMarket = false
@@ -1200,6 +1218,7 @@ function startGame(){
                 id: player.id,
                 x:player.x,
                 y:player.y,
+                worldID:player.worldID
             }) //gives data to draw  
             updateAgain = false  
         }
@@ -1352,7 +1371,11 @@ function createMarketBtn(items, xxxp=player.xp) {
 }
 function buy(boughtItem, btnID){
     if(player.xp >= boughtItem.cost){
-        socket.emit("buy", {item:boughtItem})
+        socket.emit("buy", {
+            item:boughtItem,
+            id: player.id,
+            worldID: player.worldID
+        })
     }
 }
 socket.on("bought!", (data)=>{
@@ -1395,7 +1418,11 @@ function addDot() {
 /********************************************************/
 // Detect when the user is leaving the page
 window.addEventListener('beforeunload', function(event) {
-    socket.emit("playerClosedTab", {player})
+    socket.emit("playerClosedTab", {
+        player:player,
+        //id:player.id,
+        worldID:player.worldID
+    })
     /*
     var stillPlaying = confirm("You are still playing the game. Are you sure you want to leave?");
     if (stillPlaying) {
