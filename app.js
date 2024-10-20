@@ -267,11 +267,13 @@ class World {
             isRect:true,
             color:"rgb(34, 60, 33)"
         }
+
+        this.obstacles = {}
     }
 }
 var worlds = {}
 worlds["Main"] = new World("Main") //Create main world
-worlds["Main"].obstacles = Object.assign({}, worlds["Main"].structures, worlds["Main"].trees)
+
 
 worlds["1"] = new World("1") //Create main world
 worlds["1"].obstacles = Object.assign({}, worlds["1"].structures, worlds["1"].trees)
@@ -1002,7 +1004,7 @@ class Enemy extends Entity{
                 tx: this.xInc, 
                 ty: this.yInc,
             }:
-            checkCollision(worlds[this.worldID].obstacles, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID)
+            checkCollision(world.obstacles, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID)
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -1306,7 +1308,8 @@ const projectilesObj = {
     }
 }
 class Projectile{
-    constructor(name, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
+    constructor(worldID, name, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
+        this.worldID = worldID
         this.name = name //key inside holdable items!
         this.x = x
         this.y = y
@@ -1329,6 +1332,7 @@ class Projectile{
 function createArrow(entity, arrowDirection, holdDuration, worldID="Main"){
     let world = worlds[worldID]
     world.projectiles[createID()] = new Projectile(
+        worldID,
         "Arrow", 
         entity.x + Math.cos(arrowDirection) * entitySize, 
         entity.y + Math.sin(arrowDirection) * entitySize, 
@@ -1404,6 +1408,9 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
         console.log(to.deathMessage)
     }
 }
+
+//asign obstacles
+worlds["Main"].obstacles = Object.assign({}, worlds["Main"].structures, worlds["Main"].trees)
 
 
 /*************************** @SERVER_GAME_LOOOOOP *************/
@@ -1677,12 +1684,10 @@ io.sockets.on("connection", (socket)=>{
 
     //update player (all vital info)
     socket.on("updatePlayer", (data)=>{
-        console.log(data.worldID)
         if(data.worldID && data.worldID in worlds){
             let player = data.player
             let world = worlds[data.worldID]
             let id = player.id //update!
-            //console.log(entities, id)
             if(world.entities[player.id]) {
                 let entity = world.entities[player.id];
                 //what is updated, the rest is locked (remember to put in IF as well)
@@ -1692,7 +1697,6 @@ io.sockets.on("connection", (socket)=>{
 
                 if (data.reorder) entity.inventory = inventory; //only update inventory if reordering...
             } else if(id && !player.isDead){
-                console.log(data.worldID)
                 console.log("ID", id, "was added to pool")
                 // put on top of wall if regenerated
                 for (let w in worlds[data.worldID].obstacles) {
@@ -1738,7 +1742,6 @@ io.sockets.on("connection", (socket)=>{
         let entities = world.entities
         let id = data.id
         let player = entities[data.id]
-        //console.log(player.id)
         let updateContent = [world.borderRect] //always have the border
 
         let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
@@ -1909,6 +1912,7 @@ io.sockets.on("connection", (socket)=>{
                 tool.durability -= 1
 
                 world.projectiles[createID()] = new Projectile(
+                    data.worldID,
                     "Spear", 
                     player.x + Math.cos(spearDirection) * entitySize, 
                     player.y + Math.sin(spearDirection) * entitySize, 
