@@ -1728,7 +1728,7 @@ io.sockets.on("connection", (socket)=>{
             let entities = world.entities //identify entities
             entities[player.id] = player //add player to pool
             socket.emit("sendStartData", {
-                bordersObj:world.BORDERS,
+                bordersObj: world.BORDERS,
                 structuresObj: world.structures, //send for map
                 player:player,
                 mapSize:world.mapSize,
@@ -1738,7 +1738,7 @@ io.sockets.on("connection", (socket)=>{
                 markets: Object.values(world.markets), //send for map
                 holdables: holdableItems,
                 //speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
-                MAX_IMMUNE_DURATION:MAX_IMMUNE_DURATION //maximum immune time
+                maxImmuneDuration:MAX_IMMUNE_DURATION //maximum immune time
             })
             console.log("Player ", player.username, player.id, "joined ", data.worldID, " world")
         } else console.log("NO world existing...", data.worldID)
@@ -1790,7 +1790,7 @@ io.sockets.on("connection", (socket)=>{
                     lakes: Object.values(world.lakes),
                     markets: Object.values(world.markets),
                     //speedFactor, speedFactor,
-                    MAX_IMMUNE_DURATION: MAX_IMMUNE_DURATION
+                    maxImmuneDuration: MAX_IMMUNE_DURATION
                 }) //re updates updated game data
             }
 
