@@ -208,7 +208,7 @@ const holdableItems = {
         cooldownTimer:0,
         immuneDuration: MAX_IMMUNE_DURATION//s
     },
-    /*
+    
     "Debug":{
         name:"Debug", // MUST MATCH KEY!
         class:"Sword",
@@ -224,7 +224,7 @@ const holdableItems = {
         hitRange: 1000,
         cooldownTime: 1 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
-    },*/
+    },
 }
 
 var ids = [] //player ids list
@@ -686,7 +686,7 @@ class Player extends Entity{
         this.username = (username == "")? createRandomString(5):username;
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Hand"]},//Debug"]},
+            {...holdableItems["Debug"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
@@ -706,7 +706,7 @@ class Player extends Entity{
     }
 }
 class Enemy extends Entity{
-    constructor(key, x, y, id, worldID="Main", inventory=[], invSelected=0,){
+    constructor(key, onWall, x, y, id, worldID="Main", inventory=[], invSelected=0){
         var enemy = enemyObj[key]
         super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, worldID)
         this.username = "BOT_Enemy"
@@ -735,6 +735,7 @@ class Enemy extends Entity{
         this.targetX = 0
         this.targetY = 0
         this.targetType
+        this.onWall = onWall //onWall = true if special spawn
     }
     findTarget(){
         let minDist = this.detectRange//10**10;
@@ -923,7 +924,7 @@ class Enemy extends Entity{
 }
 class Boss extends Enemy{
     constructor(x=0, y=0){
-        super("Boss", x, y, bossID)
+        super("Boss", true, x, y, bossID)
         this.summonGuards = false
         this.summoned = 0
     }
@@ -956,7 +957,7 @@ class Boss extends Enemy{
                 for(let j = 0; j < 2; j ++){
                     let id = `@Summoned${i}${j}${random(65536,0)}`
                     let y = (j * spread) - spread
-                    worlds[this.worldID].enemies[id] = new Enemy("Summoned Lord", x, y, id)
+                    worlds[this.worldID].enemies[id] = new Enemy("Summoned Lord", true, x, y, id)
                     this.summoned++
                 }
             }
@@ -966,7 +967,7 @@ class Boss extends Enemy{
 class Archer extends Enemy{
     constructor(x, y, id, worldID){
         var data = enemyObj["Archer"]
-        super("Archer", x, y, id, worldID, data.inventory, data.invSelected)
+        super("Archer", false, x, y, id, worldID, data.inventory, data.invSelected)
         this.shootRange = data.shootRange // to walk closer before shooting...
         this.holdDuration = 0
         this.holdNum = 0
@@ -1136,6 +1137,7 @@ const enemyObj = {
         generationProbability:25, //out of 100
         deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."]
     },
+
     "Summoned Lord":{
         type:"Summoned Lord", 
         imgSrc:"/imgs/Enemy_Summoned_Lord.png", 
@@ -1173,13 +1175,15 @@ const enemyObj = {
         deathMessages:["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."],
 
     },
+
+    // Normal --> Small --> Tiny
     "Vantacite Monster":{
         type:"Vantacite Monster", 
         imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
         damage:95, 
         detectRange:500, 
         reloadTime:100, 
-        speed:4, 
+        speed:3, 
         health:750, 
         w:entitySize*2, 
         h:entitySize*2,
@@ -1192,9 +1196,52 @@ const enemyObj = {
             {...holdableItems["Spear"], generationProbability:50},
         ], 
         giveXP : 2000,
-        generationProbability:10, //spawns in special occasions
+        generationProbability:10,//100
         deathMessages:["You died from a vantacite monster.", "A vantacite monster squashed you.", "You saw a vantacite monster."],
-
+    },
+    "Small Vantacite Monster":{
+        type:"Small Vantacite Monster", 
+        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        damage:40, 
+        detectRange:500, 
+        reloadTime:50, 
+        speed:4, 
+        health:400, 
+        w:entitySize*3/2, 
+        h:entitySize*3/2,
+        lootTable : [ //when selected generationProb
+            {...holdableItems["Vantacite Sword"], generationProbability:20},
+            {...holdableItems["Iron Sword"], generationProbability:100},
+            {...holdableItems["Gold Sword"], generationProbability:40},
+            {...holdableItems["Diamond Sword"], generationProbability:30},
+            {...holdableItems["Plasma Sword"], generationProbability:5},
+            {...holdableItems["Spear"], generationProbability:25},
+        ], 
+        giveXP : 1000,
+        generationProbability:0, //spawns in special occasions
+        deathMessages:["You died from a mini vantacite monster.", "A small vantacite monster hit you.", "You saw a vantacite monster (a small one)."],
+    },
+    "Tiny Vantacite Monster":{
+        type:"Tiny Vantacite Monster", 
+        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        damage:20, 
+        detectRange:500, 
+        reloadTime:30, 
+        speed:4.5, 
+        health:400, 
+        w:entitySize, 
+        h:entitySize,
+        lootTable : [ //when selected generationProb
+            {...holdableItems["Vantacite Sword"], generationProbability:20},
+            {...holdableItems["Iron Sword"], generationProbability:50},
+            {...holdableItems["Gold Sword"], generationProbability:40},
+            {...holdableItems["Diamond Sword"], generationProbability:30},
+            {...holdableItems["Plasma Sword"], generationProbability:5},
+            {...holdableItems["Spear"], generationProbability:20},
+        ], 
+        giveXP : 500,
+        generationProbability:0, //spawns in special occasions
+        deathMessages:["You died from a tiny vantacite monster.", "A tiny vantacite monster hit you.", "You saw a vantacite monster (a tiny one)."],
     }
 }
 var bossID = "Boss"
@@ -1510,7 +1557,7 @@ setInterval(()=>{
                     if(randomKey === "Archer"){
                         world.enemies[id] = new Archer(nC.x, nC.y, id, worldID)
                     } else{
-                        world.enemies[id] = new Enemy(randomKey, nC.x, nC.y, id, worldID)
+                        world.enemies[id] = new Enemy(randomKey, false, nC.x, nC.y, id, worldID)
                     }
                 } else console.log(worldID, "Abandon generation --> mob")
             }
@@ -1526,9 +1573,10 @@ setInterval(()=>{
             world.enemies[e].move()
             if(world.enemies[e].health <= 0) {
                 let pick = random(world.enemies[e].lootTable.length-1, 0) 
+                let enemy = world.enemies[e]
                 //find if percentage beats
                 //drop one thing...only one......
-                let loot = world.enemies[e].lootTable[pick]
+                let loot = enemy.lootTable[pick]
                 if(random(100, 1) <= loot.generationProbability){
                     var id = createID()
                     world.pickables[id] = new Pickable(
@@ -1538,7 +1586,33 @@ setInterval(()=>{
                         loot, 
                         0, loot.durability, loot.stackSize)
                 }
-                dropAll(world.enemies[e].id, "enemy")
+                dropAll(enemy.id, "enemy")
+
+                //if special...
+                // VANTACITE MONSTER
+                if(enemy.type == "Vantacite Monster"){
+                    //one splits to 2 small
+                    let spread = entitySize * 2
+                    let split1 = new Enemy("Small Vantacite Monster", true, enemy.x + spread, enemy.y + spread, createID(), worldID)
+                    let split2 = new Enemy("Small Vantacite Monster", true, enemy.x - spread, enemy.y - spread, createID(), worldID)
+
+                    world.enemies[split1.id] = split1
+                    world.enemies[split2.id] = split2
+                } else if(enemy.type == "Small Vantacite Monster"){
+                    //small splits to 4 tiny
+                    let spread = entitySize
+                    let split1 = new Enemy("Tiny Vantacite Monster", true, enemy.x + spread, enemy.y + spread, createID(), worldID)
+                    let split2 = new Enemy("Tiny Vantacite Monster", true, enemy.x + spread, enemy.y - spread, createID(), worldID)
+                    let split3 = new Enemy("Tiny Vantacite Monster", true, enemy.x - spread, enemy.y + spread, createID(), worldID)
+                    let split4 = new Enemy("Tiny Vantacite Monster", true, enemy.x - spread, enemy.y - spread, createID(), worldID)
+
+                    world.enemies[split1.id] = split1
+                    world.enemies[split2.id] = split2
+                    world.enemies[split3.id] = split3
+                    world.enemies[split4.id] = split4
+                }
+
+
                 delete world.enemies[e]
             }
         }
