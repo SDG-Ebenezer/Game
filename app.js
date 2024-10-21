@@ -1,5 +1,5 @@
 const { spawn } = require("child_process")
-const { log } = require("console")
+const { log, Console } = require("console")
 const { create } = require("domain")
 var express = require("express")
 const { Socket } = require("socket.io")
@@ -522,6 +522,21 @@ function findSpawn(size=0, worldID="Main") {
     }
     return { x, y };
 }
+function borderInPoints(x, y, worldID){
+    let borders = worlds[worldID].BORDERS
+    if(x < borders.L){
+        x = borders.L
+    } else if (x > borders.R){
+        x = borders.R
+    }
+    if(y < borders.D){
+        y = borders.D
+    } else if (y > borders.U){
+        y = borders.U
+    }
+    return { x, y }
+}
+
 //Function same in PLAYER js file~! 
 //HIT WALLS?
 function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize, worldID="Main") {
@@ -1593,19 +1608,33 @@ setInterval(()=>{
                 if(enemy.type == "Vantacite Monster"){
                     //one splits to 2 small
                     let spread = entitySize * 2
-                    let split1 = new Enemy("Small Vantacite Monster", true, enemy.x + spread, enemy.y + spread, createID(), worldID)
-                    let split2 = new Enemy("Small Vantacite Monster", true, enemy.x - spread, enemy.y - spread, createID(), worldID)
-
+                    //1
+                    let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
+                    let split1 = new Enemy("Small Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
+                    //2
+                    let c2 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
+                    let split2 = new Enemy("Small Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
+                    
+                    //Add them
                     world.enemies[split1.id] = split1
                     world.enemies[split2.id] = split2
                 } else if(enemy.type == "Small Vantacite Monster"){
                     //small splits to 4 tiny
                     let spread = entitySize
-                    let split1 = new Enemy("Tiny Vantacite Monster", true, enemy.x + spread, enemy.y + spread, createID(), worldID)
-                    let split2 = new Enemy("Tiny Vantacite Monster", true, enemy.x + spread, enemy.y - spread, createID(), worldID)
-                    let split3 = new Enemy("Tiny Vantacite Monster", true, enemy.x - spread, enemy.y + spread, createID(), worldID)
-                    let split4 = new Enemy("Tiny Vantacite Monster", true, enemy.x - spread, enemy.y - spread, createID(), worldID)
+                    //1
+                    let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
+                    let split1 = new Enemy("Tiny Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
+                    //2
+                    let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
+                    let split2 = new Enemy("Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
+                    //3
+                    let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
+                    let split3 = new Enemy("Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
+                    //4
+                    let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
+                    let split4 = new Enemy("Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
 
+                    //Add them
                     world.enemies[split1.id] = split1
                     world.enemies[split2.id] = split2
                     world.enemies[split3.id] = split3
