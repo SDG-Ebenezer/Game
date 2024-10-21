@@ -1145,7 +1145,7 @@ class Archer extends Enemy{
         let arrowDirection = this.rotation + this.defaultRotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
         //SHOOT ARROW!
         //make da arrow
-        createArrow(this, arrowDirection, holdDuration, thiw.worldID)
+        createArrow(this, arrowDirection, holdDuration, this.worldID)
         this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png"
 
         this.inventory[this.invSelected].durability -= 1
