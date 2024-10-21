@@ -1102,11 +1102,14 @@ function startGame(){
         
         /*****************************************************/
         //ask server for starting data and create new ID
-        var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value;
+        var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
+
+        var worldID = "Main"
+        //if(selectedValue=="Player5"){worldID = "1"}
         socket.emit("askForStartData", {
             username: document.getElementById("username").value,
             img:selectedValue,
-            worldID:"Main" //WORLD THAT THE PLAYER JOINS
+            worldID:worldID //WORLD THAT THE PLAYER JOINS
         })
     }
     //start game loop

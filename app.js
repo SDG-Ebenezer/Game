@@ -424,7 +424,6 @@ class Tree {
     }
     treeFindSpawn (s) {
         let mp = worlds[this.worldID].mapSize
-        console.log(mp)
         let x, y;
         let doNotPass = true;
         while (doNotPass) {
