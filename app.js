@@ -1183,13 +1183,13 @@ const enemyObj = {
         health:750, 
         w:entitySize*2, 
         h:entitySize*2,
-        lootTable : [
+        lootTable : [ //when selected generationProb
             {...holdableItems["Vantacite Sword"], generationProbability:20},
-            {...holdableItems["Iron Sword"]},
-            {...holdableItems["Gold Sword"]},
-            {...holdableItems["Diamond Sword"]},
-            {...holdableItems["Plasma Sword"]},
-            {...holdableItems["Spear"]},
+            {...holdableItems["Iron Sword"], generationProbability:100},
+            {...holdableItems["Gold Sword"], generationProbability:80},
+            {...holdableItems["Diamond Sword"], generationProbability:60},
+            {...holdableItems["Plasma Sword"], generationProbability:10},
+            {...holdableItems["Spear"], generationProbability:50},
         ], 
         giveXP : 2000,
         generationProbability:10, //spawns in special occasions
@@ -1469,7 +1469,8 @@ toggleOpeningsToArena(true)
 worlds["Main"].enemies[bossID] = new Boss()
 
 // CREATE SAMPLE WORLD
-createWorld("1", 1500, 0, 10, 1, 2, 0, 1)
+createWorld("World1", 1500, 0, 10, 1, 2, 0, 1)
+//createWorld("2", 100, 10, 1, 1, 1, 1, 1)
 
 /*************************** @SERVER_GAME_LOOOOOP *************/
 var startedCountdown = false
@@ -1527,8 +1528,8 @@ setInterval(()=>{
                 let pick = random(world.enemies[e].lootTable.length-1, 0) 
                 //find if percentage beats
                 //drop one thing...only one......
-                if(random(100, 1) <= world.enemies[e].lootTable[pick].generationProbability){
-                    let loot = world.enemies[e].lootTable[pick]
+                let loot = world.enemies[e].lootTable[pick]
+                if(random(100, 1) <= loot.generationProbability){
                     var id = createID()
                     world.pickables[id] = new Pickable(
                         id, 
@@ -1557,7 +1558,7 @@ setInterval(()=>{
         }
 
         //add coins
-        if(random(500,1)==1 && Object.keys(world.pickables).length < world.mapSize/50){ //50=max amount of eatables at one time
+        if(random(500,1)==1 && Object.keys(world.pickables).length < world.amountOfPickables){ //50=max amount of eatables at one time
             let spawnLocation = findSpawn(pickableSize, worldID) //find a suitable place to generate
             if(spawnLocation.x && spawnLocation.y){
                 let kind
@@ -1572,7 +1573,6 @@ setInterval(()=>{
                 world.pickables[pid] = new Pickable(pid, spawnLocation.x, spawnLocation.y, coins[kind])
             } else console.log(worldID, "Abandon generation --> eatable")
         }
-
         //add loot 0.1% chance (swords, etc.)
         if (random(1000, 1) == 1) {
             let spawnLocation = findSpawn(pickableSize, worldID)
@@ -1590,6 +1590,14 @@ setInterval(()=>{
                     );
                 }
             } else console.log(worldID, "Abandon generation --> loot")
+        }
+        //update world.pickables (despawn?)
+        for(let key in world.pickables){
+            let pickable = world.pickables[key]
+            pickable.despawnIn -= 1
+            if(pickable.despawnIn <= 0){
+                delete world.pickables[key]
+            }
         }
 
         // Update particles
@@ -1697,14 +1705,7 @@ setInterval(()=>{
             });
         }
 
-        //update world.pickables (despawn?)
-        for(let key in world.pickables){
-            let pickable = world.pickables[key]
-            pickable.despawnIn -= 1
-            if(pickable.despawnIn <= 0){
-                delete world.pickables[key]
-            }
-        }
+        
     }
 }, FPS)
 

@@ -1104,7 +1104,7 @@ function startGame(){
         var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
 
         var worldID = "Main"
-        if(selectedValue=="Player5"){worldID = "1"}
+        if(selectedValue=="Player5"){worldID = "World1"}
         socket.emit("askForStartData", {
             username: document.getElementById("username").value,
             img:selectedValue,
