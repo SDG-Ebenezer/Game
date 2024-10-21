@@ -1791,7 +1791,7 @@ io.sockets.on("connection", (socket)=>{
                     markets: Object.values(world.markets),
                     //speedFactor, speedFactor,
                     MAX_IMMUNE_DURATION: MAX_IMMUNE_DURATION
-                }) //re updates updated game data.
+                }) //re updates updated game data
             }
 
             global_player = player
@@ -2019,9 +2019,9 @@ io.sockets.on("connection", (socket)=>{
                         didDamage = true // turn to true
                     }
                 }
-                if(didDamage && tool.durability != null){
-                    tool.durability -= 1 //DAMAGE Tool
+                if(didDamage){                    
                     usedItem = true // item was used!
+                    if(tool.durability != null) tool.durability -= 1 //DAMAGE Tool
                 }
             }
 
