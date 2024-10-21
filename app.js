@@ -16,6 +16,8 @@ const PORT = process.env.PORT || 1111 //server PORT
 serv.listen(PORT)
 console.log("Online @ " + PORT)
 
+const DEBUG = false
+
 /************ CONSTS/VARS *********************/
 //RANDOM
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
@@ -41,8 +43,8 @@ var maxLoad = 750 //most px a player can see
 //const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
 //Render is slowerm so runs at x[speedFactor] as fast
 //ENTITIES speed not affected
-const maxImmuneDuration = 10000 //* speedFactor//
-const swordRotation = 45/57.1
+const MAX_IMMUNE_DURATION = 10000 //* speedFactor//
+const SWORD_ROTATION = 45/57.1
 const holdableItems = {
     "Hand":{
         name:"Hand", // MUST MATCH KEY!
@@ -68,7 +70,7 @@ const holdableItems = {
         maxDurability:30,
         damage:25,
         generationProbability:50, //out of 100
-        rotation:swordRotation,
+        rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 2000, //market value
@@ -84,7 +86,7 @@ const holdableItems = {
         maxDurability:20,
         damage:30,
         generationProbability:30, //out of 100
-        rotation:swordRotation,
+        rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 3500, //market value
@@ -100,7 +102,7 @@ const holdableItems = {
         maxDurability:60,
         damage:40,
         generationProbability:10, //out of 100
-        rotation:swordRotation,
+        rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 5000, //market value
@@ -116,7 +118,7 @@ const holdableItems = {
         maxDurability:100,
         damage:50,
         generationProbability:1, //out of 100
-        rotation:swordRotation,
+        rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 10_000, //market value
@@ -132,7 +134,7 @@ const holdableItems = {
         maxDurability:200,
         damage:80,
         generationProbability:0.1, // 1 in 1000
-        rotation:swordRotation, //rad
+        rotation:SWORD_ROTATION, //rad
         stackSize:1,
         maxStackSize:1,
         cost: 30_000, //market value
@@ -204,7 +206,7 @@ const holdableItems = {
         hitRange: maxLoad,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0,
-        immuneDuration: maxImmuneDuration//s
+        immuneDuration: MAX_IMMUNE_DURATION//s
     },
     /*
     "Debug":{
@@ -215,7 +217,7 @@ const holdableItems = {
         maxDurability:100000,
         damage:1000,
         generationProbability:0, // 1 in 1000
-        rotation:swordRotation, //rad
+        rotation:SWORD_ROTATION, //rad
         stackSize:1,
         maxStackSize:1,
         cost: 1_000_000_000, //market value
@@ -227,14 +229,14 @@ const holdableItems = {
 
 var ids = [] //player ids list
 /************ MAP SIZE *********************/
-const mapSize = 4000 //px
+const defaultMapSize = 4000 //px
 
 /************ UNIVERSAL *********************/
 const entitySize = 75
 
 /************ WORLDS *********************/
 class World {
-    constructor(id, mp=4000){
+    constructor(id, mp=defaultMapSize, amountOfEnemies=10, amountOfTrees=1000, amountOfLakes=4, amountOfStructures=10, amountOfPickables=100, amountOfMarkets=3){
         this.id = id
         this.mapSize = mp
 
@@ -268,15 +270,17 @@ class World {
             color:"rgb(34, 60, 33)"
         }
 
+        this.amountOfEnemies=amountOfEnemies
+        this.amountOfTrees=amountOfTrees
+        this.amountOfLakes=amountOfLakes
+        this.amountOfStructures=amountOfStructures
+        this.amountOfPickables=amountOfPickables
+        this.amountOfMarkets=amountOfMarkets
+
         this.obstacles = {}
     }
 }
 var worlds = {}
-worlds["Main"] = new World("Main") //Create main world
-
-
-worlds["1"] = new World("1") //Create main world
-worlds["1"].obstacles = Object.assign({}, worlds["1"].structures, worlds["1"].trees)
 
 /** @STRUCTURES *****/
 class Wall {
@@ -345,31 +349,6 @@ function toggleOpeningsToArena(escapesLocked, worldID="Main"){
         escapesIDs = []
     }
 }
-/** @MAIN_STRUCTURE */
-/**Key:
- * S = Stairs
- * W = Wall
- * N = Space
- * E = Escape (Comes later after boss defeated)
- */
-for(let r = 0; r < structureW; r++){
-    for(let c = 0; c < structureH; c++){
-        let wall = {
-            relX: r*wallSize-(structureW * wallSize)/2 + mainStructureCenter.x,
-            relY: c*wallSize-(structureH * wallSize)/2 + mainStructureCenter.y
-        }
-        if(structureBlueprint[r][c] == "W"){
-            worlds["Main"].structures[`STRUCTURE${structuresID}`] = new Wall(wall, structuresID, wallSize)
-            structuresID++;
-        } else if(structureBlueprint[r][c] == "S"){
-            worlds["Main"].structures[structuresID] = new Stairs(wall.relX, wall.relY, structuresID, wallSize, c==0?Math.PI:(Math.PI/180)) //make rotate based on corner
-            structuresID++;
-        } else if(structureBlueprint[r][c] == "E"){
-            worlds["Main"].escapesData.push({x:wall.relX,y:wall.relY,r:r,c:c})
-        }
-    }
-}
-
 
 /** @LAKES */
 /** Take a swim! Cool off bud!*/
@@ -385,80 +364,6 @@ class Lake{
         this.decreaseSpeedFactor = 0.5 //* speedFactor //slow speed
 
         this.worldID = worldID
-    }
-}
-
-//generate
-let lakeCount = Math.floor(mapSize/1000)>0?Math.floor(mapSize/1000):1
-//lakes
-console.log("Lakes:", lakeCount)
-for(let i = 0; i < lakeCount; i++){
-    let size = random(300,250)
-    worlds["Main"].lakes[`LAKE${i}`] = new Lake(random(mapSize/2-size,-mapSize/2+size), random(mapSize/2-size,-mapSize/2+size), size)
-}
-
-/************************** @SMALL_STRUCTURE_GENERATOR *************/
-var numOfRandomWalls = random(Math.ceil(mapSize/400), Math.floor(mapSize/1600))
-for(let i = 0; i < numOfRandomWalls; i++){
-    let blueprintSize = random(4,1)
-    //make blueprint
-    let blueprint = []
-    for(let r = 0; r< blueprintSize; r++){
-        blueprint.push([])
-        for(let c = 0; c< blueprintSize; c++){
-            /**Key:
-             * S = Stairs
-             * N = Nothing
-             * W = Wall
-             */
-            possibleWalls = ["W", "W", "W", "W", "W", "N", "N", "N", "N", "S"] //1 "S" in 10 tries
-            blueprint[r].push(possibleWalls[random(possibleWalls.length-1, 0)])
-        }
-    }
-    let structureSize = blueprintSize * wallSize
-    let a = findSpawn(structureSize, "Main") //Spawn only in the main world
-    let allStairs = []
-    //generate Structure
-    for(let r = 0; r < blueprintSize; r++){
-        for(let c = 0; c < blueprintSize; c++){
-            let nC = { 
-                relX: a.x+c*wallSize, 
-                relY: a.y+r*wallSize 
-            }
-            if(blueprint[r][c] == "W"){
-                worlds["Main"].structures[`STRUCTURE${structuresID}`] = new Wall(nC, structuresID, wallSize)
-                structuresID++
-            } else if(blueprint[r][c] == "S"){
-                allStairs.push({r:r,c:c,id:structuresID})
-                worlds["Main"].structures[structuresID] = new Stairs(nC.relX, nC.relY, structuresID, wallSize, 0) //rotate none as a placeholder
-                structuresID++
-            }
-        }
-    }
-    //rotate stairs accordingly
-    for(let s in allStairs){
-        let stair = allStairs[s]
-        let rotate
-        if(blueprint[stair.r+1] && blueprint[stair.r+1][stair.c]
-        && blueprint[stair.r+1][stair.c] == "W")
-        { rotate = 180 }
-        else if (blueprint[stair.r-1] && blueprint[stair.r-1][stair.c]
-        && blueprint[stair.r-1][stair.c] == "W")
-        { rotate = 0 }
-        else if (blueprint[stair.r][stair.c+1] 
-        && blueprint[stair.r][stair.c+1] == "W")
-        { rotate = 90 }
-        else if (blueprint[stair.r][stair.c-1] 
-        && blueprint[stair.r][stair.c-1] == "W")
-        { rotate = 270 }
-        else{ 
-            //cant be a stair, because no adjacent walls!
-            let old = worlds["Main"].structures[stair.id]
-            worlds["Main"].structures[`STRUCUTRE${stair.id}`] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
-            console.log("Stairs replaced.")
-        }
-
-        worlds["Main"].structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
     }
 }
 
@@ -484,10 +389,9 @@ class Particle{
 }
 
 /**************************** @MARKETS *************/
-var marketID = 0
 var marketSize = 200
 class Market{
-    constructor(x, y, ID, imgSize=marketSize, worldID="Main") {
+    constructor(worldID, x, y, ID, imgSize=marketSize) {
         this.x = x;
         this.y = y;
         this.id = ID;
@@ -498,17 +402,10 @@ class Market{
         this.worldID = worldID
     }
 }
-//markets
-for(let i = 0; i < 3; i ++){
-    let coords = findSpawn(marketSize, "Main")
-    let newMarket = new Market(coords.x, coords.y, marketID)
-    worlds["Main"].markets[marketID] = newMarket
-    marketID++
-}
 
 /**************************** @TREES *************/
 class Tree {
-    constructor(treesID, size=random(500,200), worldID="Main") {
+    constructor(worldID, treesID, size=random(500,200)) {
         this.worldID = worldID
 
         let thing = this.treeFindSpawn(size)
@@ -526,12 +423,14 @@ class Tree {
         this.obstructionRadius = 20
     }
     treeFindSpawn (s) {
+        let mp = worlds[this.worldID].mapSize
+        console.log(mp)
         let x, y;
         let doNotPass = true;
         while (doNotPass) {
             doNotPass = false; // be optimistic, you know?
-            x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
-            y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2))
+            x = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2))
+            y = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2))
             //cannot spawn on structures or markets 
             var world = worlds[this.worldID]
             let li1 = [world.structures, world.markets]
@@ -563,27 +462,20 @@ class Tree {
         return { x, y };
     }
 }
-var treesID = 0
-var treeCount = mapSize/50 // tree count
-//Generate trees in the world...
-for(let i = 0; i < treeCount; i ++){
-    let newTree = new Tree(treesID)
-    worlds["Main"].trees[`Tree${treesID}`] = newTree
-    treesID++
-}
 
 /************************** @SPAWN_FINDER *************/
 /**
  * Everyone needs a home!
  */
 function findSpawn(size=0, worldID="Main") {
-    let s = size;
-    let x, y;
-    let doNotPass = true;
+    let s = size
+    let x, y
+    let doNotPass = true
+    let mp = worlds[worldID].mapSize
     while (doNotPass) {
         doNotPass = false; // be optimistic, you know?
-        x = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
-        y = random((mapSize / 2) - (s / 2), -(mapSize / 2) + (s / 2));
+        x = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
+        y = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
         //cannot spawn on structures or markets 
         let thisWorld = worlds[worldID]
         let li1 = [thisWorld.structures, thisWorld.markets]
@@ -907,8 +799,11 @@ class Enemy extends Entity{
             this.moving = true;
         } else if (!this.moving) {
             this.status = "Wander"
-            this.targetX = random(mapSize/2,-mapSize/2)
-            this.targetY = random(mapSize/2,-mapSize/2)
+
+            let mp = world.mapSize
+
+            this.targetX = random(mp/2,-mp/2)
+            this.targetY = random(mp/2,-mp/2)
             this.dx = this.targetX - this.x;
             this.dy = this.targetY - this.y;
             this.moving = true;
@@ -920,8 +815,11 @@ class Enemy extends Entity{
             this.dy = this.targetY - this.y;
             // if at destination, find new one
             if(this.dx < 1 && this.dy < 1) {
-                this.targetX = random(mapSize/2,-mapSize/2)
-                this.targetY = random(mapSize/2,-mapSize/2)
+
+                let mp = world.mapSize
+
+                this.targetX = random(mp/2,-mp/2)
+                this.targetY = random(mp/2,-mp/2)
             }
         }           
         this.moveMove()
@@ -1065,6 +963,8 @@ class Archer extends Enemy{
         this.holdNum = 0
     }
     move(){
+        let world = worlds[this.worldID]
+
         //move normally if not holding bow
         if(this.inventory[this.invSelected].name == "Bow"){
             super.findTarget()
@@ -1115,8 +1015,11 @@ class Archer extends Enemy{
                 this.speed = this.maxSpeed
                 if (!this.moving) {
                     this.status = "Wander"
-                    this.targetX = random(mapSize/2,-mapSize/2)
-                    this.targetY = random(mapSize/2,-mapSize/2)
+
+                    let mp = world.mapSize
+
+                    this.targetX = random(mp/2,-mp/2)
+                    this.targetY = random(mp/2,-mp/2)
                     this.dx = this.targetX - this.x;
                     this.dy = this.targetY - this.y;
                     this.moving = true;
@@ -1128,8 +1031,10 @@ class Archer extends Enemy{
                     this.dy = this.targetY - this.y;
                     // if at destination, find new one
                     if(this.dx < 1 && this.dy < 1) {
-                        this.targetX = random(mapSize/2,-mapSize/2)
-                        this.targetY = random(mapSize/2,-mapSize/2)
+                        let mp = world.mapSize
+
+                        this.targetX = random(mp/2,-mp/2)
+                        this.targetY = random(mp/2,-mp/2)
                     }
                 }  
                 super.moveMove()
@@ -1157,7 +1062,7 @@ class Archer extends Enemy{
 }
 
 /*************************** @ENEMY_GENERATOR *************/
-const maxEnemyCount = Math.floor(Math.sqrt(mapSize**2/400**2)) //1 per 400 sq px
+//const maxEnemyCount = Math.floor(Math.sqrt(mp**2/400**2)) //1 per 400 sq px
 const enemyObj = {
     "Normal":{
         type:"Normal",
@@ -1283,12 +1188,7 @@ const enemyObj = {
 
     }
 }
-
-//initialize boss
 var bossID = "Boss"
-//var bossSpawned = false
-toggleOpeningsToArena(true)
-worlds["Main"].enemies[bossID] = new Boss()
 
 /**************************** @PROJECTILES *************/
 const projectilesObj = {
@@ -1409,9 +1309,153 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
     }
 }
 
-//asign obstacles
-worlds["Main"].obstacles = Object.assign({}, worlds["Main"].structures, worlds["Main"].trees)
+/****** CREATE WORLDS *******/
+function createWorld(
+    id, 
+    mp=defaultMapSize, 
+    amountOfEnemies=Math.floor(defaultMapSize/400), 
+    amountOfTrees=Math.floor(defaultMapSize/25), 
+    amountOfLakes=Math.floor(defaultMapSize/1000), 
+    amountOfStructures=Math.floor(defaultMapSize/40), 
+    amountOfPickables=Math.floor(defaultMapSize/40), 
+    amountOfMarkets=Math.floor(defaultMapSize/1200)){
+    
+    worlds[id] = new World(id, mp, amountOfEnemies, amountOfTrees, amountOfLakes, amountOfStructures, amountOfPickables, amountOfMarkets)
 
+    if(DEBUG) console.log(worlds[id])
+
+    /** MAIN STRUCTURE */
+    if(id==="Main"){
+        /** @MAIN_STRUCTURE */
+        /**Key:
+         * S = Stairs
+         * W = Wall
+         * N = Space
+         * E = Escape (Comes later after boss defeated)
+         */
+        for(let r = 0; r < structureW; r++){
+            for(let c = 0; c < structureH; c++){
+                let wall = {
+                    relX: r*wallSize-(structureW * wallSize)/2 + mainStructureCenter.x,
+                    relY: c*wallSize-(structureH * wallSize)/2 + mainStructureCenter.y
+                }
+                let sID = createRandomString(20)
+                if(structureBlueprint[r][c] == "W"){
+                    worlds[id].structures[`STRUCTURE${sID}`] = new Wall(wall, sID, wallSize, id)
+                } else if(structureBlueprint[r][c] == "S"){
+                    worlds[id].structures[sID] = new Stairs(wall.relX, wall.relY, sID, wallSize, c==0?Math.PI:(Math.PI/180), id) //make rotate based on corner
+                } else if(structureBlueprint[r][c] == "E"){
+                    worlds[id].escapesData.push({x:wall.relX,y:wall.relY,r:r,c:c})
+                }
+            }
+        }
+
+    }
+
+    /** LAKES */
+    if(DEBUG) console.log("Lakes")
+    var mp = worlds[id].mapSize
+    for(let i = 0; i < amountOfLakes; i++){
+        let size = random(300,250)
+        worlds[id].lakes[`LAKE${i}`] = new Lake(random(mp/2-size,-mp/2+size), random(mp/2-size,-mp/2+size), size)
+    }
+
+    /** STRUCTURES */
+    if(DEBUG) console.log("Structures")
+    var amountOfStructures = random(Math.ceil(mp/400), Math.floor(mp/1600))
+    for(let i = 0; i < amountOfStructures; i++){
+        let blueprintSize = random(4,1)
+        //make blueprint
+        let blueprint = []
+        for(let r = 0; r< blueprintSize; r++){
+            blueprint.push([])
+            for(let c = 0; c< blueprintSize; c++){
+                /**Key:
+                 * S = Stairs
+                 * N = Nothing
+                 * W = Wall
+                 */
+                possibleWalls = ["W", "W", "W", "W", "W", "N", "N", "N", "N", "S"] //1 "S" in 10 tries
+                blueprint[r].push(possibleWalls[random(possibleWalls.length-1, 0)])
+            }
+        }
+        let structureSize = blueprintSize * wallSize
+        let a = findSpawn(structureSize, id)
+        let allStairs = []
+        //generate Structure
+        for(let r = 0; r < blueprintSize; r++){
+            for(let c = 0; c < blueprintSize; c++){
+                let nC = { 
+                    relX: a.x+c*wallSize, 
+                    relY: a.y+r*wallSize 
+                }
+                let sID = createRandomString(20)
+                if(blueprint[r][c] == "W"){
+                    worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
+                } else if(blueprint[r][c] == "S"){
+                    allStairs.push({r:r,c:c,id:sID})
+                    worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, 0, id) //rotate none as a placeholder
+                }
+            }
+        }
+        //rotate stairs accordingly
+        for(let s in allStairs){
+            let stair = allStairs[s]
+            let rotate
+            if(blueprint[stair.r+1] && blueprint[stair.r+1][stair.c]
+            && blueprint[stair.r+1][stair.c] == "W")
+            { rotate = 180 }
+            else if (blueprint[stair.r-1] && blueprint[stair.r-1][stair.c]
+            && blueprint[stair.r-1][stair.c] == "W")
+            { rotate = 0 }
+            else if (blueprint[stair.r][stair.c+1] 
+            && blueprint[stair.r][stair.c+1] == "W")
+            { rotate = 90 }
+            else if (blueprint[stair.r][stair.c-1] 
+            && blueprint[stair.r][stair.c-1] == "W")
+            { rotate = 270 }
+            else{ 
+                //cant be a stair, because no adjacent walls!
+                let old = worlds[id].structures[stair.id]
+                worlds[id].structures[`STRUCTURE${stair.id}`] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
+                console.log("World", id, "Stairs replaced.")
+            }
+            worlds[id].structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
+        }
+    }
+
+    /** MARKETS */
+    if(DEBUG) console.log("Markets")
+    for(let i = 0; i < amountOfMarkets; i++){
+        let mid = createRandomString(20)
+        let coords = findSpawn(marketSize, id)
+        let newMarket = new Market(id, coords.x, coords.y, mid)
+        worlds[id].markets[mid] = newMarket
+    }
+
+    /** TREES */
+    if(DEBUG) console.log("Trees")
+    //var treeCount = mp/50 // tree count
+    //Generate trees in the world...
+    for(let i = 0; i < amountOfTrees; i++){
+        let tID = createRandomString(20)
+        let newTree = new Tree(id, tID)
+        worlds[id].trees[`Tree${tID}`] = newTree
+    }
+
+
+    // ASSIGN OBSTACLES TO WORLD DATA
+    worlds[id].obstacles = Object.assign({}, worlds[id].structures, worlds[id].trees)
+}
+
+// CREATE MAIN WORLD
+createWorld("Main")
+//INITIALIZE BOSS
+toggleOpeningsToArena(true)
+worlds["Main"].enemies[bossID] = new Boss()
+
+// CREATE SAMPLE WORLD
+createWorld("1", 1500, 0, 10, 1, 2, 0, 1)
 
 /*************************** @SERVER_GAME_LOOOOOP *************/
 var startedCountdown = false
@@ -1442,7 +1486,7 @@ setInterval(()=>{
             }
         }
         //Spawn in enemies (chance of)
-        if(Object.keys(world.enemies).length < maxEnemyCount){
+        if(Object.keys(world.enemies).length < world.amountOfEnemies){
             var randomKey = Object.keys(enemyObj)[random(Object.keys(enemyObj).length-1, 0)]
             if(random(100, 1) < enemyObj[randomKey].generationProbability){
                 var nC = findSpawn(entitySize, worldID)
@@ -1460,7 +1504,7 @@ setInterval(()=>{
         for(let e in world.enemies){
             //...unless there is a lord...
             if(worldID == "Main" && world.enemies[e].type == "Summoned Lord"){
-                world.enemies[bossID].immuneDuration = maxImmuneDuration
+                world.enemies[bossID].immuneDuration = MAX_IMMUNE_DURATION
             }
             world.enemies[e].move()
             if(world.enemies[e].health <= 0) {
@@ -1497,7 +1541,7 @@ setInterval(()=>{
         }
 
         //add eatables, swords, etc.
-        if(random(500,1)==1 && Object.keys(world.pickables).length < mapSize/50){ //50=max amount of eatables at one time
+        if(random(500,1)==1 && Object.keys(world.pickables).length < world.mapSize/50){ //50=max amount of eatables at one time
             let spawnLocation = findSpawn(pickableSize, worldID) //find a suitable place to generate
             let kind
             if (random(4, 1) == 1){
@@ -1669,14 +1713,14 @@ io.sockets.on("connection", (socket)=>{
                 bordersObj:world.BORDERS,
                 structuresObj: world.structures, //send for map
                 player:player,
-                mapSize:mapSize,
+                mapSize:world.mapSize,
                 entitySize:entitySize,
                 walls: Object.values(world.structures), //send for map
                 lakes: Object.values(world.lakes), //send for map
                 markets: Object.values(world.markets), //send for map
                 holdables: holdableItems,
                 //speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
-                maxImmuneDuration:maxImmuneDuration //maximum immune time
+                MAX_IMMUNE_DURATION:MAX_IMMUNE_DURATION //maximum immune time
             })
             console.log("Player ", player.username, player.id, "joined ", data.worldID, " world")
         } else console.log("NO world existing...", data.worldID)
@@ -1722,13 +1766,13 @@ io.sockets.on("connection", (socket)=>{
                 socket.emit("reupdate", {
                     bordersObj:world.BORDERS,
                     structuresObj: world.structures,
-                    mapSize:mapSize,
+                    mapSize:world.mapSize,
                     entitySize:entitySize,
                     walls: Object.values(world.structures),
                     lakes: Object.values(world.lakes),
                     markets: Object.values(world.markets),
                     //speedFactor, speedFactor,
-                    maxImmuneDuration: maxImmuneDuration
+                    MAX_IMMUNE_DURATION: MAX_IMMUNE_DURATION
                 }) //re updates updated game data.
             }
 
@@ -1967,8 +2011,8 @@ io.sockets.on("connection", (socket)=>{
                 //perform actions
                 //ACTIVATE FORCE SHIELD
                 if(player.inventory[player.invSelected].name == "Force Shield"){
-                    if(player.inventory[player.invSelected].immuneDuration + player.immuneDuration > maxImmuneDuration){ 
-                        player.immuneDuration = maxImmuneDuration
+                    if(player.inventory[player.invSelected].immuneDuration + player.immuneDuration > MAX_IMMUNE_DURATION){ 
+                        player.immuneDuration = MAX_IMMUNE_DURATION
                     } else {
                         player.immuneDuration += player.inventory[player.invSelected].immuneDuration
                     }

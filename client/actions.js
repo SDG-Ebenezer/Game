@@ -810,6 +810,7 @@ function performActions() {
             x: player.x - Math.cos(player.rotation + player.defaultRotation) * entitySize * 2,
             y: player.y - Math.sin(player.rotation + player.defaultRotation) * entitySize * 2, //defaultRotation needs to be included because that's the default, etc. at 0. rotation is just the current rotation
             allDrop : allDrop,
+            id:player.id,
             worldID: player.worldID
         });
         delete keySet["q"] //drop 1 only!
@@ -1105,7 +1106,7 @@ function startGame(){
         socket.emit("askForStartData", {
             username: document.getElementById("username").value,
             img:selectedValue,
-            worldID:"Main"//"1"
+            worldID:"Main" //WORLD THAT THE PLAYER JOINS
         })
     }
     //start game loop
