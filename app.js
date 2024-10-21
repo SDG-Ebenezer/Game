@@ -426,7 +426,14 @@ class Tree {
         let mp = worlds[this.worldID].mapSize
         let x, y;
         let doNotPass = true;
+        let tries = 0
         while (doNotPass) {
+            //if tried more than 1000 times, just give up
+            if(tries > 1000) {
+                if (DEBUG) console.log("Tree --> give up generation")
+                break
+            }
+            tries++
             doNotPass = false; // be optimistic, you know?
             x = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2))
             y = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2))
@@ -471,7 +478,10 @@ function findSpawn(size=0, worldID="Main") {
     let x, y
     let doNotPass = true
     let mp = worlds[worldID].mapSize
+    let tries = 0
     while (doNotPass) {
+        if(tries > 1000) break
+        tries++
         doNotPass = false; // be optimistic, you know?
         x = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
         y = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
@@ -1380,47 +1390,49 @@ function createWorld(
         }
         let structureSize = blueprintSize * wallSize
         let a = findSpawn(structureSize, id)
-        let allStairs = []
-        //generate Structure
-        for(let r = 0; r < blueprintSize; r++){
-            for(let c = 0; c < blueprintSize; c++){
-                let nC = { 
-                    relX: a.x+c*wallSize, 
-                    relY: a.y+r*wallSize 
-                }
-                let sID = createRandomString(20)
-                if(blueprint[r][c] == "W"){
-                    worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
-                } else if(blueprint[r][c] == "S"){
-                    allStairs.push({r:r,c:c,id:sID})
-                    worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, 0, id) //rotate none as a placeholder
+        if(a.x && a.y){
+            let allStairs = []
+            //generate Structure
+            for(let r = 0; r < blueprintSize; r++){
+                for(let c = 0; c < blueprintSize; c++){
+                    let nC = { 
+                        relX: a.x+c*wallSize, 
+                        relY: a.y+r*wallSize 
+                    }
+                    let sID = createRandomString(20)
+                    if(blueprint[r][c] == "W"){
+                        worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
+                    } else if(blueprint[r][c] == "S"){
+                        allStairs.push({r:r,c:c,id:sID})
+                        worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, 0, id) //rotate none as a placeholder
+                    }
                 }
             }
-        }
-        //rotate stairs accordingly
-        for(let s in allStairs){
-            let stair = allStairs[s]
-            let rotate
-            if(blueprint[stair.r+1] && blueprint[stair.r+1][stair.c]
-            && blueprint[stair.r+1][stair.c] == "W")
-            { rotate = 180 }
-            else if (blueprint[stair.r-1] && blueprint[stair.r-1][stair.c]
-            && blueprint[stair.r-1][stair.c] == "W")
-            { rotate = 0 }
-            else if (blueprint[stair.r][stair.c+1] 
-            && blueprint[stair.r][stair.c+1] == "W")
-            { rotate = 90 }
-            else if (blueprint[stair.r][stair.c-1] 
-            && blueprint[stair.r][stair.c-1] == "W")
-            { rotate = 270 }
-            else{ 
-                //cant be a stair, because no adjacent walls!
-                let old = worlds[id].structures[stair.id]
-                worlds[id].structures[`STRUCTURE${stair.id}`] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
-                console.log("World", id, "Stairs replaced.")
+            //rotate stairs accordingly
+            for(let s in allStairs){
+                let stair = allStairs[s]
+                let rotate
+                if(blueprint[stair.r+1] && blueprint[stair.r+1][stair.c]
+                && blueprint[stair.r+1][stair.c] == "W")
+                { rotate = 180 }
+                else if (blueprint[stair.r-1] && blueprint[stair.r-1][stair.c]
+                && blueprint[stair.r-1][stair.c] == "W")
+                { rotate = 0 }
+                else if (blueprint[stair.r][stair.c+1] 
+                && blueprint[stair.r][stair.c+1] == "W")
+                { rotate = 90 }
+                else if (blueprint[stair.r][stair.c-1] 
+                && blueprint[stair.r][stair.c-1] == "W")
+                { rotate = 270 }
+                else{ 
+                    //cant be a stair, because no adjacent walls!
+                    let old = worlds[id].structures[stair.id]
+                    worlds[id].structures[`STRUCTURE${stair.id}`] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
+                    console.log("World", id, "Stairs replaced.")
+                }
+                worlds[id].structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
             }
-            worlds[id].structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
-        }
+        } else console.log(id, "Abandon generation --> structure")
     }
 
     /** MARKETS */
@@ -1428,23 +1440,26 @@ function createWorld(
     for(let i = 0; i < amountOfMarkets; i++){
         let mid = createRandomString(20)
         let coords = findSpawn(marketSize, id)
-        let newMarket = new Market(id, coords.x, coords.y, mid)
-        worlds[id].markets[mid] = newMarket
+        if(coords.x && coords.y) {
+            worlds[id].markets[mid] = new Market(id, coords.x, coords.y, mid)
+        } else console.log(id, "Abandon generation --> market")
     }
 
     /** TREES */
     if(DEBUG) console.log("Trees")
-    //var treeCount = mp/50 // tree count
-    //Generate trees in the world...
     for(let i = 0; i < amountOfTrees; i++){
         let tID = createRandomString(20)
         let newTree = new Tree(id, tID)
-        worlds[id].trees[`Tree${tID}`] = newTree
+        //console.log(newTree)
+        //if the tree can be generated, add to pool
+        if(newTree.x && newTree.y) worlds[id].trees[`Tree${tID}`] = newTree
     }
 
 
     // ASSIGN OBSTACLES TO WORLD DATA
     worlds[id].obstacles = Object.assign({}, worlds[id].structures, worlds[id].trees)
+
+    if(DEBUG) console.log("Done")
 }
 
 // CREATE MAIN WORLD
@@ -1489,12 +1504,14 @@ setInterval(()=>{
             var randomKey = Object.keys(enemyObj)[random(Object.keys(enemyObj).length-1, 0)]
             if(random(100, 1) < enemyObj[randomKey].generationProbability){
                 var nC = findSpawn(entitySize, worldID)
-                let id = createRandomString(20)
-                if(randomKey === "Archer"){
-                    world.enemies[id] = new Archer(nC.x, nC.y, id, worldID)
-                } else{
-                    world.enemies[id] = new Enemy(randomKey, nC.x, nC.y, id, worldID)
-                }
+                if(nC.x && nC.y){
+                    let id = createRandomString(20)
+                    if(randomKey === "Archer"){
+                        world.enemies[id] = new Archer(nC.x, nC.y, id, worldID)
+                    } else{
+                        world.enemies[id] = new Enemy(randomKey, nC.x, nC.y, id, worldID)
+                    }
+                } else console.log(worldID, "Abandon generation --> mob")
             }
         }
         //the boss has no immune!...
@@ -1539,38 +1556,40 @@ setInterval(()=>{
             }
         }
 
-        //add eatables, swords, etc.
+        //add coins
         if(random(500,1)==1 && Object.keys(world.pickables).length < world.mapSize/50){ //50=max amount of eatables at one time
             let spawnLocation = findSpawn(pickableSize, worldID) //find a suitable place to generate
-            let kind
-            if (random(4, 1) == 1){
-                kind = "Health"
-            } else if(random(2, 1) == 1){
-                kind = "Speed"
-            } else{
-                kind = "Coin"
-            }
-            var pid = createRandomString(20)
-            world.pickables[pid] = new Pickable(pid, spawnLocation.x, spawnLocation.y, coins[kind])
+            if(spawnLocation.x && spawnLocation.y){
+                let kind
+                if (random(4, 1) == 1){
+                    kind = "Health"
+                } else if(random(2, 1) == 1){
+                    kind = "Speed"
+                } else{
+                    kind = "Coin"
+                }
+                var pid = createRandomString(20)
+                world.pickables[pid] = new Pickable(pid, spawnLocation.x, spawnLocation.y, coins[kind])
+            } else console.log(worldID, "Abandon generation --> eatable")
         }
 
-        //add loot 0.1% chance
+        //add loot 0.1% chance (swords, etc.)
         if (random(1000, 1) == 1) {
             let spawnLocation = findSpawn(pickableSize, worldID)
-            let randomKey = Object.keys(holdableItems)[Math.floor(Math.random() * Object.keys(holdableItems).length)] // rand key in holdableItems
-            let gProb = holdableItems[randomKey].generationProbability;
-            let gen = random(100, 1) < gProb
-            if (gen) {
-                var pid = createRandomString(20)
-                world.pickables[pid] = new Pickable(
-                    pid,
-                    spawnLocation.x,
-                    spawnLocation.y,
-                    holdableItems[randomKey],
-                    0,
-                    holdableItems[randomKey].durability
-                );
-            }
+            if(spawnLocation.x && spawnLocation.y){
+                let randomKey = Object.keys(holdableItems)[Math.floor(Math.random() * Object.keys(holdableItems).length)] // rand key in holdableItems
+                if (random(100, 1) < holdableItems[randomKey].generationProbability) {
+                    var pid = createRandomString(20)
+                    world.pickables[pid] = new Pickable(
+                        pid,
+                        spawnLocation.x,
+                        spawnLocation.y,
+                        holdableItems[randomKey],
+                        0,
+                        holdableItems[randomKey].durability
+                    );
+                }
+            } else console.log(worldID, "Abandon generation --> loot")
         }
 
         // Update particles
@@ -1730,7 +1749,6 @@ io.sockets.on("connection", (socket)=>{
         if(data.worldID && data.worldID in worlds){
             let player = data.player
             let world = worlds[data.worldID]
-            let id = player.id //update!
             if(world.entities[player.id]) {
                 let entity = world.entities[player.id];
                 //what is updated, the rest is locked (remember to put in IF as well)
@@ -1739,8 +1757,9 @@ io.sockets.on("connection", (socket)=>{
                 Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
 
                 if (data.reorder) entity.inventory = inventory; //only update inventory if reordering...
-            } else if(id && !player.isDead){
-                console.log("ID", id, "was added to pool")
+            } else if(!player.isDead){
+                console.log("ID", data.id, "was added to pool")
+                world.entities[data.id] = player
                 // put on top of wall if regenerated
                 for (let w in worlds[data.worldID].obstacles) {
                     let obstacle = worlds[data.worldID].obstacles[w];
