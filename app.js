@@ -206,7 +206,7 @@ const holdableItems = {
         cooldownTimer:0,
         immuneDuration: maxImmuneDuration//s
     },
-
+    /*
     "Debug":{
         name:"Debug", // MUST MATCH KEY!
         class:"Sword",
@@ -222,7 +222,7 @@ const holdableItems = {
         hitRange: 1000,
         cooldownTime: 1 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
-    },
+    },*/
 }
 
 var ids = [] //player ids list
