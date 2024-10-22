@@ -981,7 +981,7 @@ class Boss extends Enemy{
 }
 class Archer extends Enemy{
     constructor(x, y, id, worldID){
-        var data = enemyObj["Archer"]
+        let data = structuredClone(enemyObj["Archer"])
         super("Archer", false, x, y, id, worldID, data.inventory, data.invSelected)
         this.shootRange = data.shootRange // to walk closer before shooting...
         this.holdDuration = 0
