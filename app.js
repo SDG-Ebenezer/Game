@@ -45,6 +45,7 @@ var maxLoad = 750 //most px a player can see
 //ENTITIES speed not affected
 const MAX_IMMUNE_DURATION = 10000 //* speedFactor//
 const SWORD_ROTATION = 45/57.1
+// no nested objects, so most holdableItems are shallow copies {...}
 const holdableItems = {
     "Hand":{
         name:"Hand", // MUST MATCH KEY!
@@ -1087,6 +1088,7 @@ class Archer extends Enemy{
 }
 
 /*************************** @ENEMY_GENERATOR *************/
+// nested objects, so enemyObj are deep copies `structuredClone()`
 //const maxEnemyCount = Math.floor(Math.sqrt(mp**2/400**2)) //1 per 400 sq px
 const enemyObj = {
     "Normal":{
