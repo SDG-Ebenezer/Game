@@ -912,7 +912,8 @@ function mousedown(e) {
         if(player.inventory[player.invSelected].name == "Bow"){
             emitMousedownEvent()
         }
-    }, 1000) // every  s
+    }, 350) // every  s
+    // BOW COOLDOWN DURATION (COOLDOWN TIMER) DEFINED HERE
 
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
