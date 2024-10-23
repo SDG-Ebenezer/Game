@@ -1,3 +1,9 @@
+/**
+ * 
+ * THIS JS DOCUMENT DEALS WITH THE IN-GAME ELEMENTS
+ * 
+ */
+
 //canvas with the actual game elements
 const canvas = document.getElementById("canv")
 const ctx = canvas.getContext("2d")
@@ -1077,8 +1083,23 @@ socket.on("allowUpdate", ()=>{updateAgain = true})
 var gameLoopInt // TO BE THE GAME LOOPA! (currently undefined)
 
 
-/************** START/STOP GAME  *************/
-function startGame(){
+/************** START/JOIN/STOP GAME  *************/
+function joinGame(){
+    let selectedValue = document.getElementById("join_game_input").value
+    console.log(selectedValue)
+
+    startGame(selectedValue)
+}
+function createNewWorld(){
+    //create ID
+    st = ""
+    for(let i = 0; i < 6; i ++){
+        st += String(random(9, 0))
+    }
+    console.log(st)
+    startGame(st, true)
+}
+function startGame(worldID = "Main", createWorld=false){
     {
         //zoom in spawn effect
         scale -= 0.25
@@ -1086,7 +1107,7 @@ function startGame(){
         tx = ty = invSelected = 0
         //set these:
         /************ RESET BTNS *********************/
-        document.getElementById("exitGameBtn").style.display = "none"
+        //document.getElementById("exitGameBtn").style.display = "none"
         document.getElementById("preGame_Stuff").style.display = "none"
         document.getElementById("startGameBtn").style.display = "none"
         document.getElementById("gameOver").style.display = "none"
@@ -1104,12 +1125,14 @@ function startGame(){
         //ask server for starting data and create new ID
         var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
 
-        var worldID = "Main"
-        if(selectedValue=="Player5"){worldID = "World1"}
+        //if(selectedValue=="Player5"){worldID = "World1"}
+
+        console.log("World ID = ", worldID)
         socket.emit("askForStartData", {
             username: document.getElementById("username").value,
             img:selectedValue,
-            worldID:worldID //WORLD THAT THE PLAYER JOINS
+            worldID:worldID, //WORLD THAT THE PLAYER JOINS
+            createWorld:createWorld
         })
     }
     //start game loop
@@ -1231,9 +1254,22 @@ function exitGame(){
     //make home screen visible again
     document.getElementById("startGameBtn").style.display = "block"
     document.getElementById("preGame_Stuff").style.display = "flex"
-    document.getElementById("exitGameBtn").style.display = "none"
-}
+    //document.getElementById("exitGameBtn").style.display = "none"
 
+    /************ CLEAR EVENT LISTENERS *********************/
+    document.removeEventListener("keydown", keydown)
+    document.removeEventListener("keyup", keyup)
+    document.removeEventListener("mousemove", mousemove)
+    document.removeEventListener("mousedown", mousedown)
+    document.removeEventListener("mouseup", mouseup)
+    // (for mobile)
+    document.removeEventListener("touchstart", touchstart)
+    document.removeEventListener("touchend", touchend)
+}
+socket.on("noWorld", ()=>{
+    console.log("no world...")
+    exitGame()
+})
 // Show game over screen if dead
 socket.on("gameOver", ()=>{
     // DEATH MESSAGE update found in the game loop search: [A4dh3dfDM9]
@@ -1247,8 +1283,8 @@ socket.on("gameOver", ()=>{
     document.removeEventListener("mouseup", mouseup)
     document.removeEventListener("touchstart", touchstart)
     document.removeEventListener("touchend", touchend)
-    document.getElementById("exitGameBtn").style.display = "block"
-    document.getElementById("gameOver").style.display = "block"
+    //document.getElementById("exitGameBtn").style.display = "block"
+    document.getElementById("gameOver").style.display = "flex"
 
     //reset variables
     speedTime = speedTimeMax //reset speed!!
@@ -1261,20 +1297,7 @@ socket.on("gameOver", ()=>{
 
 
 /***********************************************/
-function showHelp(){
-    let help = document.getElementById("help")
-    let helpBtn = document.getElementById("helpBtn")
-    if (help.style.display == "block"){
-        help.style.display = "none"
-        helpBtn.innerHTML = "HELP"
-        helpOpen = false
-    }
-    else{
-        help.style.display = "block"
-        helpBtn.innerHTML = "<b>X</b>"
-        helpOpen = true
-    }
-}
+
 var lastHealthBeforeMarket; // Keep track of health. If lower then, close market
 function toggleMarket(){
     let market = document.getElementById("market")

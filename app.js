@@ -1,8 +1,8 @@
-const { spawn } = require("child_process")
-const { log, Console } = require("console")
-const { create } = require("domain")
+//const { spawn } = require("child_process")
+//const { log, Console } = require("console")
+//const { create } = require("domain")
 var express = require("express")
-const { Socket } = require("socket.io")
+//const { Socket } = require("socket.io")
 var app = express()
 var serv = require("http").Server(app)
 
@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 1111 //server PORT
 serv.listen(PORT)
 console.log("Online @ " + PORT)
 
-const DEBUG = false
+const DEBUG = true
 
 /************ CONSTS/VARS *********************/
 //RANDOM
@@ -39,7 +39,7 @@ function createID(){
     return id
 }
 
-var maxLoad = 750 //most px a player can see 
+const MAX_LOAD = 750 //most px a player can see 
 //const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
 //Render is slowerm so runs at x[speedFactor] as fast
 //ENTITIES speed not affected
@@ -172,7 +172,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 1000, //market value
-        hitRange: maxLoad,
+        hitRange: MAX_LOAD,
         cooldownTime: 0, //20 bc now hold down for power/damage
         cooldownTimer:0
     },
@@ -188,7 +188,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:1,
         cost: 2500, //market value
-        hitRange: maxLoad,
+        hitRange: MAX_LOAD,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0
     },
@@ -204,7 +204,7 @@ const holdableItems = {
         stackSize:1,
         maxStackSize:2,
         cost: 2000, //market value
-        hitRange: maxLoad,
+        hitRange: MAX_LOAD,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer:0,
         immuneDuration: MAX_IMMUNE_DURATION//s
@@ -248,6 +248,7 @@ class World {
 
         this.structures = {}
         this.escapesData = []
+        this.escapesIDs = {}
 
         this.projectiles = {}
         this.pickables = {}
@@ -330,24 +331,26 @@ var structureW = structureBlueprint[0].length; // width
 var structureH = structureBlueprint.length; // height (making it a square)
 var wallSize = 100
 
-var escapesIDRoot = "Escapes"
-var escapesIDs = []
+
 function toggleOpeningsToArena(escapesLocked, worldID="Main"){
+    let world = worlds[worldID]
+    if(!world) return
+    // Probably only Main
     if(!escapesLocked){
         let i = 0
-        for(let e in worlds["Main"].escapesData){
-            let obj = worlds["Main"].escapesData[e]
-            let id = `${escapesIDRoot}${i}`
-            worlds["Main"].structures[id] = new Stairs(obj.x, obj.y, id, wallSize, obj.r==1?270*(Math.PI/180):90*(Math.PI/180))
-            escapesIDs.push(id)
+        for(let e in world.escapesData){
+            let obj = world.escapesData[e]
+            let id = `"Escapes${i}`
+            world.structures[id] = new Stairs(obj.x, obj.y, id, wallSize, obj.r==1?270*(Math.PI/180):90*(Math.PI/180))
+            world.escapesIDs.push(id)
             i++
         }
     } else{
-        for(let i in escapesIDs){
-            let id = escapesIDs[i]
-            delete worlds[worldID].structures[id]
+        for(let i in world.escapesIDs){
+            let id = world.escapesIDs[i]
+            delete world.structures[id]
         }
-        escapesIDs = []
+        world.escapesIDs = []
     }
 }
 
@@ -1385,14 +1388,15 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
 /****** CREATE WORLDS *******/
 function createWorld(
     id, 
-    mp=defaultMapSize, 
-    amountOfEnemies=Math.floor(defaultMapSize/400), 
-    amountOfTrees=Math.floor(defaultMapSize/25), 
-    amountOfLakes=Math.floor(defaultMapSize/1000), 
-    amountOfStructures=Math.floor(defaultMapSize/40), 
-    amountOfPickables=Math.floor(defaultMapSize/40), 
-    amountOfMarkets=Math.floor(defaultMapSize/1200)){
+    mp=defaultMapSize, numEnemies=null, numTrees=null, numLakes=null, numStructures=null, numPickables=null, numMarkets=null){
     
+    let amountOfEnemies = numEnemies?numEnemies:Math.floor(mp/400)
+    let amountOfTrees = numTrees?numTrees:Math.floor(mp/75)
+    let amountOfLakes = numLakes?numLakes:Math.floor(mp/1000)
+    let amountOfStructures = numStructures?numStructures:Math.floor(mp/400)
+    let amountOfPickables = numPickables?numPickables:Math.floor(mp/40)
+    let amountOfMarkets = numMarkets?numMarkets:Math.floor(mp/1200)
+
     worlds[id] = new World(id, mp, amountOfEnemies, amountOfTrees, amountOfLakes, amountOfStructures, amountOfPickables, amountOfMarkets)
 
     if(DEBUG) console.log(worlds[id])
@@ -1435,7 +1439,6 @@ function createWorld(
 
     /** STRUCTURES */
     if(DEBUG) console.log("Structures")
-    var amountOfStructures = random(Math.ceil(mp/400), Math.floor(mp/1600))
     for(let i = 0; i < amountOfStructures; i++){
         let blueprintSize = random(4,1)
         //make blueprint
@@ -1529,12 +1532,11 @@ function createWorld(
 // CREATE MAIN WORLD
 createWorld("Main")
 //INITIALIZE BOSS
-toggleOpeningsToArena(true)
+toggleOpeningsToArena(true, "Main")
 worlds["Main"].enemies[bossID] = new Boss()
 
 // CREATE SAMPLE WORLD
 createWorld("World1", 1500, 0, 10, 1, 2, 0, 1)
-//createWorld("2", 100, 10, 1, 1, 1, 1, 1)
 
 /*************************** @SERVER_GAME_LOOOOOP *************/
 var startedCountdown = false
@@ -1548,7 +1550,7 @@ setInterval(()=>{
         //console.log(bossCountDownTime)
         if(worldID == "Main"){
             if (!world.enemies[bossID] && !startedCountdown){
-                toggleOpeningsToArena(false);
+                toggleOpeningsToArena(false, "Main");
                 startedCountdown = true
                 bossCountDownTime = bossCountDownTimeMax; // seconds  
                 let countdownInterval = setInterval(() => {
@@ -1556,7 +1558,7 @@ setInterval(()=>{
             
                     if (bossCountDownTime === 0) {
                         clearInterval(countdownInterval); // Stop the countdown interval
-                        toggleOpeningsToArena(true)
+                        toggleOpeningsToArena(true, "Main")
                         world.enemies[bossID] = new Boss()
                         startedCountdown = false
                         console.log("The boss has entered the arena.");
@@ -1826,6 +1828,23 @@ io.sockets.on("connection", (socket)=>{
     
     //
     socket.on("askForStartData", function(data){
+        //creating world?
+        if(data.createWorld){
+            //just makin sure... 0.0000...1% change of this code running
+            //just to be safe...
+            if(data.worldID in worlds) data.worldID = createRandomString(6)
+            //add world    
+            createWorld(data.worldID, 2000)
+            console.log(data.worldID)
+        }
+
+        //huh...
+        if(!data.createWorld && !(data.worldID in worlds)){
+            //invalid worldID, return...nothing happened here
+            socket.emit("noWorld")
+            return //go home
+        }
+
         let nC = findSpawn(entitySize, data.worldID)
         let player = new Player(nC.x, nC.y, data.username, `/imgs/${data.img}.png`, data.worldID)
         //var worldID = "Main"
@@ -1849,7 +1868,7 @@ io.sockets.on("connection", (socket)=>{
             console.log("Player ", player.username, player.id, "joined ", data.worldID, " world")
         } else console.log("NO world existing...", data.worldID)
     }) 
-
+    
     //update player (all vital info)
     socket.on("updatePlayer", (data)=>{
         if(data.worldID && data.worldID in worlds){
@@ -1906,62 +1925,67 @@ io.sockets.on("connection", (socket)=>{
 
     //give data if requested (still active if player is dead)
     socket.on("requestUpdateDataFromServer", (data)=>{
-        let world = worlds[data.worldID]
-        let entities = world.entities
-        let id = data.id
-        let player = entities[data.id]
-        let updateContent = [world.borderRect] //always have the border
-
-        let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
-
-        if(data.worldID){
+        try{
             let world = worlds[data.worldID]
+            let entities = world.entities
+            let id = data.id
+            let player = entities[data.id]
+            let updateContent = [world.borderRect] //always have the border
 
-            let updateLi = [
-                world.lakes, world.markets, world.structures, //landmarks
-                world.particles, //um...
-                players, world.enemies, //entities
-                world.pickables, world.projectiles, //items
-                world.trees //um....
-            ];
-            updateLi.forEach(group => {
-                for (let i in group) {
-                    let item = group[i]
-                    let distance;
-                    if (item.isCircle) {
-                        distance = Math.sqrt(Math.pow(data.x - item.x, 2) + Math.pow(data.y - item.y, 2)) - item.radius;
-                        if (distance <= maxLoad) {
-                            updateContent.push(item); 
-                        }
-                    } else {
-                        let dx = Math.max(Math.abs(data.x - item.x) - item.width / 2, 0);
-                        let dy = Math.max(Math.abs(data.y - item.y) - item.height / 2, 0);
-                        if(Math.sqrt(dx * dx + dy * dy) <= maxLoad) {
-                            updateContent.push(item); 
+            let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
+
+            if(data.worldID){
+                let world = worlds[data.worldID]
+
+                let updateLi = [
+                    world.lakes, world.markets, world.structures, //landmarks
+                    world.particles, //um...
+                    players, world.enemies, //entities
+                    world.pickables, world.projectiles, //items
+                    world.trees //um....
+                ];
+                updateLi.forEach(group => {
+                    for (let i in group) {
+                        let item = group[i]
+                        let distance;
+                        if (item.isCircle) {
+                            distance = Math.sqrt(Math.pow(data.x - item.x, 2) + Math.pow(data.y - item.y, 2)) - item.radius;
+                            if (distance <= MAX_LOAD) {
+                                updateContent.push(item); 
+                            }
+                        } else {
+                            let dx = Math.max(Math.abs(data.x - item.x) - item.width / 2, 0);
+                            let dy = Math.max(Math.abs(data.y - item.y) - item.height / 2, 0);
+                            if(Math.sqrt(dx * dx + dy * dy) <= MAX_LOAD) {
+                                updateContent.push(item); 
+                            }
                         }
                     }
+                });
+                
+                //delete killed players 
+                //ONLY dies if send death message!!
+                if(player && player.isDead){// player.health <= 0
+                    dropAll(id)
+                    delete worlds[data.worldID].entities[id]
+                    socket.emit("gameOver")
                 }
-            });
-            
-            //delete killed players 
-            //ONLY dies if send death message!!
-            if(player && player.isDead){// player.health <= 0
-                dropAll(id)
-                delete worlds[data.worldID].entities[id]
-                socket.emit("gameOver")
-            }
 
-            //if in range
-            socket.emit("sendUpdateDataToClient", {
-                updateContent: updateContent,
-                player: player,
-                serverPlayerCount: Object.keys(world.entities).length,
-                leaderboard: Object.values(world.entities)
-                .sort((a, b) => b.kills - a.kills)
-                .slice(0, 5)
-                .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })), 
-                structures:Object.values(world.structures)
-            })
+                //if in range
+                socket.emit("sendUpdateDataToClient", {
+                    updateContent: updateContent,
+                    player: player,
+                    serverPlayerCount: Object.keys(world.entities).length,
+                    leaderboard: Object.values(world.entities)
+                    .sort((a, b) => b.kills - a.kills)
+                    .slice(0, 5)
+                    .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })), 
+                    structures:Object.values(world.structures)
+                })
+            }
+        } catch(err){
+            console.log(err)
+            socket.emit("noWorld")
         }
     })
 
@@ -2159,45 +2183,50 @@ io.sockets.on("connection", (socket)=>{
         }
     })
     socket.on("mouseup", function(data){
-        let world = worlds[data.worldID]
-        let entities = world.entities
-        let player = entities[data.id]
+        try{
+            let world = worlds[data.worldID]
+            let entities = world.entities
+            let player = entities[data.id]
 
-        if(player){
-            let tool = player.inventory[player.invSelected]
-            let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
-            if (tool.name === "Bow"
-            && holdDuration > 0
-            ) {
-                // Check for arrow in inventory
-                let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
-                // Shoot arrow
-                if (canShoot) {
-                    player.inventory[player.invSelected].imgSrc = `/imgs/Bow.png`
-                    let arrowDirection = player.rotation + player.defaultRotation + Math.PI;
-                    
-                    //make da arrow
-                    createArrow(player, arrowDirection, holdDuration, player.worldID)
+            if(player){
+                let tool = player.inventory[player.invSelected]
+                let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
+                if (tool.name === "Bow"
+                && holdDuration > 0
+                ) {
+                    // Check for arrow in inventory
+                    let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
+                    // Shoot arrow
+                    if (canShoot) {
+                        player.inventory[player.invSelected].imgSrc = `/imgs/Bow.png`
+                        let arrowDirection = player.rotation + player.defaultRotation + Math.PI;
+                        
+                        //make da arrow
+                        createArrow(player, arrowDirection, holdDuration, player.worldID)
 
-                    // Decrease arrow stack or remove from inventory
-                    for (let slot = 0; slot < player.inventory.length; slot++) {
-                        let invSlot = player.inventory[slot];
-                        if (invSlot.name === "Arrow") {
-                            if (invSlot.stackSize > 1) {
-                                invSlot.stackSize -= 1;
-                            } else {
-                                player.inventory[slot] = { ...holdableItems["Hand"]};
+                        // Decrease arrow stack or remove from inventory
+                        for (let slot = 0; slot < player.inventory.length; slot++) {
+                            let invSlot = player.inventory[slot];
+                            if (invSlot.name === "Arrow") {
+                                if (invSlot.stackSize > 1) {
+                                    invSlot.stackSize -= 1;
+                                } else {
+                                    player.inventory[slot] = { ...holdableItems["Hand"]};
+                                }
+                                break;
                             }
-                            break;
                         }
-                    }
 
-                    //damage bow
-                    tool.durability -= 1
-                    usedItem = true // item was used!
+                        //damage bow
+                        tool.durability -= 1
+                        usedItem = true // item was used!
+                    }
                 }
-            }
-        } 
+            } 
+        } catch(err){
+            console.log(err)
+            socket.emit("noWorld")
+        }
     })
     //buy
     socket.on("buy", function(data){
