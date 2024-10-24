@@ -1967,7 +1967,7 @@ io.sockets.on("connection", (socket)=>{
                 //delete killed players 
                 //ONLY dies if send death message!!
                 if(player && player.isDead){// player.health <= 0
-                    dropAll(id, null, data.worldID)
+                    dropAll(id, "player", data.worldID)
                     delete worlds[data.worldID].entities[id]
                     socket.emit("gameOver")
                 }
@@ -2298,7 +2298,7 @@ io.sockets.on("connection", (socket)=>{
     })
     socket.on("playerClosedTab", function(data){
         if(data.worldID && worlds[data.worldID] && data.player && data.player.id && worlds[data.worldID].entities[data.player.id]){
-            dropAll(data.player.id, null, data.worldID)
+            dropAll(data.player.id, "player", data.worldID)
         }
     })    
 })
