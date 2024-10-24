@@ -116,8 +116,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     //scale
     if(player.onWall){
         if(scale>minScale){scale-=0.05}//transition effect
-    }
-    else{
+    } else{
         if(scale<maxScale){scale+=0.05} //transition effect
     }
     ctx.translate(canvas.width/2, canvas.height/2);
@@ -908,6 +907,7 @@ function mousemove(e) {
         lastEnteredSlot = newIndex; // Update the last entered slot
     }
 }
+
 //is mouse down and still down?
 var holding = null
 var holdDuration = 1
@@ -1102,7 +1102,7 @@ function createNewWorld(){
 function startGame(worldID = "Main", createWorld=false){
     {
         //zoom in spawn effect
-        scale -= 0.25
+        scale = minScale
         //reset or set these:
         tx = ty = invSelected = 0
         //set these:
@@ -1139,6 +1139,12 @@ function startGame(worldID = "Main", createWorld=false){
     gameLoopInt = setInterval(()=>{
         //player update
         if(player && updateAgain && canPlay) {
+            //update worldIDDiv
+            if(player.worldID){
+                document.getElementById("worldIDDiv").style.display = "block"
+                document.getElementById("worldIDSpan").innerHTML = player.worldID
+            }
+
             if(player.health > 0){ 
                 performActions() //get tx,ty from keys
                 //close market if attacked
@@ -1255,6 +1261,9 @@ function exitGame(){
     document.getElementById("startGameBtn").style.display = "block"
     document.getElementById("preGame_Stuff").style.display = "flex"
     //document.getElementById("exitGameBtn").style.display = "none"
+
+    //update worldIDDiv
+    document.getElementById("worldIDDiv").style.display = "none"
 
     /************ CLEAR EVENT LISTENERS *********************/
     document.removeEventListener("keydown", keydown)

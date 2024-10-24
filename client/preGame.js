@@ -39,3 +39,12 @@ function showHelp(){
         helpOpen = true
     }
 }
+
+//copy on click
+document.getElementById("worldIDDiv").addEventListener("click", function() {
+    navigator.clipboard.writeText(document.getElementById("worldIDSpan").textContent)
+    document.getElementById("worldIDCopySuccessDiv").style.display = "block"
+    setTimeout(()=>{
+        document.getElementById("worldIDCopySuccessDiv").style.display = "none"
+    }, 1000)
+  });

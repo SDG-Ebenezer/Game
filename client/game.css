@@ -21,6 +21,7 @@ button{
     padding:5px;
     cursor: url("/imgs/PointerCursor.cur"),pointer;
 }
+input{ cursor:text }
 #startGameBtn{
     color:white;
     background-color: rgb(31, 119, 31);
@@ -306,7 +307,7 @@ input[type="radio"]:checked + img {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.661);
+    background-color: rgba(0, 0, 0, 0.336);
     display: none;
     z-index: 1;
     position: fixed;
@@ -351,13 +352,37 @@ input[type="radio"]:checked + img {
     width:20px;
     height: 20px;
 }
+
+#topStuff{
+    position: absolute;
+    display: flex;
+    top: 0px;
+    right: 35;
+    z-index: 2;
+}
+/**World ID Div*/
+#worldIDDiv{
+    display: none;
+    border:none;
+    padding:10px;
+    cursor: pointer;
+    z-index: 2;
+    background-color: rgba(0, 0, 0, 0.527);
+    color:rgb(170, 170, 170);
+}
+#worldIDSpan {color:white}
+
+#worldIDCopySuccessDiv{
+    display:none;
+    background-color: rgba(0, 128, 0, 0.404);
+    color: white;
+}
+/**Help*/
 #helpBtn {
     border:none;
     padding:10px;
-    position: absolute;
-    top: 0px;
-    right: 25;
-    cursor: url("/imgs/PointerCursor.cur"),pointer;
+    height:40px;
+    cursor: pointer;
     z-index: 2;
     background-color: aqua;
     color:black;
@@ -384,6 +409,7 @@ input[type="radio"]:checked + img {
     display: none;
     z-index: 2; /*Above starting page*/
 }
+
 /*scroll bar*/
 ::-webkit-scrollbar {
     width: 15px;
