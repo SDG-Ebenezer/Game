@@ -370,7 +370,10 @@ input[type="radio"]:checked + img {
     background-color: rgba(0, 0, 0, 0.527);
     color:rgb(170, 170, 170);
 }
-#worldIDSpan {color:white}
+#worldIDSpan {
+    color:white;
+    cursor:copy
+}
 
 #worldIDCopySuccessDiv{
     display:none;
