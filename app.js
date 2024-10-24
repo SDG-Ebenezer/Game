@@ -22,14 +22,16 @@ const DEBUG = true
 //RANDOM
 var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 
-function createRandomString(l=10){
-    var pool = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#?! '
+function createRandomString(l=10, specialCharacters=true){
+    var pool = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' 
+    if(specialCharacters) pool += "/?!@#$%&-=+[]{}|;:<>,.* "
     var ret_string = ""
     for(var i = 0; i < l; i ++){
         ret_string += pool[random(0, pool.length)]
     }
     return ret_string
 }
+console.log(createRandomString(100))
 //CREATE NEW IDs
 function createID(){
     /*GENERATE ID*/
@@ -703,7 +705,7 @@ class Entity {
 class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100){
         super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), worldID)
-        this.username = (username == "")? createRandomString(5):username;
+        this.username = (username == "")? createRandomString(5, false):username;
         this.kills = 0
         this.inventory = [
             {...holdableItems["Hand"]},//Debug"]},
