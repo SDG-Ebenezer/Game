@@ -84,6 +84,8 @@ socket.on("sendStartData", (data)=>{
 
     //speedFactor = data.speedFactor
     maxImmuneDuration = data.maxImmuneDuration
+
+    console.log(player)
 })
 //Make sure added variables are also emitted from the server-side
 socket.on("reupdate", (data)=>{
@@ -291,7 +293,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
 //(REGULAR UPDATE)
 socket.on("sendUpdateDataToClient", (info) => {
     // Don't update data if the player is dead
-    if (player.health > 0) {
+    if (canPlay && player && player.health > 0) {
         // Variables that should not be overriden by update
         let savedInv = player.inventory;
         // Update player data
@@ -1084,11 +1086,13 @@ var gameLoopInt // TO BE THE GAME LOOPA! (currently undefined)
 
 
 /************** START/JOIN/STOP GAME  *************/
-function joinGame(){
-    let selectedValue = document.getElementById("join_game_input").value
-    console.log(selectedValue)
+function joinGame(value=null){
+    if(!value){
+        value = document.getElementById("join_game_input").value
+        console.log(value)
+    }
 
-    startGame(selectedValue)
+    startGame(value)
 }
 function createNewWorld(){
     //create ID
@@ -1099,7 +1103,7 @@ function createNewWorld(){
     console.log(st)
     startGame(st, true)
 }
-function startGame(worldID = "Main", createWorld=false){
+function startGame(worldID = "Main", createWorld=false, username=null){
     {
         //zoom in spawn effect
         scale = minScale
@@ -1129,7 +1133,7 @@ function startGame(worldID = "Main", createWorld=false){
 
         console.log("World ID = ", worldID)
         socket.emit("askForStartData", {
-            username: document.getElementById("username").value,
+            username: username?username:document.getElementById("username").value,
             img:selectedValue,
             worldID:worldID, //WORLD THAT THE PLAYER JOINS
             createWorld:createWorld
@@ -1252,6 +1256,12 @@ function startGame(worldID = "Main", createWorld=false){
             updateAgain = false  
         }
     }, 0.01) //0.01
+}
+function rejoinGame(){
+    clearInterval(gameLoopInt)
+    canPlay = false
+    console.log(player.worldID)
+    startGame(player.worldID, false, player.username)
 }
 function exitGame(){
     canPlay = false // turn off

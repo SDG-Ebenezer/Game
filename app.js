@@ -135,7 +135,7 @@ const holdableItems = {
         imgSrc:"/imgs/Sword5.png",
         durability:200,
         maxDurability:200,
-        damage:80,
+        damage:100,
         generationProbability:0.1, // 1 in 1000
         rotation:SWORD_ROTATION, //rad
         stackSize:1,
@@ -856,8 +856,8 @@ class Enemy extends Entity{
         }           
         this.moveMove()
         // Check for damage
-        if(distanceToTarget < this.width/2 && !this.justAttacked){
-            if(this.targetType == "player"){    
+        if(distanceToTarget < this.width/2){
+            if(this.targetType == "player" && !this.justAttacked){    
                 let player = world.entities[this.target.id]
                 var damage = this.damage
                 var tool = this.inventory[this.invSelected]
@@ -1850,6 +1850,9 @@ io.sockets.on("connection", (socket)=>{
 
         let nC = findSpawn(entitySize, data.worldID)
         let player = new Player(nC.x, nC.y, data.username, `/imgs/${data.img}.png`, data.worldID)
+
+        console.log(player)
+
         //var worldID = "Main"
         if(data.worldID in worlds){
             var world = worlds[data.worldID]
@@ -1874,7 +1877,7 @@ io.sockets.on("connection", (socket)=>{
     
     //update player (all vital info)
     socket.on("updatePlayer", (data)=>{
-        if(data.worldID && data.worldID in worlds){
+        if(data.player && data.worldID && data.worldID in worlds){
             let player = data.player
             let world = worlds[data.worldID]
             if(world.entities[player.id]) {

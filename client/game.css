@@ -81,24 +81,18 @@ input{ cursor:text }
     color:white;
     background-color: rgb(43, 115, 182);
     font-size: 20px;
-    border:5px solid;
-    border-left-color:rgb(82, 147, 209);
-    border-top-color:rgb(82, 147, 209);
-    border-right-color:rgb(20, 62, 100);
-    border-bottom-color:rgb(20, 62, 100);
+    border: none;
     padding-top:7px;
     padding-bottom:7px;
     padding-left: 20px;
     padding-right: 20px;
     margin:0;
+    height:100%;
+    filter: brightness(1);
 }
 #joinGameBtn:hover{
     color:white;
-    background-color: rgb(29, 81, 129);
-    border-left-color:rgb(82, 147, 209);
-    border-top-color:rgb(82, 147, 209);
-    border-right-color:rgb(20, 62, 100);
-    border-bottom-color:rgb(20, 62, 100);
+    filter: brightness(0.8);
 }
 
 h1, h2, h3, h4, p {
@@ -330,14 +324,28 @@ input[type="radio"]:checked + img {
     color: white;
     font-size: 2vw;
 }
+#rejoinGameBtn{
+    margin:0;
+    font-size: x-large;
+    width: 50%;
+    border:none;
+    background-color:#8ad374;
+    color:white;
+    padding:10px;
+    filter: brightness(1);
+}
 #exitGameBtn{
     margin:0;
     font-size: x-large;
     width: 50%;
     border:none;
-    background-color:#90c0f3;
+    background-color:#5c5c5c;
+    color:#ccc;
     padding:10px;
-    z-index: 100;
+}
+
+#rejoinGameBtn:hover, #exitGameBtn:hover{
+    filter: brightness(0.8);
 }
 
 .padText{
