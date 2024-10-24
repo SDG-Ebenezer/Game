@@ -647,6 +647,7 @@ function dropAll(id, type="player", worldID="Main"){
     let world = worlds[worldID]
     if (type == "player") from = world.entities[id]
     else if (type == "enemy") from = world.enemies[id]
+
     if(from){
         from.inventory.forEach(slot=>{
             if(slot.name != "Hand"){
@@ -1605,7 +1606,7 @@ setInterval(()=>{
                         loot, 
                         0, loot.durability, loot.stackSize)
                 }
-                dropAll(enemy.id, "enemy")
+                dropAll(enemy.id, "enemy", worldID)
 
                 //if special...
                 // VANTACITE MONSTER
@@ -1966,7 +1967,7 @@ io.sockets.on("connection", (socket)=>{
                 //delete killed players 
                 //ONLY dies if send death message!!
                 if(player && player.isDead){// player.health <= 0
-                    dropAll(id)
+                    dropAll(id, null, data.worldID)
                     delete worlds[data.worldID].entities[id]
                     socket.emit("gameOver")
                 }
@@ -2297,7 +2298,7 @@ io.sockets.on("connection", (socket)=>{
     })
     socket.on("playerClosedTab", function(data){
         if(data.worldID && worlds[data.worldID] && data.player && data.player.id && worlds[data.worldID].entities[data.player.id]){
-            dropAll(data.player.id)
+            dropAll(data.player.id, null, data.worldID)
         }
     })    
 })
