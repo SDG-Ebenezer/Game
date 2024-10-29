@@ -168,8 +168,19 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 images[pic] = new Image()
                 images[pic].src = pic
             }
+            
+            //if on wall, scale up by 10 px
+            let addSize = 0
+            if(item.onWall) addSize = 10 
+            
+            //draw
             ctx.rotate(item.rotation)
-            ctx.drawImage(images[pic], -item.width/2, -item.height/2, item.width, item.height)
+            ctx.drawImage(
+                images[pic], 
+                -item.width/2 - addSize/2, 
+                -item.height/2 - addSize/2, 
+                item.width + addSize, 
+                item.height + addSize)
         }
         //draw held item
         if(item.inventory){
@@ -199,12 +210,12 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             let w = 50
             let h = 10
             let x = -w/2
-            let y = -item.size *3/4
+            let y = -item.size * 3/4
             ctx.save()
             ctx.translate(item.x, item.y)
-            ctx.fillStyle = "black"
+            ctx.fillStyle = "rgb(0,0,0, 0.5)"
             ctx.fillRect(x, y, w, h)
-            ctx.fillStyle = "rgb(0,235,0)"
+            ctx.fillStyle = "rgb(0,235,0, 0.8)"
             ctx.fillRect(x, y, w * (item.health/item.maxHealth), h)
             ctx.restore()
         }   
