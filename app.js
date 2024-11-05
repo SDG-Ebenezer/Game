@@ -316,23 +316,70 @@ class Stairs {
     }
 }
 
-var structuresID = 0
 var mainStructureCenter = {x:0,y:0}
-
-var structureBlueprint = [
-    ["S", "W", "W", "W", "W", "W", "W", "S"],
-    ["W", "E", "N", "N", "N", "N", "E", "W"],
-    ["W", "N", "N", "N", "N", "N", "N", "W"],
-    ["W", "N", "N", "N", "N", "N", "N", "W"],
-    ["W", "N", "N", "N", "N", "N", "N", "W"],
-    ["W", "N", "N", "N", "N", "N", "N", "W"],
-    ["W", "E", "N", "N", "N", "N", "E", "W"],
-    ["S", "W", "W", "W", "W", "W", "W", "S"]
+var mainStructureBlueprint = [
+    [ "N", "S", "W", "W", "W", "W", "W", "W", "W", "W", "S", "N" ],
+    [ "S", "W", "E", "N", "N", "N", "N", "N", "N", "E", "W", "S" ],
+    [ "W", "E", "N", "N", "W", "N", "N", "W", "N", "N", "E", "W" ],
+    [ "W", "N", "N", "N", "W", "N", "N", "W", "N", "N", "N", "W" ],
+    [ "W", "N", "W", "W", "S", "N", "N", "S", "W", "W", "N", "W" ],
+    [ "W", "N", "N", "N", "N", "N", "N", "N", "N", "N", "N", "W" ],
+    [ "W", "N", "N", "N", "N", "N", "N", "N", "N", "N", "N", "W" ],
+    [ "W", "N", "W", "W", "S", "N", "N", "S", "W", "W", "N", "W" ],
+    [ "W", "N", "N", "N", "W", "N", "N", "W", "N", "N", "N", "W" ],
+    [ "W", "E", "N", "N", "W", "N", "N", "W", "N", "N", "E", "W" ],
+    [ "S", "W", "E", "N", "N", "N", "N", "N", "N", "E", "W", "S" ],
+    [ "N", "S", "W", "W", "W", "W", "W", "W", "W", "W", "S", "N" ],
 ]
-var structureW = structureBlueprint[0].length; // width
-var structureH = structureBlueprint.length; // height (making it a square)
+    
+    
+var mainStructureW = mainStructureBlueprint[0].length; // width
+var mainStructureH = mainStructureBlueprint.length; // height (making it a square)
 var wallSize = 100
 
+function findStairRotation(row, column, blueprint, indicator="S"){
+    let r = row
+    let c = column
+    let possibleRotations = []
+
+    console.log(blueprint, r, c)
+
+    if(blueprint[r][c] !== indicator){
+        console.log("This is not a stair!")
+        return null
+    }
+    
+    if(blueprint[r-1] && blueprint[r-1][c]
+        && blueprint[r-1][c] == "W"
+    ){
+        console.log("Somethin' is above this...")
+        possibleRotations.push(0)
+    }
+    if(blueprint[r+1] && blueprint[r+1][c]
+        && blueprint[r+1][c] == "W"
+    ){
+        console.log("Somethin' is below this...")
+        possibleRotations.push(Math.PI)
+    }
+    if(blueprint[r] && blueprint[r][c-1]
+        && blueprint[r][c-1] == "W"
+    ){
+        console.log("Somethin' is left of this...")
+        possibleRotations.push(Math.PI*3/2)
+    }
+    if(blueprint[r] && blueprint[r][c+1]
+        && blueprint[r][c+1] == "W"
+    ){
+        console.log("Somethin' is right of this...")
+        possibleRotations.push(Math.PI/2)
+    }
+    console.log(possibleRotations, possibleRotations[0])
+    //if stair is by itself (0) or if surrounded (all 4) make it a wall...
+    if (possibleRotations.length == 0 || possibleRotations.length == 4
+    ) return -1
+    // else return one possible rotation
+    else return possibleRotations[random(possibleRotations.length-1,0)] 
+}
 
 function toggleOpeningsToArena(escapesLocked, worldID="Main"){
     let world = worlds[worldID]
@@ -343,7 +390,10 @@ function toggleOpeningsToArena(escapesLocked, worldID="Main"){
         for(let e in world.escapesData){
             let obj = world.escapesData[e]
             let id = `"Escapes${i}`
-            world.structures[id] = new Stairs(obj.x, obj.y, id, wallSize, obj.r==1?270*(Math.PI/180):90*(Math.PI/180))
+            // See findStairRotation() in Main World structure
+            // for explanation of column first then row 
+            // in function.
+            world.structures[id] = new Stairs(obj.x, obj.y, id, wallSize, findStairRotation(obj.c, obj.r, obj.blueprint, "E")/*obj.r==1?270*(Math.PI/180):90*(Math.PI/180)*/)
             world.escapesIDs.push(id)
             i++
         }
@@ -1404,6 +1454,9 @@ function createWorld(
 
     if(DEBUG) console.log(worlds[id])
 
+    // For structures
+    //var allStairs = []
+
     /** MAIN STRUCTURE */
     if(id==="Main"){
         /** @MAIN_STRUCTURE */
@@ -1413,19 +1466,32 @@ function createWorld(
          * N = Space
          * E = Escape (Comes later after boss defeated)
          */
-        for(let r = 0; r < structureW; r++){
-            for(let c = 0; c < structureH; c++){
+        for(let r = 0; r < mainStructureW; r++){
+            for(let c = 0; c < mainStructureH; c++){
                 let wall = {
-                    relX: r*wallSize-(structureW * wallSize)/2 + mainStructureCenter.x,
-                    relY: c*wallSize-(structureH * wallSize)/2 + mainStructureCenter.y
+                    relX: r*wallSize-(mainStructureW * wallSize)/2 + mainStructureCenter.x,
+                    relY: c*wallSize-(mainStructureH * wallSize)/2 + mainStructureCenter.y
                 }
                 let sID = createRandomString(20)
-                if(structureBlueprint[r][c] == "W"){
+                if(mainStructureBlueprint[r][c] == "W"){
                     worlds[id].structures[`STRUCTURE${sID}`] = new Wall(wall, sID, wallSize, id)
-                } else if(structureBlueprint[r][c] == "S"){
-                    worlds[id].structures[sID] = new Stairs(wall.relX, wall.relY, sID, wallSize, c==0?Math.PI:(Math.PI/180), id) //make rotate based on corner
-                } else if(structureBlueprint[r][c] == "E"){
-                    worlds[id].escapesData.push({x:wall.relX,y:wall.relY,r:r,c:c})
+                } else if(mainStructureBlueprint[r][c] == "S"){
+                    // for some reason, column first? (??)
+
+                    // Likely because the blueprint is made manually
+                    // and the columns are read differently in 
+                    // this function findStairRotation.
+                    let stairRotation = findStairRotation(c, r, mainStructureBlueprint)
+                    console.log(stairRotation)
+                    if(stairRotation != -1){
+                        worlds[id].structures[sID] = new Stairs(wall.relX, wall.relY, sID, wallSize, stairRotation, id) 
+                    } else{
+                        worlds[id].structures[`STRUCTURE${sID}`] = new Wall(wall, sID, wallSize, id)
+                    }
+
+                    //allStairs.push({r:r,c:c,id:sID, blueprint:mainStructureBlueprint})
+                } else if(mainStructureBlueprint[r][c] == "E"){
+                    worlds[id].escapesData.push({x:wall.relX,y:wall.relY,r:r,c:c,blueprint:mainStructureBlueprint})
                 }
             }
         }
@@ -1459,48 +1525,31 @@ function createWorld(
             }
         }
         let structureSize = blueprintSize * wallSize
+
         let a = findSpawn(structureSize, id)
         if(a.x && a.y){
-            let allStairs = []
             //generate Structure
             for(let r = 0; r < blueprintSize; r++){
                 for(let c = 0; c < blueprintSize; c++){
                     let nC = { 
-                        relX: a.x+c*wallSize, 
-                        relY: a.y+r*wallSize 
+                        relX: a.x + c*wallSize, 
+                        relY: a.y + r*wallSize 
                     }
                     let sID = createRandomString(20)
                     if(blueprint[r][c] == "W"){
                         worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
                     } else if(blueprint[r][c] == "S"){
-                        allStairs.push({r:r,c:c,id:sID})
-                        worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, 0, id) //rotate none as a placeholder
+                        //allStairs.push({r:r,c:c,id:sID, blueprint:blueprint})
+
+                        let stairRotation = findStairRotation(r, c, blueprint)
+                        console.log(stairRotation)
+                        if(stairRotation != -1){
+                            worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, stairRotation, id) //rotate none as a placeholder
+                        } else {
+                            worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
+                        }
                     }
                 }
-            }
-            //rotate stairs accordingly
-            for(let s in allStairs){
-                let stair = allStairs[s]
-                let rotate
-                if(blueprint[stair.r+1] && blueprint[stair.r+1][stair.c]
-                && blueprint[stair.r+1][stair.c] == "W")
-                { rotate = 180 }
-                else if (blueprint[stair.r-1] && blueprint[stair.r-1][stair.c]
-                && blueprint[stair.r-1][stair.c] == "W")
-                { rotate = 0 }
-                else if (blueprint[stair.r][stair.c+1] 
-                && blueprint[stair.r][stair.c+1] == "W")
-                { rotate = 90 }
-                else if (blueprint[stair.r][stair.c-1] 
-                && blueprint[stair.r][stair.c-1] == "W")
-                { rotate = 270 }
-                else{ 
-                    //cant be a stair, because no adjacent walls!
-                    let old = worlds[id].structures[stair.id]
-                    worlds[id].structures[`STRUCTURE${stair.id}`] = new Wall({relX:old.x,relY:old.y}, structuresID, wallSize)
-                    console.log("World", id, "Stairs replaced.")
-                }
-                worlds[id].structures[stair.id].rotation = rotate * (Math.PI/180) //convert deg to rad
             }
         } else console.log(id, "Abandon generation --> structure")
     }
@@ -2260,10 +2309,10 @@ io.sockets.on("connection", (socket)=>{
 
             //additional area (padding)
             let aPad = 1.5 //area x __ == actual area detection
-            if(!(player.x > mainStructureCenter.x - (structureW/2) * (wallSize * aPad)
-            && player.x < mainStructureCenter.x + (structureW/2) * (wallSize * aPad)
-            && player.y > mainStructureCenter.y - (structureH/2) * (wallSize * aPad)
-            && player.y < mainStructureCenter.y + (structureH/2) * (wallSize * aPad) 
+            if(!(player.x > mainStructureCenter.x - (mainStructureW/2) * (wallSize * aPad)
+            && player.x < mainStructureCenter.x + (mainStructureW/2) * (wallSize * aPad)
+            && player.y > mainStructureCenter.y - (mainStructureH/2) * (wallSize * aPad)
+            && player.y < mainStructureCenter.y + (mainStructureH/2) * (wallSize * aPad) 
             && bossCountDownTime > 0)) ret = null //emit only when in range...
             
             socket.emit("SendCountdownInfo", {
