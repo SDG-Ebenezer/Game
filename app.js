@@ -250,7 +250,6 @@ class Lake{
  * in water, climbs walls?, etc. For animation purposes.
  */
 
-var particleFrequency = 400 // 
 class Particle{
     constructor(x, y, radius=random(entitySize/2, entitySize/5), worldID="Main"){
         this.x = x
@@ -265,12 +264,17 @@ class Particle{
         this.worldID = worldID
     }
 }
+
+
+var particleFrequency = 1000 // 
 function createParticle(world, x, y, fromID){
-    world.particles[createID()] = new Particle(x, y)
-    //particle timeout manages time til disappear
-    world.particleTimeouts[fromID] = setTimeout(()=>{
-        delete world.particleTimeouts[fromID]
-    }, particleFrequency)
+    if(random(100, 1) > 20){
+        world.particles[createID()] = new Particle(x, y)
+        //particle timeout manages time til disappear
+        world.particleTimeouts[fromID] = setTimeout(()=>{
+            delete world.particleTimeouts[fromID]
+        }, particleFrequency)
+    }
 }
 
 /**************************** @MARKETS *************/

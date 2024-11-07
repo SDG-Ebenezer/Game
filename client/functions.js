@@ -253,14 +253,11 @@ export function checkCollision(obstacles, lakes, playerX, playerY, tx, ty, onWal
             let lake = lakes[l];
             let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
             if (distanceSquared <= Math.pow(lake.radius, 2)) {
-                /*
-                if(who&&!world.particleTimeouts[who.id]){
-                    world.particleTimeouts[who.id] = setTimeout(()=>{
-                        delete world.particleTimeouts[who.id]
-                    }, particleFrequency)
-                    world.particles[createID()] = new Particle(playerX, playerY)
-                }*/
-                return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor, addLakeParticle:true };
+                if (distanceSquared <= Math.pow(lake.radius - size * 2, 2)) {
+                    return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor, addLakeParticle:true };
+                } else{
+                    return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor, addLakeParticle:false };
+                }
             }
         }
     }
