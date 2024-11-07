@@ -1222,9 +1222,6 @@ window.exitGame = function exitGame(){
     // (for mobile)
     document.removeEventListener("touchstart", touchstart)
     document.removeEventListener("touchend", touchend)
-    
-    /**Hide game divs */
-    document.getElementById("inGame_Stuff").style.display = "none"
 }
 socket.on("noWorld", ()=>{
     console.log("no world...")
@@ -1252,6 +1249,9 @@ socket.on("gameOver", ()=>{
     //close dem
     if(helpOpen) showHelp() 
     if(marketOpen) toggleMarket()
+
+    /**Hide game divs */
+    document.getElementById("inGame_Stuff").style.display = "none"
 })
 
 
