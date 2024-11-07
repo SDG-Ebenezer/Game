@@ -1,14 +1,27 @@
+import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, test } from "./client/functions.js"
+
 //const { spawn } = require("child_process")
 //const { log, Console } = require("console")
 //const { create } = require("domain")
-var express = require("express")
+//var express = require("express")
 //const { Socket } = require("socket.io")
 var app = express()
-var serv = require("http").Server(app)
+//var serv = require("http").Server(app)
+import express from 'express';
+import { Server } from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+var app = express();
+var serv = Server(app);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+//send index.html
 app.get("/", function(req, res){
     res.sendFile(__dirname + "/client/index.html")
 })
+//send other stuff
 app.use("/imgs", express.static(__dirname + "/client/imgs"));
 app.use("/client", express.static(__dirname + "/client"))
 
@@ -35,207 +48,15 @@ console.log(createRandomString(100))
 //CREATE NEW IDs
 function createID(){
     /*GENERATE ID*/
-    id = createRandomString() //rand id
+    let id = createRandomString() //rand id
     while (id in ids){id = createRandomString()}
     ids.push(id) //keep track of all ids
     return id
 }
 
-const MAX_LOAD = 750 //most px a player can see 
-//const speedFactor = PORT===1111? 1 : 2 //adjust how fast the game goes (the lower the slower) 
-//Render is slowerm so runs at x[speedFactor] as fast
-//ENTITIES speed not affected
-const MAX_IMMUNE_DURATION = 10000 //* speedFactor//
-const SWORD_ROTATION = 45/57.1
-// no nested objects, so most holdableItems are shallow copies {...}
-const holdableItems = {
-    "Hand":{
-        name:"Hand", // MUST MATCH KEY!
-        class:"Hand",
-        imgSrc:null,
-        durability:Infinity,
-        maxDurability:Infinity,
-        damage:5,
-        generationProbability:0, //out of 100
-        rotation:0,
-        stackSize:0,
-        maxStackSize:0,
-        cost: Infinity, //market value
-        hitRange: null,
-        cooldownTime: 5 , //* 1/speedFactor, //ms till next use
-        cooldownTimer: 0
-    },
-    "Iron Sword":{
-        name:"Iron Sword", // MUST MATCH KEY!
-        class:"Sword",
-        imgSrc:"/imgs/Sword.png",
-        durability:30,
-        maxDurability:30,
-        damage:25,
-        generationProbability:50, //out of 100
-        rotation:SWORD_ROTATION,
-        stackSize:1,
-        maxStackSize:1,
-        cost: 2000, //market value
-        hitRange: 175,
-        cooldownTime: 5 , //* 1/speedFactor, //mms till next use
-        cooldownTimer: 0
-    },
-    "Gold Sword":{
-        name:"Gold Sword", // MUST MATCH KEY!
-        class:"Sword",
-        imgSrc:"/imgs/Sword2.png",
-        durability:20,
-        maxDurability:20,
-        damage:30,
-        generationProbability:30, //out of 100
-        rotation:SWORD_ROTATION,
-        stackSize:1,
-        maxStackSize:1,
-        cost: 3500, //market value
-        hitRange: 150,
-        cooldownTime: 15 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },
-    "Diamond Sword":{
-        name:"Diamond Sword", // MUST MATCH KEY!
-        class:"Sword",
-        imgSrc:"/imgs/Sword3.png",
-        durability:60,
-        maxDurability:60,
-        damage:40,
-        generationProbability:10, //out of 100
-        rotation:SWORD_ROTATION,
-        stackSize:1,
-        maxStackSize:1,
-        cost: 5000, //market value
-        hitRange: 150,
-        cooldownTime: 10 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },
-    "Plasma Sword":{
-        name:"Plasma Sword", // MUST MATCH KEY!
-        class:"Sword",
-        imgSrc:"/imgs/Sword4.png",
-        durability:100,
-        maxDurability:100,
-        damage:50,
-        generationProbability:1, //out of 100
-        rotation:SWORD_ROTATION,
-        stackSize:1,
-        maxStackSize:1,
-        cost: 10_000, //market value
-        hitRange: 125,
-        cooldownTime: 50 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },
-    "Vantacite Sword":{
-        name:"Vantacite Sword", // MUST MATCH KEY!
-        class:"Sword",
-        imgSrc:"/imgs/Sword5.png",
-        durability:200,
-        maxDurability:200,
-        damage:100,
-        generationProbability:0.1, // 1 in 1000
-        rotation:SWORD_ROTATION, //rad
-        stackSize:1,
-        maxStackSize:1,
-        cost: 30_000, //market value
-        hitRange: 85,
-        cooldownTime: 200 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },
-    "Arrow":{
-        name:"Arrow", // MUST MATCH KEY!
-        class:"Arrow",
-        imgSrc:"/imgs/Arrow.png",
-        durability:Infinity,
-        maxDurability:Infinity,
-        damage: 1,
-        generationProbability:75, //out of 100
-        rotation:0,
-        stackSize:1, //start out stack Size
-        maxStackSize:64,
-        cost: 25, //market value
-        hitRange: null,
-        cooldownTime: 0 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },
-    "Bow":{
-        name:"Bow",  // MUST MATCH KEY!
-        class:"Bow",
-        imgSrc:"/imgs/Bow.png",
-        //loadedBowPic:"/imgs/Bow_And_Arrow.png",
-        durability:100,
-        maxDurability:100,
-        damage: "Max 21", //check createArrow's damage
-        generationProbability:10, //out of 100
-        rotation:0,
-        stackSize:1,
-        maxStackSize:1,
-        cost: 1000, //market value
-        hitRange: MAX_LOAD,
-        cooldownTime: 0, //20 bc now hold down for power/damage
-        cooldownTimer:0
-    },
-    "Spear":{
-        name:"Spear", // MUST MATCH KEY!
-        class:"Spear",
-        imgSrc:"/imgs/Spear.png",
-        durability:15,
-        maxDurability:15,
-        damage:80,
-        generationProbability:1, //out of 100
-        rotation:0, //how looks like when held
-        stackSize:1,
-        maxStackSize:1,
-        cost: 2500, //market value
-        hitRange: MAX_LOAD,
-        cooldownTime: 0 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },
-    "Force Shield":{
-        name:"Force Shield", // MUST MATCH KEY!
-        class:"UseUpErs", //Use-Up-Ers are used upon click
-        imgSrc:"/imgs/Shield.png",
-        durability:null,
-        maxDurability:null,
-        damage:0,
-        generationProbability:15, //out of 100
-        rotation:0, //how looks like when held
-        stackSize:1,
-        maxStackSize:2,
-        cost: 2000, //market value
-        hitRange: MAX_LOAD,
-        cooldownTime: 0 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0,
-        immuneDuration: MAX_IMMUNE_DURATION//s
-    },
-    /*
-    "Debug":{
-        name:"Debug", // MUST MATCH KEY!
-        class:"Sword",
-        imgSrc:"/imgs/Sword5.png",
-        durability:100000,
-        maxDurability:100000,
-        damage:1000,
-        generationProbability:0, // 1 in 1000
-        rotation:SWORD_ROTATION, //rad
-        stackSize:1,
-        maxStackSize:1,
-        cost: 1_000_000_000, //market value
-        hitRange: 1000,
-        cooldownTime: 1 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
-    },*/
-}
-
 var ids = [] //player ids list
 /************ MAP SIZE *********************/
 const defaultMapSize = 4000 //px
-
-/************ UNIVERSAL *********************/
-const entitySize = 75
 
 /************ WORLDS *********************/
 class World {
@@ -428,6 +249,7 @@ class Lake{
  * Particles are for animation, when an object steps
  * in water, climbs walls?, etc. For animation purposes.
  */
+
 var particleFrequency = 400 // 
 class Particle{
     constructor(x, y, radius=random(entitySize/2, entitySize/5), worldID="Main"){
@@ -442,6 +264,13 @@ class Particle{
 
         this.worldID = worldID
     }
+}
+function createParticle(world, x, y, fromID){
+    world.particles[createID()] = new Particle(x, y)
+    //particle timeout manages time til disappear
+    world.particleTimeouts[fromID] = setTimeout(()=>{
+        delete world.particleTimeouts[fromID]
+    }, particleFrequency)
 }
 
 /**************************** @MARKETS *************/
@@ -593,61 +422,6 @@ function borderInPoints(x, y, worldID){
     return { x, y }
 }
 
-//Function same in PLAYER js file~! 
-//HIT WALLS?
-function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize, worldID="Main") {
-    if(onWall) return { tx, ty }
-    let world = worlds[worldID]
-    let newX = playerX + tx;
-    let newY = playerY + ty;
-    var obstructionPadding = size/2 
-    for(let w in obstacles){
-        let obstacle = obstacles[w]
-        if(obstacle.class == "Wall" && !onWall){
-            let width = obstacle.width + obstructionPadding
-            let height = obstacle.height + obstructionPadding 
-            let obstacleX = obstacle.x - width/2
-            let obstacleY = obstacle.y - height/2
-            if (newX >= obstacleX &&
-                newX <= obstacleX + width &&
-                obstacleY <= playerY && playerY <= obstacleY + height) {
-                tx = 0;
-            }
-            if (newY >= obstacleY &&
-                newY <= obstacleY + height &&
-                obstacleX <= playerX && playerX <= obstacleX + width) {
-                ty = 0;
-            }
-        } else if(obstacle.class == "Tree"){
-            var treeCenterX = obstacle.x
-            var treeCenterY = obstacle.y
-            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
-                tx = 0
-            }
-            if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
-                ty = 0
-            }
-        }
-    }
-    if (!onWall && particlesTF) {
-        for (let l in world.lakes) {
-            let lake = world.lakes[l];
-            let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
-            if (distanceSquared <= Math.pow(lake.radius, 2)) {
-                if(who&&!world.particleTimeouts[who.id]){
-                    world.particleTimeouts[who.id] = setTimeout(()=>{
-                        delete world.particleTimeouts[who.id]
-                    }, particleFrequency)
-                    world.particles[createID()] = new Particle(playerX, playerY)
-                }
-                return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor };
-            }
-        }
-    }    
-    
-    return { tx, ty };
-}
-
 /**************************** @PICKABLES *************/
 //need to update Pickable class
 const pickableSize = 10
@@ -697,6 +471,7 @@ const coins = {
  */
 function dropAll(id, type="player", worldID="Main"){
     let world = worlds[worldID]
+    var from
     if (type == "player") from = world.entities[id]
     else if (type == "enemy") from = world.enemies[id]
 
@@ -952,39 +727,46 @@ class Enemy extends Entity{
         if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D){this.yInc = 0}
         
         //update onWall
+        /*
         let oW = false
         for(let w in world.structures){
-            let wall = world.structures[w]
+            let obstacle = world.structures[w]
             let width = this.width/2
             let height = this.height/2
-            if(wall.class == "Stairs"
-            && this.x > wall.x-wall.width/2 
-            && this.x < wall.x+wall.width/2
-            && this.y > wall.y-wall.height/2
-            && this.y < wall.y+wall.height/2
+            if(obstacle.class == "Stairs"
+            && this.x > obstacle.x-obstacle.width/2 
+            && this.x < obstacle.x+obstacle.width/2
+            && this.y > obstacle.y-obstacle.height/2
+            && this.y < obstacle.y+obstacle.height/2
             && !this.onWall){
                 oW = true;
                 break;
             } else if(this.onWall){
-                if((wall.class == "Wall" || wall.class == "Stairs")
-                && this.x > wall.x-wall.width/2-width 
-                && this.x < wall.x+wall.width/2+width
-                && this.y > wall.y-wall.height/2-height 
-                && this.y < wall.y+wall.height/2+height) {
+                if(((obstacle.class == "Wall" || obstacle.class == "Stairs")
+                && this.x > obstacle.x-obstacle.width/2-width 
+                && this.x < obstacle.x+obstacle.width/2+width
+                && this.y > obstacle.y-obstacle.height/2-height 
+                && this.y < obstacle.y+obstacle.height/2+height)
+                || (obstacle.class=="Tree"
+                && Math.sqrt(Math.pow(this.x-obstacle.x,2) + Math.pow(this.y-obstacle.y,2)) < entitySize + obstacle.obstructionRadius)) {
                     oW = true
                     break;
                 }
             }
-        }
-        this.onWall = oW
+        }*/
+        this.onWall = getOnWallStatus(world.obstacles, this)
 
         //update
+        let possibleNewXY = checkCollision(world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID)
+
+        if(possibleNewXY.addLakeParticle){
+            createParticle(worlds[this.worldID], this.x, this.y, this.id)
+        }
+
         let newCoords = this.onWall?
-            {
-                tx: this.xInc, 
-                ty: this.yInc,
-            }:
-            checkCollision(world.obstacles, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID)
+        { tx: this.xInc, ty: this.yInc }
+        :possibleNewXY
+
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
 
@@ -1520,7 +1302,7 @@ function createWorld(
                  * N = Nothing
                  * W = Wall
                  */
-                possibleWalls = ["W", "W", "W", "W", "W", "N", "N", "N", "N", "S"] //1 "S" in 10 tries
+                let possibleWalls = ["W", "W", "W", "W", "W", "N", "N", "N", "N", "S"] //1 "S" in 10 tries
                 blueprint[r].push(possibleWalls[random(possibleWalls.length-1, 0)])
             }
         }
@@ -1804,7 +1586,7 @@ setInterval(()=>{
             }
 
             // Check collision with walls
-            let collision = checkCollision(worlds[projectile.worldID].obstacles, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height), projectile.worldID);
+            let collision = checkCollision(world.obstacles, world.lakes, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height), projectile.worldID);
             
             // Check if the projectile goes out of bounds
             if (!(projectile.x + collision.tx > world.BORDERS.L && projectile.x + collision.tx < world.BORDERS.R && projectile.y + collision.ty > world.BORDERS.D && projectile.y + collision.ty < world.BORDERS.U)) {
@@ -1870,7 +1652,13 @@ setInterval(()=>{
 
 /*************************** @SOCKET *************/
 //what to do when a player connects
-var io = require("socket.io")(serv,{})
+
+// * * * SOCKET * * * //
+import { Server as SocketIOServer } from 'socket.io';
+
+// Assuming `serv` is your HTTP server instance:
+const io = new SocketIOServer(serv, {});
+
 io.sockets.on("connection", (socket)=>{
     console.log("New Socket Connection")
 
@@ -1978,7 +1766,6 @@ io.sockets.on("connection", (socket)=>{
         }
     })
 
-    //give data if requested (still active if player is dead)
     socket.on("requestUpdateDataFromServer", (data)=>{
         try{
             let world = worlds[data.worldID]
@@ -2142,7 +1929,7 @@ io.sockets.on("connection", (socket)=>{
         let id = data.id
         let player = entities[data.id]
         if(player){
-            let usedItem = false
+            var usedItem = false
             let tool = player.inventory[player.invSelected]
             //ranged attack
             if (tool.name === "Bow") {
@@ -2151,8 +1938,6 @@ io.sockets.on("connection", (socket)=>{
                     let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
                     player.inventory[player.invSelected].imgSrc = `/imgs/Bow${holdDuration}.png`
                 }
-                    
-                
             } else if(tool.name === "Spear"){
                 let spearDirection = player.rotation + player.defaultRotation + Math.PI;
                 
@@ -2274,7 +2059,6 @@ io.sockets.on("connection", (socket)=>{
 
                         //damage bow
                         tool.durability -= 1
-                        usedItem = true // item was used!
                     }
                 }
             } 
@@ -2321,18 +2105,14 @@ io.sockets.on("connection", (socket)=>{
         }
     })
 
+    
     //add particles?
     socket.on("addParticles", function(data){
         if(data && data.worldID){
             let world = worlds[data.worldID]
             if(!worlds[data.worldID].particleTimeouts[data.id]){
                 //creates new particle...
-                let id = createID()
-                world.particles[id] = new Particle(data.x, data.y)
-                //particle timeout manages time til disappear
-                world.particleTimeouts[data.id] = setTimeout(()=>{
-                    delete world.particleTimeouts[data.id]
-                }, particleFrequency)
+                createParticle(world, data.x, data.y, data.id)
             }
         }
     })

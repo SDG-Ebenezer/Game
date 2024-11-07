@@ -4,6 +4,9 @@
  * 
  */
 
+import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, test } from "/client/functions.js"
+console.log(test())
+
 //canvas with the actual game elements
 const canvas = document.getElementById("canv")
 const ctx = canvas.getContext("2d")
@@ -24,7 +27,7 @@ window.addEventListener("resize", ()=>{
     if(player) invSize = 75*5<window.innerWidth?75:window.innerWidth/5 //only if player exists
     
     gBarHeight = window.innerHeight * 40/847 
-    createMarketBtn(holdables)
+    createMarketBtn(holdableItems)
 
     scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
     maxScale = scale
@@ -38,20 +41,16 @@ var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 
 /************* VARS *************************/
 //player
-var entitySize
 var player;
 var currInvSlot = 0
 
 //w_vars (Wait Variables)
 var images = {} //loads images as needed
 var borders = {}
-//var walls = {} //all of the walls
-var holdables = {} //all things that you can hold
 var mapSize //defined soon!
 var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
-var maxImmuneDuration
 
 var helpOpen = false //
 var marketOpen = false //
@@ -67,7 +66,6 @@ socket.on("sendStartData", (data)=>{
     //walls = data.structuresObj //send for map
     player = data.player
     mapSize = data.mapSize
-    entitySize = data.entitySize
 
     //player img
     var pimg = new Image()
@@ -80,12 +78,6 @@ socket.on("sendStartData", (data)=>{
     wallsList = data.walls //send for map
     lakesList = data.lakes //send for map
     marketsList = data.markets //send for map
-    holdables = data.holdables
-
-    //speedFactor = data.speedFactor
-    maxImmuneDuration = data.maxImmuneDuration
-
-    console.log(player)
 })
 //Make sure added variables are also emitted from the server-side
 socket.on("reupdate", (data)=>{
@@ -95,12 +87,9 @@ socket.on("reupdate", (data)=>{
     borders = data.bordersObj
     //walls = data.structuresObj
     mapSize = data.mapSize
-    entitySize = data.entitySize
     wallsList = data.walls
     lakesList = data.lakes
     marketsList = data.markets
-    //speedFactor = data.speedFactor
-    maxImmuneDuration = data.maxImmuneDuration
 })
 
 
@@ -261,7 +250,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             let idcRadius = entitySize * 3/4;
             let idcCenterX = item.x
             let idcCenterY = item.y
-            let outlinePercentage = item.immuneDuration / maxImmuneDuration; 
+            let outlinePercentage = item.immuneDuration / MAX_IMMUNE_DURATION; 
             {
                 // Circle
                 ctx.beginPath();
@@ -319,7 +308,7 @@ socket.on("sendUpdateDataToClient", (info) => {
 
         // Update walls list with provided structures
         wallsList = info.structures;
-        obstacles = info.updateContent.filter(item => item.class == "Tree" || item.class == "Wall")
+        obstacles = info.updateContent.filter(item => item.class == "Tree" || item.class == "Wall" || item.class == "Stairs")
     }
     /** @Note
      * The updateCanv function is outside of the "player.health > 0"
@@ -378,7 +367,8 @@ function gActivateSpeedBar() {
         gctx.fill();
 
         // Calculate position for the image
-        let imgWidth = imgHeight = spCircleRadius; 
+        let imgWidth = spCircleRadius
+        let imgHeight = spCircleRadius 
         let imgX = spX - imgWidth / 2;
         let imgY = spY - imgHeight / 2;
 
@@ -787,7 +777,8 @@ var mouse = {
 }
 //defined when game starts
 // these are what each event listener will do
-var tx = ty = 0
+var tx = 0
+var ty = 0
 /** NOTE: ~ How Moving Works ~
  * When a key is pressed, it is stored inside of "keySet = {}". The
  * key is then performed in "performActions()". When "keyUp", the 
@@ -903,7 +894,7 @@ function mousemove(e) {
             else{
                 player.inventory[newIndex].stackSize += draggedItem.stackSize;
                 // Clear the dragged item from the inventory
-                player.inventory.splice(draggedItemIndex, 1, {...holdables["Hand"]});
+                player.inventory.splice(draggedItemIndex, 1, {...holdableItems["Hand"]});
                 // Reset draggedItemIndex
                 draggedItemIndex = -1;
                 // Redraw the inventory
@@ -1035,59 +1026,7 @@ function touchend(e){
         touching = false
     }
 }
-//Function also in APP js file~! But different
-//HIT WALLS?
-function checkCollision(obstacles, playerX, playerY, tx, ty, onWall, size=entitySize) {
-    if(onWall) return { tx, ty }
-    var newX = playerX + tx;
-    var newY = playerY + ty;
-    var obstructionPadding = size/2 
-    for(let w in obstacles){
-        var obstacle = obstacles[w]
-        if(obstacle.class == "Wall" && !onWall){
-            var width = obstacle.width + obstructionPadding
-            var height = obstacle.height + obstructionPadding 
-            var obstacleX = obstacle.x - width/2
-            var obstacleY = obstacle.y - height/2
-            if (newX >= obstacleX &&
-                newX <= obstacleX + width &&
-                obstacleY <= playerY && playerY <= obstacleY + height) {
-                tx = 0;
-            }
-            if (newY >= obstacleY &&
-                newY <= obstacleY + height &&
-                obstacleX <= playerX && playerX <= obstacleX + width) {
-                ty = 0;
-            }
-        } else if(obstacle.class == "Tree" && !onWall){
-            var treeCenterX = obstacle.x
-            var treeCenterY = obstacle.y
-            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
-                tx = 0
-            }
-            if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
-                ty = 0
-            }
-        }
-    }
-    if (!onWall) {
-        for (let l in lakesList) {
-            var lake = lakesList[l];
-            var distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
-            if (distanceSquared <= Math.pow(lake.radius, 2)) {
-                    socket.emit("addParticles", {
-                        id:player.id,
-                        x:player.x,
-                        y:player.y,
-                        worldID:player.worldID
-                    })
-                return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor };
-            }
-        }
-    }
-    
-    return { tx, ty };
-}
+
 
 /** @Update */
 // Request data to update canv
@@ -1097,7 +1036,13 @@ var gameLoopInt // TO BE THE GAME LOOPA! (currently undefined)
 
 
 /************** START/JOIN/STOP GAME  *************/
-function joinGame(value=null){
+/**
+ * NOTE:
+ * Because this file is a type module file, functions
+ * used in HTML buttons must be specifically declared
+ * with window.___ functions. 
+ */
+window.joinGame = function joinGame(value=null){
     if(!value){
         value = document.getElementById("join_game_input").value
         console.log(value)
@@ -1105,7 +1050,7 @@ function joinGame(value=null){
 
     startGame(value)
 }
-function createNewWorld(){
+window.createNewWorld = function createNewWorld(){
     //create ID
     st = ""
     for(let i = 0; i < 6; i ++){
@@ -1119,7 +1064,9 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         //zoom in spawn effect
         scale = minScale
         //reset or set these:
-        tx = ty = invSelected = 0
+        tx = 0
+        ty = 0
+        
         //set these:
         /************ RESET BTNS *********************/
         //document.getElementById("exitGameBtn").style.display = "none"
@@ -1175,8 +1122,9 @@ function startGame(worldID = "Main", createWorld=false, username=null){
                 }
 
                 //update onWall
+                /*
                 let oW = false
-                var check = Object.assign({}, obstacles, wallsList) //ascendables
+                 //ascendables
                 for(let o in check){
                     let obstacle = check[o]
                     let width = player.width/2
@@ -1190,30 +1138,33 @@ function startGame(worldID = "Main", createWorld=false, username=null){
                         oW = true;
                         break;
                     } else if(player.onWall){
-                        if(
-                            ((obstacle.class == "Wall" || obstacle.class == "Stairs")
-                                && player.x > obstacle.x-obstacle.width/2-width 
-                                && player.x < obstacle.x+obstacle.width/2+width
-                                && player.y > obstacle.y-obstacle.height/2-height 
-                                && player.y < obstacle.y+obstacle.height/2+height)
-                            ||
-                            (obstacle.class=="Tree"
-                                && Math.sqrt(Math.pow(player.x-obstacle.x,2) + Math.pow(player.y-obstacle.y,2)) < entitySize + obstacle.obstructionRadius
-                            )) {
+                        if(((obstacle.class == "Wall" || obstacle.class == "Stairs")
+                        && player.x > obstacle.x-obstacle.width/2-width 
+                        && player.x < obstacle.x+obstacle.width/2+width
+                        && player.y > obstacle.y-obstacle.height/2-height 
+                         && player.y < obstacle.y+obstacle.height/2+height)
+                        || (obstacle.class=="Tree"
+                        && Math.sqrt(Math.pow(player.x-obstacle.x,2) + Math.pow(player.y-obstacle.y,2)) < entitySize + obstacle.obstructionRadius)) {
                             oW = true
                             break;
                         }
                     }
-                }
-                player.onWall = oW
+                }*/
+                player.onWall = getOnWallStatus(obstacles, player)//oW
 
                 //check if hit wall
-                let newCoords = this.onWall?
-                    {
-                        tx:player.x+tx, 
-                        ty:player.y+ty,
-                    }:
-                    checkCollision(obstacles,player.x, player.y, tx, ty, player.onWall, player.width==player.height?player.width:Math.max(player.width, player.height))
+                let possibleNewXY = checkCollision(obstacles, lakesList, player.x, player.y, tx, ty, player.onWall, player.width==player.height?player.width:Math.max(player.width, player.height))
+                //add particles
+                if(possibleNewXY.addLakeParticle){
+                    socket.emit("addParticles", {
+                        id:player.id,
+                        x:player.x,
+                        y:player.y,
+                        worldID:player.worldID
+                    })
+                }
+
+                let newCoords = player.onWall?{tx,ty}:possibleNewXY
                 tx = newCoords.tx
                 ty = newCoords.ty
 
@@ -1268,13 +1219,14 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         }
     }, 0.01) //0.01
 }
-function rejoinGame(){
+window.startGame = startGame
+window.rejoinGame = function rejoinGame(){
     clearInterval(gameLoopInt)
     canPlay = false
     console.log(player.worldID)
     startGame(player.worldID, false, player.username)
 }
-function exitGame(){
+window.exitGame = function exitGame(){
     canPlay = false // turn off
     document.getElementById("gameOver").style.display = "none"
     clearInterval(gameLoopInt) 
@@ -1300,7 +1252,6 @@ socket.on("noWorld", ()=>{
     console.log("no world...")
     exitGame()
 })
-// Show game over screen if dead
 socket.on("gameOver", ()=>{
     // DEATH MESSAGE update found in the game loop search: [A4dh3dfDM9]
     console.log("Game over :(")
@@ -1347,7 +1298,7 @@ function toggleMarket(){
         market.style.display = "flex"
         marketBackground.style.display = "block" //background display
         marketBtn.innerHTML = "Close"
-        createMarketBtn(holdables)
+        createMarketBtn(holdableItems)
         marketOpen = true
     }
 }
@@ -1432,7 +1383,7 @@ function buy(boughtItem, btnID){
     }
 }
 socket.on("bought!", (data)=>{
-    createMarketBtn(holdables, data.newXp)
+    createMarketBtn(holdableItems, data.newXp)
 }) //reupdate table after buying
 
 /************* @WAIT_SCREEN (SERVER LOADING...) ************/
@@ -1457,7 +1408,6 @@ socket.on("disconnect", ()=>{
     disconnectTimeout = setInterval(addDot, 1000);
 })
 
-// Function to add a dot
 function addDot() {
     if (dotIndex < dotsCount) {
         dotsSpan.textContent += '.';
