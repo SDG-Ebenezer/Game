@@ -256,7 +256,7 @@ class Particle{
         this.x = x
         this.y = y
         this.duration = 95
-        this.color = "#00000008"
+        this.color = "#28707430"
         this.size = radius
         this.radius = radius
 

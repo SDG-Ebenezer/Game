@@ -248,7 +248,7 @@ export function checkCollision(obstacles, lakes, playerX, playerY, tx, ty, onWal
         }
     }
     
-    if (!onWall){//) && particlesTF) {
+    if (!onWall && particlesTF) {
         for (let l in lakes) {
             let lake = lakes[l];
             let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
