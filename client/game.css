@@ -505,3 +505,31 @@ input[type="radio"]:checked + img {
     padding: 10px;
     font-size: 15px;
 }
+
+
+#inGame_Stuff{
+    position: absolute;
+    display: none;
+    background-color: #00000000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+#healthBar, #healthBarBackground, #healthText{
+    position: absolute;
+    bottom: 0;
+    width:100%;    
+    height: 30px;
+    padding:5px;
+}
+#healthBar{
+    background-color: #00c4c4d3;
+}
+#healthBarBackground{
+    background-color: #00000081;
+}
+#healthText{
+    color:white;
+    font-size: 20px;
+}

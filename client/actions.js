@@ -320,7 +320,10 @@ socket.on("sendUpdateDataToClient", (info) => {
 
 /** @GAME_DETAILS */
 var gBarHeight = window.innerHeight * 40/847 //also in resize
+var healthBar = document.getElementById("healthBar")
+var healthBarBackground = document.getElementById("healthBarBackground")
 function gHealth(){
+    /*
     let width = canvas.width
     let height = gBarHeight
     let fontSize = gBarHeight * 0.5
@@ -331,6 +334,10 @@ function gHealth(){
     gctx.fillStyle = 'black'
     gctx.font = `${fontSize}px ${defaultFontFamily}`
     gctx.fillText (`HEALTH ${Math.round(player.health)}`, 0, canvas.height-height+fontSize)
+    */
+    let health = Math.round((player.health/player.maxHealth) * 100)
+    healthBar.style.width = `${health}%`
+    document.getElementById("healthQuantity").innerHTML = `${health}`
 }
 var xpImg = new Image()
 xpImg.src = "/imgs/Money.svg"
@@ -428,41 +435,6 @@ document.addEventListener("mousemove", function(event) {
     } else {displayHelp = false}
 })
 
-//SHADOW CURRENTLY REMOVED!
-/*
-function gShadow(){
-    let radius = canvas.width > canvas.height ? canvas.width : canvas.height
-    let startAngle = Math.PI / 4
-    let endAngle = -startAngle
-    let sectorColor = "#0000009a"
-    let rad = Math.atan2(mouse.y, mouse.x)
-    ctx.save()
-    ctx.translate(ginfo.width/2, ginfo.height/2)
-    ctx.rotate(rad) 
-    ctx.beginPath();
-    ctx.fillStyle = sectorColor; 
-    ctx.arc(0,0, radius, startAngle, endAngle);
-    ctx.lineTo(-entitySize * 4, 0); //center of arc
-    ctx.fill(); 
-    ctx.closePath();
-    ctx.restore()
-}*/
-
-/**
- * BUG <.Kj87dD @error> FIXED!
- * Issue: 
- * * When a player zooms out, their 
- * * range increases. When they zoom in,
- * * the range decreases. This creates
- * * unfair advantage for people with zoomed
- * * in devices...
- * SOLUTIONS:
- * ---
- * 
- *       HH:MM  MM/DD/YYYY   
- * DATE: 10:34p 10/ 4/2024
- */
-// This is the little circle that appears...where you hit 
 var attackCursorOn = false
 function gAttackCursor(){
     var tool = player.inventory[player.invSelected]
@@ -1083,6 +1055,9 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         document.addEventListener("touchstart", touchstart)
         document.addEventListener("touchend", touchend)
         
+        /**Show game divs */
+        document.getElementById("inGame_Stuff").style.display = "block"
+
         /*****************************************************/
         //ask server for starting data and create new ID
         var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
@@ -1247,6 +1222,9 @@ window.exitGame = function exitGame(){
     // (for mobile)
     document.removeEventListener("touchstart", touchstart)
     document.removeEventListener("touchend", touchend)
+    
+    /**Hide game divs */
+    document.getElementById("inGame_Stuff").style.display = "none"
 }
 socket.on("noWorld", ()=>{
     console.log("no world...")
