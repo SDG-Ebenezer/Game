@@ -1042,8 +1042,8 @@ const enemyObj = {
         reloadTime:100, 
         speed:3, 
         health:750, 
-        w:entitySize*2, 
-        h:entitySize*2,
+        w:entitySize*2.25, 
+        h:entitySize*2.25,
         lootTable : [ //when selected generationProb
             {...holdableItems["Vantacite Sword"], generationProbability:20},
             {...holdableItems["Iron Sword"], generationProbability:100},
@@ -1075,7 +1075,7 @@ const enemyObj = {
             {...holdableItems["Spear"], generationProbability:25},
         ], 
         giveXP : 1000,
-        generationProbability:0, //spawns in special occasions
+        generationProbability:20,
         deathMessages:["You died from a mini vantacite monster.", "A small vantacite monster hit you.", "You saw a vantacite monster (a small one)."],
     },
     "Tiny Vantacite Monster":{
@@ -1085,7 +1085,7 @@ const enemyObj = {
         detectRange:500, 
         reloadTime:30, 
         speed:4.5, 
-        health:400, 
+        health:250, 
         w:entitySize, 
         h:entitySize,
         lootTable : [ //when selected generationProb
@@ -1099,6 +1099,28 @@ const enemyObj = {
         giveXP : 500,
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from a tiny vantacite monster.", "A tiny vantacite monster hit you.", "You saw a vantacite monster (a tiny one)."],
+    },
+    "Very Tiny Vantacite Monster":{
+        type:"Very Tiny Vantacite Monster", 
+        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        damage:5, 
+        detectRange:500, 
+        reloadTime:5, 
+        speed:7, 
+        health:50, 
+        w:entitySize * 0.7, 
+        h:entitySize * 0.7,
+        lootTable : [ //when selected generationProb
+            {...holdableItems["Vantacite Sword"], generationProbability:10},
+            {...holdableItems["Iron Sword"], generationProbability:70},
+            {...holdableItems["Gold Sword"], generationProbability:40},
+            {...holdableItems["Diamond Sword"], generationProbability:30},
+            {...holdableItems["Plasma Sword"], generationProbability:5},
+            {...holdableItems["Spear"], generationProbability:20},
+        ], 
+        giveXP : 250,
+        generationProbability:0, //spawns in special occasions
+        deathMessages:["You died from a very small vantacite monster.", "A very small vantacite monster hit you.", "You saw a vantacite monster (a very small one)."],
     }
 }
 var bossID = "Boss"
@@ -1479,7 +1501,29 @@ setInterval(()=>{
                     world.enemies[split2.id] = split2
                     world.enemies[split3.id] = split3
                     world.enemies[split4.id] = split4
+                } else if(enemy.type == "Tiny Vantacite Monster"){
+                    //small splits to 4 very small ones
+                    let spread = entitySize
+                    //1
+                    let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
+                    let split1 = new Enemy("Very Tiny Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
+                    //2
+                    let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
+                    let split2 = new Enemy("Very Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
+                    //3
+                    let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
+                    let split3 = new Enemy("Very Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
+                    //4
+                    let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
+                    let split4 = new Enemy("Very Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
+
+                    //Add them
+                    world.enemies[split1.id] = split1
+                    world.enemies[split2.id] = split2
+                    world.enemies[split3.id] = split3
+                    world.enemies[split4.id] = split4
                 }
+
 
 
                 delete world.enemies[e]
