@@ -886,6 +886,7 @@ function mousemove(e) {
 //is mouse down and still down?
 var holding = null
 var holdDuration = 1
+var draggedItem
 function mousedown(e) {
     //holding operations
     holding = setInterval(()=>{
@@ -1023,7 +1024,7 @@ window.joinGame = function joinGame(value=null){
 }
 window.createNewWorld = function createNewWorld(){
     //create ID
-    st = ""
+    let st = ""
     for(let i = 0; i < 6; i ++){
         st += String(random(9, 0))
     }
@@ -1041,7 +1042,7 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         //set these:
         /************ RESET BTNS *********************/
         //document.getElementById("exitGameBtn").style.display = "none"
-        document.getElementById("preGame_Stuff").style.display = "none"
+        document.getElementById("preGame_Stuff_OuterDiv").style.display = "none"
         document.getElementById("startGameBtn").style.display = "none"
         document.getElementById("gameOver").style.display = "none"
         /************ ADD EVENT LISTENERS *********************/
@@ -1206,7 +1207,7 @@ window.exitGame = function exitGame(){
     clearInterval(gameLoopInt) 
     //make home screen visible again
     document.getElementById("startGameBtn").style.display = "block"
-    document.getElementById("preGame_Stuff").style.display = "flex"
+    document.getElementById("preGame_Stuff_OuterDiv").style.display = "flex"
     //document.getElementById("exitGameBtn").style.display = "none"
 
     //update worldIDDiv
@@ -1257,7 +1258,7 @@ socket.on("gameOver", ()=>{
 /***********************************************/
 
 var lastHealthBeforeMarket; // Keep track of health. If lower then, close market
-function toggleMarket(){
+window.toggleMarket = function toggleMarket(){
     let market = document.getElementById("market")
     let marketBackground = document.getElementById("marketBackground")
     let marketBtn = document.getElementById("showMarketBtn")
@@ -1289,7 +1290,7 @@ function createMarketBtn(items, xxxp=player.xp) {
     market.style.height = ginfo.height - ((invSize + 15) + (gBarHeight * 3) + 15) //15 for padding
     let k = 1
     Object.entries(items).forEach(([key, value]) => {
-        if(value.cost){ //if Infinity then, null.
+        if(value.inMarket && value.cost){ //if Infinity then, null.
             var row = table.insertRow(); 
             if(k%2==0){
                 row.style.backgroundColor = "#2b2b2b"

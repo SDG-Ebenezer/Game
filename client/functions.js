@@ -19,7 +19,8 @@ export const holdableItems = {
         cost: Infinity, //market value
         hitRange: null,
         cooldownTime: 5 , //* 1/speedFactor, //ms till next use
-        cooldownTimer: 0
+        cooldownTimer: 0, 
+        inMarket:false,
     },
     "Iron Sword":{
         name:"Iron Sword", // MUST MATCH KEY!
@@ -35,7 +36,8 @@ export const holdableItems = {
         cost: 2000, //market value
         hitRange: 175,
         cooldownTime: 5 , //* 1/speedFactor, //mms till next use
-        cooldownTimer: 0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Gold Sword":{
         name:"Gold Sword", // MUST MATCH KEY!
@@ -51,7 +53,8 @@ export const holdableItems = {
         cost: 3500, //market value
         hitRange: 150,
         cooldownTime: 15 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true,
     },
     "Diamond Sword":{
         name:"Diamond Sword", // MUST MATCH KEY!
@@ -67,7 +70,8 @@ export const holdableItems = {
         cost: 5000, //market value
         hitRange: 150,
         cooldownTime: 10 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Plasma Sword":{
         name:"Plasma Sword", // MUST MATCH KEY!
@@ -83,7 +87,8 @@ export const holdableItems = {
         cost: 10_000, //market value
         hitRange: 125,
         cooldownTime: 50 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Vantacite Sword":{
         name:"Vantacite Sword", // MUST MATCH KEY!
@@ -99,7 +104,8 @@ export const holdableItems = {
         cost: 30_000, //market value
         hitRange: 85,
         cooldownTime: 200 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Arrow":{
         name:"Arrow", // MUST MATCH KEY!
@@ -115,7 +121,8 @@ export const holdableItems = {
         cost: 25, //market value
         hitRange: null,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Bow":{
         name:"Bow",  // MUST MATCH KEY!
@@ -132,7 +139,8 @@ export const holdableItems = {
         cost: 1000, //market value
         hitRange: MAX_LOAD,
         cooldownTime: 0, //20 bc now hold down for power/damage
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Spear":{
         name:"Spear", // MUST MATCH KEY!
@@ -148,7 +156,8 @@ export const holdableItems = {
         cost: 2500, //market value
         hitRange: MAX_LOAD,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:true
     },
     "Force Shield":{
         name:"Force Shield", // MUST MATCH KEY!
@@ -164,7 +173,8 @@ export const holdableItems = {
         cost: 2000, //market value
         hitRange: MAX_LOAD,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0,
+        cooldownTimer: 0, 
+        inMarket:true,
         immuneDuration: MAX_IMMUNE_DURATION//s
     },
     /*
@@ -182,7 +192,8 @@ export const holdableItems = {
         cost: 1_000_000_000, //market value
         hitRange: 1000,
         cooldownTime: 1 , //* 1/speedFactor, //ms till next use
-        cooldownTimer:0
+        cooldownTimer: 0, 
+        inMarket:false
     },*/
 }
 

@@ -26,62 +26,69 @@
         </div>
         <!-- CONTENT -->
     </div>
-    <div id="preGame_Stuff" class="no_selection">
-        <h1 id="title">Game</h1>
+    <div id="preGame_Stuff_OuterDiv" class="no_selection">
+        <div id="preGame_Stuff">
+            <h1 id="title">Game</h1>
 
-        <input id="username" class="text_input" placeholder="Username..." maxlength="25">
+            <div id="usernameInputDiv">
+                <input id="username" class="text_input" placeholder="Username..." maxlength="25">
+            </div>
 
-        <div id="skin_decider_div">
-            <!--This is just a puppet image, the acual image is pre-checked off in the div, and that is the data that will be sent over. This will be updated with changes in the skins_imgs_div-->
+            <div id="skin_decider_div">
+                <!--This is just a puppet image, the acual image is pre-checked off in the div, and that is the data that will be sent over. This will be updated with changes in the skins_imgs_div-->
+                
+                <button id="change_skin_btn" onclick="toggleSkinsImageOptionsDiv()">
+                    <img id="showcase_skin" class="skins_imgs rot90deg" src="/client/imgs/Player.png" alt="Player 1">
+                    Change Skin
+                </button>
+
+                <div class="image-options" id="skins-image-options">
+                    <!--NOTE: input values are actual titles (.png) of the image's skins-->
+                    <h2>CHANGE SKIN:</h2>
+                    <!--Player 1-->
+                    <label>
+                        <span class="skins_imgs_ad_text"> <b>DEFAULT</b> </span>
+                        <input type="radio" name="option" value="Player" checked default>
+                        <img class="skins_imgs rot90deg" src="/client/imgs/Player.png" alt="Player 1">                
+                    </label>
+                    <!--Player 2-->
+                    <label>
+                        <input type="radio" name="option" value="Player2">
+                        <img class="skins_imgs rot90deg" src="/client/imgs/Player2.png" alt="Player 2">
+                    </label>
+                    <!--Player 3-->
+                    <label>
+                        <input type="radio" name="option" value="Player3">
+                        <img class="skins_imgs rot90deg" src="/client/imgs/Player3.png" alt="Player 3">
+                    </label>
+                    <!--Player 4-->
+                    <label>
+                        <input type="radio" name="option" value="Player4">
+                        <img class="skins_imgs rot90deg" src="/client/imgs/Player4.png" alt="Player 4">
+                    </label>
+                    <!--Player 5-->
+                    <label>
+                        <input type="radio" name="option" value="Player5">
+                        <img class="skins_imgs rot90deg" src="/client/imgs/Player5.png" alt="Player 5">
+                    </label>
+                    <!-- X -->
+                    <button id="change_skin_close_btn" onclick="toggleSkinsImageOptionsDiv()">X</button>
+                </div>
+            </div>
+
+            <div id="startGameBtnDiv">
+                <button onclick="startGame()" id="startGameBtn">Join Main World</button>
+            </div>
             
-            <button id="change_skin_btn" onclick="toggleSkinsImageOptionsDiv()">
-                <img id="showcase_skin" class="skins_imgs rot90deg" src="/client/imgs/Player.png" alt="Player 1">
-                Change Skin
-            </button>
+            <div id="join_game">
+                <input id="join_game_input" class="text_input" placeholder="Game ID" maxlength="6">
+                <button onclick="joinGame()" id="joinGameBtn">Join World</button>
+            </div>
 
-            <div class="image-options" id="skins-image-options">
-                <!--NOTE: input values are actual titles (.png) of the image's skins-->
-                <h2>CHANGE SKIN:</h2>
-                <!--Player 1-->
-                <label>
-                    <span class="skins_imgs_ad_text"> <b>DEFAULT</b> </span>
-                    <input type="radio" name="option" value="Player" checked default>
-                    <img class="skins_imgs rot90deg" src="/client/imgs/Player.png" alt="Player 1">                
-                </label>
-                <!--Player 2-->
-                <label>
-                    <input type="radio" name="option" value="Player2">
-                    <img class="skins_imgs rot90deg" src="/client/imgs/Player2.png" alt="Player 2">
-                </label>
-                <!--Player 3-->
-                <label>
-                    <input type="radio" name="option" value="Player3">
-                    <img class="skins_imgs rot90deg" src="/client/imgs/Player3.png" alt="Player 3">
-                </label>
-                <!--Player 4-->
-                <label>
-                    <input type="radio" name="option" value="Player4">
-                    <img class="skins_imgs rot90deg" src="/client/imgs/Player4.png" alt="Player 4">
-                </label>
-                <!--Player 5-->
-                <label>
-                    <input type="radio" name="option" value="Player5">
-                    <img class="skins_imgs rot90deg" src="/client/imgs/Player5.png" alt="Player 5">
-                </label>
-                <!-- X -->
-                <button id="change_skin_close_btn" onclick="toggleSkinsImageOptionsDiv()">X</button>
+            <div id="createNewWorldDiv">
+                <button onclick="createNewWorld()" id="startWorldBtn">Create New World</button>
             </div>
         </div>
-
-        <button onclick="startGame()" id="startGameBtn">Play Main World</button>
-        
-        <div id="join_game">
-            <input id="join_game_input" class="text_input" placeholder="Game ID" maxlength="6">
-            <button onclick="joinGame()" id="joinGameBtn">Join World</button>
-        </div>
-
-        <button onclick="createNewWorld()" id="startWorldBtn">Create New World</button>
-        
     </div>
     <div id="inGame_Stuff" class="no_selection">
         <!--Health Bar-->
@@ -97,8 +104,8 @@
     <div id="gameOver">
         <h1 id="gameOverText">GAME OVER</h1>
         <p id="deathMessageText"></p>
-        <button onclick="rejoinGame()" id="rejoinGameBtn">Play Again</button>
-        <button onclick="exitGame()" id="exitGameBtn">Exit</button>
+        <button onclick="rejoinGame()" id="rejoinGameBtn"><b>PLAY AGAIN</b></button>
+        <button onclick="exitGame()" id="exitGameBtn">EXIT</button>
     </div>
     <div id="toolsList">
 

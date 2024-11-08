@@ -26,41 +26,48 @@ input{ cursor:text }
     color:white;
     background-color: rgb(31, 119, 31);
     font-size: 30px;
+    min-height: fit-content;
+    border:none;
+    filter: brightness(1);
+    /*
     border:5px solid;
     border-left-color:rgb(34, 123, 34);
     border-top-color:rgb(34, 123, 34);
     border-right-color:rgb(12, 73, 12);
     border-bottom-color:rgb(12, 73, 12);
+    */
     padding-top:7px;
     padding-bottom:7px;
     padding-left: 100px;
     padding-right: 100px;
-    margin:0;
-    /*
-    position:absolute;
-    top:65%;
-    left:50%;
-    transform: translate(-50%, -35%);*/
+    margin-top:10;
 }
 #startGameBtn:hover{
+    filter: brightness(0.8);
     color:white;
+    /*
     background-color: rgb(20, 96, 20);
     border-right-color:rgb(34, 123, 34);
     border-bottom-color:rgb(34, 123, 34);
     border-left-color:rgb(12, 73, 12);
     border-top-color:rgb(12, 73, 12);
     padding-top:9px;
-    padding-bottom:5px;
+    padding-bottom:5px;*/
 }
 #startWorldBtn{
     color:white;
-    background-color: rgb(43, 115, 182);
+    background-color: rgb(30, 161, 155);
     font-size: 20px;
+    min-height: fit-content;
+    border: none;
+    filter: brightness(1);
+    /*
     border:5px solid;
     border-left-color:rgb(82, 147, 209);
     border-top-color:rgb(82, 147, 209);
     border-right-color:rgb(20, 62, 100);
     border-bottom-color:rgb(20, 62, 100);
+    */
     padding-top:7px;
     padding-bottom:7px;
     padding-left: 50px;
@@ -69,6 +76,8 @@ input{ cursor:text }
 }
 #startWorldBtn:hover{
     color:white;
+    filter: brightness(0.8);
+    /*
     background-color: rgb(29, 81, 129);
     border-left-color:rgb(82, 147, 209);
     border-top-color:rgb(82, 147, 209);
@@ -76,23 +85,7 @@ input{ cursor:text }
     border-bottom-color:rgb(20, 62, 100);
     padding-top:9px;
     padding-bottom:5px;
-}
-#joinGameBtn{
-    color:white;
-    background-color: rgb(43, 115, 182);
-    font-size: 20px;
-    border: none;
-    padding-top:7px;
-    padding-bottom:7px;
-    padding-left: 20px;
-    padding-right: 20px;
-    margin:0;
-    height:100%;
-    filter: brightness(1);
-}
-#joinGameBtn:hover{
-    color:white;
-    filter: brightness(0.8);
+    */
 }
 
 h1, h2, h3, h4, p {
@@ -123,6 +116,7 @@ h1, h2, h3, h4, p {
 
 /* Market container */
 #market {
+    z-index: 3;
     display: none;
     flex-direction: column;
     position: absolute;
@@ -185,6 +179,7 @@ h1, h2, h3, h4, p {
 }
 
 #skin_decider_div{
+    min-height: fit-content;
     margin-bottom: 10px;
 }
 #showcase_skin{display: block;}
@@ -270,30 +265,75 @@ input[type="radio"]:checked + img {
 
 #title{
     color:white;
-    font-size: 10vh;
+    text-align: center;
+    font-size: 70px;
+    min-height: fit-content;
 }
-#preGame_Stuff {
+/*Background div*/
+#preGame_Stuff_OuterDiv{ 
     background-image: url("/imgs/BackgroundImg.png"); /* Set background image */
     background-size: cover; /* Adjust as per your requirement */
     background-position: center; /* Adjust as per your requirement */
     z-index: 1; /* Ensure it's behind other content */
+    position: absolute;
+    display: block;
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100%; /* Set height to 100% of the viewport */
+}
+/*stuff over background div*/
+#preGame_Stuff {
+    background-color: #00000000;
     position: absolute;
-    display: flex; /* Add Flexbox */
-    flex-direction: column; /* Organize as a column */
+    top: 0;
+    left: 0;
+
+    overflow-y: visible;
+    height: 100%;
+    width: 100%;
+    display: block; /* Add Flexbox */
+    /*flex-direction: column; /* Organize as a column */
     justify-content: center; /* Center horizontally */
     align-items: center; /* Center vertically */
 }
 
+/* Center all in preGame Div */
+#usernameInputDiv, #join_game, #skin_decider_div, #startGameBtnDiv, #createNewWorldDiv{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
 #username{
     margin:10px;
 }
 
 #join_game{
-    padding:50px
+    padding:50px;
+    margin:0;
+}
+#join_game_input{
+    width:70%;
+    max-width: 300px;
+}
+#joinGameBtn{
+    color:white;
+    background-color: rgb(43, 115, 182);
+    width:15%;
+    max-width: 240px;
+    border: none;
+    font-size: large;
+    
+    padding-top:11px;
+    padding-bottom:11px;
+    padding-left: 20px;
+    padding-right: 20px;
+    filter: brightness(1);
+}
+#joinGameBtn:hover{
+    color:white;
+    filter: brightness(0.8);
 }
 
 #gameOver {
@@ -324,23 +364,22 @@ input[type="radio"]:checked + img {
     color: white;
     font-size: 2vw;
 }
-#rejoinGameBtn{
+#rejoinGameBtn, #exitGameBtn{
     margin:0;
     font-size: x-large;
-    width: 50%;
-    border:none;
-    background-color:#8ad374;
-    color:white;
-    padding:10px;
+    width: 70%;
     filter: brightness(1);
 }
-#exitGameBtn{
-    margin:0;
-    font-size: x-large;
-    width: 50%;
+#rejoinGameBtn{
     border:none;
-    background-color:#5c5c5c;
-    color:#ccc;
+    background-color:#44ad2493;
+    color:white;
+    padding:10px;
+}
+#exitGameBtn{
+    border: 1px solid #999;
+    background-color:#5c5c5c42;
+    color:#b3b3b3;
     padding:10px;
 }
 
@@ -366,7 +405,7 @@ input[type="radio"]:checked + img {
     display: flex;
     top: 0px;
     right: 35;
-    z-index: 2;
+    z-index: 4;
 }
 /**World ID Div*/
 #worldIDDiv{
@@ -398,7 +437,7 @@ input[type="radio"]:checked + img {
     background-color: aqua;
     color:black;
     animation: btn_anim 0.5s linear 4;
-    z-index: 3; /*Above help page*/
+    /*z-index: 5; Set in topStuff div*/
 } 
 #helpBtn:hover{
     opacity: 1;
@@ -418,7 +457,7 @@ input[type="radio"]:checked + img {
     height: 100vh;
     background-color: rgb(0, 0, 0, 0.85);
     display: none;
-    z-index: 2; /*Above starting page*/
+    z-index: 4; /*Above EVERYTHING ELSE (except for topStuff) */
 }
 
 /*scroll bar*/
