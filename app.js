@@ -1,4 +1,4 @@
-import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, test } from "./client/functions.js"
+import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, random, test } from "./client/functions.js"
 
 //const { spawn } = require("child_process")
 //const { log, Console } = require("console")
@@ -32,8 +32,6 @@ console.log("Online @ " + PORT)
 const DEBUG = true
 
 /************ CONSTS/VARS *********************/
-//RANDOM
-var random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 
 function createRandomString(l=10, specialCharacters=true){
     var pool = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' 

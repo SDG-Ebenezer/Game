@@ -268,6 +268,9 @@ export function checkCollision(obstacles, lakes, playerX, playerY, tx, ty, onWal
 export function test(){
     return "Success!"
 }
+
+export const random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
+
 /*
 if (typeof module !== "undefined" && module.exports) {
     module.exports = { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus }
