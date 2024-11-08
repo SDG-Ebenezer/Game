@@ -1690,8 +1690,6 @@ io.sockets.on("connection", (socket)=>{
         let nC = findSpawn(entitySize, data.worldID)
         let player = new Player(nC.x, nC.y, data.username, `/imgs/${data.img}.png`, data.worldID)
 
-        console.log(player)
-
         //var worldID = "Main"
         if(data.worldID in worlds){
             var world = worlds[data.worldID]
