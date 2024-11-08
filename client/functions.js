@@ -186,6 +186,8 @@ export const holdableItems = {
     },*/
 }
 
+export const random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
+
 export function getOnWallStatus(obstacles, player){
     //console.log(obstacles)
     for(let o in obstacles){
@@ -268,8 +270,6 @@ export function checkCollision(obstacles, lakes, playerX, playerY, tx, ty, onWal
 export function test(){
     return "Success!"
 }
-
-export const random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
 
 /*
 if (typeof module !== "undefined" && module.exports) {
