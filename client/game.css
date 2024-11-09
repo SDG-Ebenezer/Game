@@ -493,7 +493,7 @@ input[type="radio"]:checked + img {
     height: 30px;
     filter: brightness(1);
 }
-#helpBtn:hover, #settingsBtn:hover{
+#helpBtn:hover, #settingsBtn:hover, #exitGameIconBtn:hover{
     filter: brightness(0.8);
 }
 #exitGameIconBtn{

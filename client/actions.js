@@ -1041,8 +1041,11 @@ window.createNewWorld = function createNewWorld(){
     console.log(st)
     startGame(st, true)
 }
+window.gameOn = false
 function startGame(worldID = "Main", createWorld=false, username=null){
     {
+        gameOn = true
+        
         //zoom in spawn effect
         scale = minScale
         //reset or set these:
@@ -1194,6 +1197,8 @@ function startGame(worldID = "Main", createWorld=false, username=null){
 
                 //Update death message ONLY IF IT EXISTS [A4dh3dfDM9]
                 if(player.deathMessage) document.getElementById("deathMessageText").innerHTML = player.deathMessage
+
+                gameOn = false
             }
             socket.emit("requestUpdateDataFromServer", {
                 id: player.id,
@@ -1213,6 +1218,7 @@ window.rejoinGame = function rejoinGame(){
     startGame(player.worldID, false, player.username)
 }
 window.exitGame = function exitGame(){
+    gameOn = false
     canPlay = false // turn off
     document.getElementById("gameOver").style.display = "none"
     clearInterval(gameLoopInt) 
@@ -1264,6 +1270,8 @@ socket.on("gameOver", ()=>{
 
     /**Hide game divs */
     document.getElementById("inGame_Stuff").style.display = "none"
+
+    gameOn = false
 })
 
 
@@ -1411,27 +1419,28 @@ function addDot() {
 /********************************************************/
 // Detect when the user is leaving the page
 window.addEventListener('beforeunload', function(event) {
-    socket.emit("playerClosedTab", {
-        player:player,
-        worldID:player.worldID
-    })
-    /*
-    var stillPlaying = confirm("You are still playing the game. Are you sure you want to leave?");
+    if(gameOn) event.preventDefault()
+    let stillPlaying = gameOn?confirm("Are you sure you want to leave?"):false
+    console.log(gameOn, stillPlaying)
     if (stillPlaying) {
+        socket.emit("playerClosedTab", {
+            player:player,
+            worldID:player.worldID
+        })
         return null;
-    } else {
-        event.preventDefault();
-        return event.returnValue = 'Are you sure you want to leave?';
-    }*/
+    } 
 })
 
 
 window.leaveGame = function leaveGame(){
-    socket.emit("playerClosedTab", {
-        worldID: player.worldID,
-        player: player
-    })
-    exitGame()
+    let goOrNot = confirm("Are you sure you want to leave? Your inventory, xp, and progress will not be saved.")
+    if(goOrNot){
+        socket.emit("playerClosedTab", {
+            worldID: player.worldID,
+            player: player
+        })
+        exitGame()
+    }
 }
 
 /*
