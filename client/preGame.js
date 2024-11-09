@@ -24,19 +24,24 @@ function toggleSkinsImageOptionsDiv(){
         toggleImageOptionsDivOn = true
     }
 }
-//startGame(document.getElementById("join_game_input"))
+
 function showHelp(){
     let help = document.getElementById("help")
-    let helpBtn = document.getElementById("helpBtn")
     if (help.style.display == "block"){
         help.style.display = "none"
-        helpBtn.innerHTML = "HELP"
-        helpOpen = false
     }
     else{
         help.style.display = "block"
-        helpBtn.innerHTML = "<b>X</b>"
-        helpOpen = true
+    }
+}
+//
+function showSettings(){
+    let settings = document.getElementById("settings")
+    if (settings.style.display == "block"){
+        settings.style.display = "none"
+    }
+    else{
+        settings.style.display = "block"
     }
 }
 

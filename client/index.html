@@ -91,6 +91,19 @@
         </div>
     </div>
     <div id="inGame_Stuff" class="no_selection">
+        <!--Leaderboard-->
+        <div id="leaderboard">
+            <span id="leaderboardHeading"><b>LEADERBOARD</b></span>
+            <div id="leaderboardSlotDiv">
+                <span id="leaderboardSlot1">1.</span>
+                <span id="leaderboardSlot2">2.</span>
+                <span id="leaderboardSlot3">3.</span>
+                <span id="leaderboardSlot4">4.</span>
+                <span id="leaderboardSlot5">5.</span>
+            </div>
+            <span id="playersInServer"></span>
+        </div>
+
         <!--Health Bar-->
         <div id="healthBarBackground"></div>
         <div id="healthBar"></div>
@@ -183,8 +196,32 @@
         </p>
         <br><br><br>
     </div>
+
+    <!-- settings -->
+    <div id="settings">
+        <h1 class="padText">SETTINGS:</h1>
+        <div class="switchSets">
+            <label class="switch">
+                <input type="checkbox" id="mapOnOffSlider" checked>
+                <span class="slider"></span>
+            </label>
+            <span class="settingsP">Map</span>
+        </div>
+        <div class="switchSets">
+            <label class="switch">
+                <input type="checkbox" id="leaderboardOnOffSlider" checked>
+                <span class="slider"></span>
+            </label>
+            <span class="settingsP">Leaderboard</span>
+        </div>
+    </div>
+
     <!-- Durability div, on hover cursor-->
     <div id="floatingDurabilityDiv"></div>
+
+    <!-- info div, on hover cursor-->
+    <div id="floatingInfoDiv"></div>
+
 
     <!-- Things on top of the screen... -->
     <div id="topStuff">
@@ -195,7 +232,13 @@
         </div>
 
         <!-- Help Btn -->
-        <button onclick="showHelp()" id="helpBtn">HELP</button>
+        <img onclick="showHelp()" id="helpBtn" src="imgs/Help_Icon.png"></img>
+        
+        <!-- Settings Btn -->
+        <img id="settingsBtn" onclick="showSettings()" src="imgs/Settings_Icon.png"></img>
+
+        <!-- Exit Btn -->
+        <img id="exitGameIconBtn" onclick="leaveGame()" src="imgs/Exit_Icon.png"></img>
     </div>
 
     <!-- wait -->

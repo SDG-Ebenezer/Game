@@ -51,7 +51,6 @@ var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
 
-var helpOpen = false //
 var marketOpen = false //
 
 var obstacles = {}
@@ -273,7 +272,11 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     gctx.clearRect(0, 0, ginfo.width, ginfo.height)
     //dont show if player dead
     if(player && player.health > 0){
-        gHealth()
+        //d... is a div data
+        dHealth()
+        dLeaderboardData(serverPlayerCount, leaderboard)
+
+        //g... done on gctx canvas (ctx rendering)
         gXP()
         gActivateSpeedBar()
         //gShadow()
@@ -282,7 +285,6 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         gShowCountdown()
         //close if market is open
         if(!marketOpen){
-            gLeaderboardData(serverPlayerCount, leaderboard)
             gMap()
         }
     }
@@ -321,7 +323,7 @@ socket.on("sendUpdateDataToClient", (info) => {
 var gBarHeight = window.innerHeight * 40/847 //also in resize
 var healthBar = document.getElementById("healthBar")
 var healthBarBackground = document.getElementById("healthBarBackground")
-function gHealth(){
+function dHealth(){
     /*
     let width = canvas.width
     let height = gBarHeight
@@ -403,7 +405,9 @@ function gActivateSpeedBar() {
         speedTime += 0.01
     }    
 
+    let div = document.getElementById("floatingInfoDiv")
     if(displayHelp){
+        /*
         let x = ginfo.width / 2
         let y = ginfo.height - gBarHeight * 2
         let w = 500
@@ -419,6 +423,15 @@ function gActivateSpeedBar() {
         gctx.textAlign = "center";
         gctx.fillText("Hold a Key and then Press [X] to Sprint", x , y);
         gctx.restore()
+        */
+        let text = "<span>Hold a Key and then Press <img src=\"imgs/IconsK_X.png\" width=20 height=20> to Sprint</span>"
+        
+        div.innerHTML = text
+        div.style.display = "block"
+        div.style.left = mouse.x+canvas.width/2-350
+        div.style.top = mouse.y+canvas.height/2-50
+    } else{
+        div.style.display = "none"
     }
 }
 // Add help display if hover over speed bar icon
@@ -466,39 +479,36 @@ function gAttackCursor(){
         attackCursorOn = true //allows attack sends
     } else {attackCursorOn = false}
 }
-function gLeaderboardData(pc, leaderboard){
-    gctx.fillStyle = 'white'
-    let fontSize = (canvas.width/4)/15<15?(canvas.width/4)/15:15
-    let padding = 10
-    let x = canvas.width/4>200?canvas.width-200:canvas.width * 3/4
-    let y = fontSize + 100  // Increased the initial y position for more space
-
-    gctx.font = `${(canvas.width/4)/10<20?(canvas.width/4)/10:20}px ${defaultFontFamily}` //fontSize but "5" bigger (in ratio)
-    gctx.fillText("Leaderboard", x, y - padding)
-
-    y += fontSize + padding // Adjusted y position for the first leaderboard entry
-
-    gctx.font = `${fontSize}px ${defaultFontFamily}`
-    for (let i = 0; i < 5; i++) {
-        gctx.fillStyle = "#000000aa"
-        gctx.fillRect(x, y - fontSize - padding, canvas.width-x, fontSize + 2 * padding) // Adjusted the height of the rectangle
-
-        if (leaderboard[i]) {
-            let text = `${leaderboard[i].kills} Kills  ${leaderboard[i].username}`
-            if(leaderboard[i].id == player.id) gctx.fillStyle = "gold"
-            else gctx.fillStyle = "white"
-            gctx.fillText(text, x + padding, y - padding)
-        }
-        y += fontSize + 2 * padding // Increased the vertical space between leaderboard entries
+function dLeaderboardData(serverPlayerCount, leaderboard){
+    if(document.getElementById("leaderboardOnOffSlider").checked == false){
+        document.getElementById("leaderboard").style.display = "none"
+        return
     }
-    let text = `Players in server: ${pc}`
-    fontSize = 10
-    gctx.fillStyle = 'white'
-    gctx.font = `${fontSize}px ${defaultFontFamily}`
-    gctx.fillText(text, x, y-padding)
+
+    document.getElementById("leaderboard").style.display = marketOpen?"none":"block"
+    for (let i = 0; i < 5; i++) {
+        let lbSlot = document.getElementById(`leaderboardSlot${i+1}`)
+        if (leaderboard[i]) {
+            let text = `${i+1}. ${leaderboard[i].kills} Kills  ${leaderboard[i].username}`
+
+            //is this you?
+            if(leaderboard[i].id == player.id){
+                lbSlot.style.color = "gold"
+            } else{
+                lbSlot.style.color = "white"
+            }
+            lbSlot.innerHTML = text
+        } else{
+            lbSlot.innerHTML = `${i+1}.`
+            lbSlot.style.color = "white"
+        }
+    }
+    document.getElementById("playersInServer").innerHTML = `Players in server: ${serverPlayerCount}`
 }
 var mapOff = true
 function gMap(){
+    if(document.getElementById("mapOnOffSlider").checked == false) return
+
     let paddingForMapOn = 15
     let size = mapOff?(canvas.height * 1/6):Math.min(canvas.height, canvas.width)-paddingForMapOn //added pIcSize to balance out offset
     let sf = size/mapSize //scale factor
@@ -899,7 +909,7 @@ function mousedown(e) {
 
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
-    if (!helpOpen && e.target.tagName.toLowerCase() !== 'button') {
+    if (e.target.tagName.toLowerCase() !== 'button') {
         let clickedInv = false;
         for (let i = 0; i < player.inventory.length; i++) {
             let x = i * invSize;
@@ -962,7 +972,7 @@ function mouseup(e) {
     }
     //reset holding vars
     if(holding){
-        if(!helpOpen && e.target.tagName.toLowerCase() !== 'button' 
+        if(e.target.tagName.toLowerCase() !== 'button' 
         && !clickedInv
         && player.health > 0 
         && player.inventory[player.invSelected].cooldownTimer == 0){
@@ -1057,7 +1067,8 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         
         /**Show game divs */
         document.getElementById("inGame_Stuff").style.display = "block"
-
+        /* Add leave game icon btn*/
+        document.getElementById("exitGameIconBtn").style.display = "block"
         /*****************************************************/
         //ask server for starting data and create new ID
         var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
@@ -1212,7 +1223,9 @@ window.exitGame = function exitGame(){
 
     //update worldIDDiv
     document.getElementById("worldIDDiv").style.display = "none"
-
+    
+    /* Hide leave game icon btn*/
+    document.getElementById("exitGameIconBtn").style.display = "none"
     /************ CLEAR EVENT LISTENERS *********************/
     document.removeEventListener("keydown", keydown)
     document.removeEventListener("keyup", keyup)
@@ -1247,7 +1260,6 @@ socket.on("gameOver", ()=>{
     keySet = {} // reset keySet
     mapOff = true
     //close dem
-    if(helpOpen) showHelp() 
     if(marketOpen) toggleMarket()
 
     /**Hide game divs */
@@ -1401,7 +1413,6 @@ function addDot() {
 window.addEventListener('beforeunload', function(event) {
     socket.emit("playerClosedTab", {
         player:player,
-        //id:player.id,
         worldID:player.worldID
     })
     /*
@@ -1413,6 +1424,15 @@ window.addEventListener('beforeunload', function(event) {
         return event.returnValue = 'Are you sure you want to leave?';
     }*/
 })
+
+
+window.leaveGame = function leaveGame(){
+    socket.emit("playerClosedTab", {
+        worldID: player.worldID,
+        player: player
+    })
+    exitGame()
+}
 
 /*
 // Detect when a player leaves the tab (open)

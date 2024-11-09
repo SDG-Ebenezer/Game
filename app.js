@@ -2177,6 +2177,7 @@ io.sockets.on("connection", (socket)=>{
     socket.on("playerClosedTab", function(data){
         if(data.worldID && worlds[data.worldID] && data.player && data.player.id && worlds[data.worldID].entities[data.player.id]){
             dropAll(data.player.id, "player", data.worldID)
+            delete worlds[data.worldID].entities[data.player.id]
         }
     })    
 })
