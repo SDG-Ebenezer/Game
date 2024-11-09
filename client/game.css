@@ -244,6 +244,7 @@ input[type="radio"] {
     display: inline-block;
     width: 54px; /* Should be 2x of the width of transition */
     height: 28px;
+    border-radius: 20%;
 }
 
 .switch input { 
@@ -260,9 +261,7 @@ input[type="radio"] {
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    -webkit-transition: .4s;
-    transition: .4s;
-    border-radius: 28px;
+    border-radius: 8px;/*20%;/*28px;*/
     filter: brightness(1);
 }
 
@@ -274,13 +273,11 @@ input[type="radio"] {
     left: 4px;
     bottom: 4px;
     background-color: white;
-    -webkit-transition: .4s;
-    transition: .4s;
-    border-radius: 50%;
+    border-radius: 30%;
 }
 
 input:checked + .slider {
-    background-color: #2196F3;
+    background-color: #149e1b;
 }
 
 .slider:hover {
@@ -517,6 +514,9 @@ input[type="radio"]:checked + img {
 /** Settings */
 .switchSets{
     padding: 10px;
+    display: flex;
+    flex-flow: row;
+    gap: 10px;
 }
 .settingsP{
     font-size: 24px; /*A little less than the height of the sliders*/
