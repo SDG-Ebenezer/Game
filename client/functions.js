@@ -227,37 +227,77 @@ export function getOnWallStatus(obstacles, player){
     return false
 }
 
-export function checkCollision(obstacles, lakes, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize, world) {
-    if(onWall) return { tx, ty }
+export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize, worldID="Main", entities={}) {
     let newX = playerX + tx;
     let newY = playerY + ty;
     var obstructionPadding = size/2 
-    for(let w in obstacles){
-        let obstacle = obstacles[w]
-        if(obstacle.class == "Wall"){
-            let width = obstacle.width + obstructionPadding
-            let height = obstacle.height + obstructionPadding 
-            let obstacleX = obstacle.x - width/2
-            let obstacleY = obstacle.y - height/2
-            if (newX >= obstacleX &&
-                newX <= obstacleX + width &&
-                obstacleY <= playerY && playerY <= obstacleY + height) {
-                tx = 0;
-            }
-            if (newY >= obstacleY &&
-                newY <= obstacleY + height &&
-                obstacleX <= playerX && playerX <= obstacleX + width) {
-                ty = 0;
-            }
-        } else if(obstacle.class == "Tree"){
-            var treeCenterX = obstacle.x
-            var treeCenterY = obstacle.y
-            if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
+    
+    // check obstacles (trees/walls)
+    if(!onWall){
+        for(let w in obstacles){
+            let obstacle = obstacles[w]
+            let s = size/4
+            if(obstacle.class == "Wall"){
+                let width = obstacle.width
+                let height = obstacle.height 
+                let obstacleX = obstacle.x - width/2
+                let obstacleY = obstacle.y - height/2
+                if (newX + s >= obstacleX &&
+                    newX - s <= obstacleX + width &&
+                    obstacleY  <= playerY + s && 
+                    playerY - s <= obstacleY + height) {
+                    tx = 0;
+                }
+                if (newY + s >= obstacleY &&
+                    newY - s <= obstacleY + height &&
+                    obstacleX <= playerX + s && 
+                    playerX - s <= obstacleX + width) {
+                    ty = 0;
+                }
+            } else if(obstacle.class == "Tree"){
+                var treeCenterX = obstacle.x
+                var treeCenterY = obstacle.y
+                if(Math.sqrt(Math.pow(newX-treeCenterX,2) + Math.pow(playerY-treeCenterY,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
+                    tx = 0
+                }
+                if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
+                    ty = 0
+                }
+            } 
+        }
+    }
+
+    // check entities
+    for(let e in entities){
+        let obstacle = entities[e]
+        let s = size/2 + Math.min(obstacle.width, obstacle.height)/4
+        if(obstacle.id != playerID){
+            var x = obstacle.x
+            var y = obstacle.y
+            if(Math.sqrt(Math.pow(newX-x,2) + Math.pow(playerY-y,2)) < s){
                 tx = 0
             }
-            if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
+            if(Math.sqrt(Math.pow(newY-y,2) + Math.pow(playerX-x,2)) < s){
                 ty = 0
             }
+            /*
+            let width = obstacle.width
+            let height = obstacle.height 
+            let obstacleX = obstacle.x - width/2
+            let obstacleY = obstacle.y - height/2
+            if (newX + s >= obstacleX &&
+                newX - s <= obstacleX + width &&
+                obstacleY  <= playerY + s && 
+                playerY - s <= obstacleY + height) {
+                tx = 0;
+            }
+            if (newY + s >= obstacleY &&
+                newY - s <= obstacleY + height &&
+                obstacleX <= playerX + s && 
+                playerX - s <= obstacleX + width) {
+                ty = 0;
+            }
+            */
         }
     }
     

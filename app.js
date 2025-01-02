@@ -42,7 +42,6 @@ function createRandomString(l=10, specialCharacters=true){
     }
     return ret_string
 }
-console.log(createRandomString(100))
 //CREATE NEW IDs
 function createID(){
     /*GENERATE ID*/
@@ -62,8 +61,7 @@ class World {
         this.id = id
         this.mapSize = mp
 
-        this.enemies = {} //bots
-        this.entities = {} //players
+        this.entities = {} //bots and players
         this.trees = {}
         this.lakes = {}
 
@@ -475,7 +473,7 @@ function dropAll(id, type="player", worldID="Main"){
     let world = worlds[worldID]
     var from
     if (type == "player") from = world.entities[id]
-    else if (type == "enemy") from = world.enemies[id]
+    else if (type == "enemy") from = world.entities[id]
 
     if(from){
         from.inventory.forEach(slot=>{
@@ -502,10 +500,17 @@ function dropAll(id, type="player", worldID="Main"){
 
 /**************************** @ENTITIES *************/
 class Entity {
-    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), worldID="Main") {
+    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, worldID="Main") {
         this.id = id;
+        this.class = "Entity"
         this.x = x;
         this.y = y;
+        this.knockbackDue = {
+            x:0,
+            y:0
+        }
+        this.knockbackDist = knockbackDist // hit back
+        this.knockbackResistance = 0 //in percentage (e.g. 0.1)
         this.type = type;
         this.rotation = 0;               //changing this 
                                          // changes nothing, 
@@ -525,14 +530,15 @@ class Entity {
         this.onWall = false //default
         this.immuneDuration = 0 //this > 0 == can't take damage (see MAX Immune Duration)
         this.xp = xp
-
+        this.kills = 0
         this.worldID = worldID
     }
 }
+
 class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100){
-        super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), worldID)
-        this.username = (username == "")? createRandomString(5, false):username;
+        super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), 5, worldID)
+        this.username = (username == "")? "Player":username;
         this.kills = 0
         this.inventory = [
             {...holdableItems["Hand"]},//Debug"]},
@@ -543,7 +549,7 @@ class Player extends Entity{
         ];
         this.invSelected = 0
         this.hitSize = 40
-
+        this.isPlayer = true
         /** @NOTE!
          * This is to prevent players from not despawning 
          * when they are inactive or not on the page while
@@ -554,10 +560,11 @@ class Player extends Entity{
         this.deathMessage = null
     }
 }
+
 class Enemy extends Entity{
-    constructor(key, onWall, x, y, id, worldID="Main", inventory=[], invSelected=0){
-        var enemy = enemyObj[key]
-        super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, worldID)
+    constructor(enemyObjKey, onWall, x, y, id, worldID="Main", inventory=[], invSelected=0){
+        var enemy = enemyObj[enemyObjKey]
+        super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, enemy.knockbackDist, worldID)
         this.username = "BOT_Enemy"
         this.detectRange = enemy.detectRange
         this.damage = enemy.damage
@@ -585,43 +592,45 @@ class Enemy extends Entity{
         this.targetY = 0
         this.targetType
         this.onWall = onWall //onWall = true if special spawn
+
+        this.targetData = {}
     }
     findTarget(){
-        let minDist = this.detectRange//10**10;
-        let targetData;
+        let minDist = this.detectRange//10**10
         let world = worlds[this.worldID]
-        for (let i in world.entities) {
-            let plyr = world.entities[i]
+        let players = Object.values(world.entities).filter(i => i.isPlayer)
+        for (let i in players) {
+            let plyr = players[i]
             let dist = Math.sqrt(Math.pow(plyr.x - this.x, 2) + Math.pow(plyr.y - this.y, 2));
-            if (dist < minDist && plyr.type == "player" && plyr) {
+            if (dist < minDist && plyr) {
                 minDist = dist;
-                targetData = {
-                    key:i,
+                this.targetData = {
+                    key:plyr.id,
                     targetType:"player"
                 } //player target
             }
         }
         // if no player is found, then pick things up
-        if(!targetData && this.inventory.some(item => item.name === "Hand")){
+        if(!this.targetData && this.inventory.some(item => item.name === "Hand")){
             for (let i in world.pickables) {
                 let item = world.pickables[i]
                 let dist = Math.sqrt(Math.pow(item.x - this.x, 2) + Math.pow(item.y - this.y, 2));
                 if (dist < minDist && item && item.class!="Coin") {
                     minDist = dist;
                     targetData = {
-                        key:i,
+                        key:item.id,
                         targetType:"pickable"
                     }; //item target
                 }
             }
         }
-        if(targetData!=undefined) {
-            if(targetData.targetType == "player"){
-                this.target = world.entities[targetData.key]
-            } else if(targetData.targetType == "pickable"){
-                this.target = world.pickables[targetData.key]
+        if(this.targetData!=undefined) {
+            if(this.targetData.targetType == "player"){
+                this.target = world.entities[this.targetData.key]
+            } else if(this.targetData.targetType == "pickable"){
+                this.target = world.pickables[this.targetData.key]
             }
-            this.targetType = targetData.targetType
+            this.targetType = this.targetData.targetType
         }
         else{this.target = null}
     }
@@ -683,7 +692,7 @@ class Enemy extends Entity{
         }           
         this.moveMove()
         // Check for damage
-        if(distanceToTarget < this.width/2){
+        if(distanceToTarget < Math.min(this.width, this.height)*0.8){ //Dist to hit (melee)
             if(this.targetType == "player" && !this.justAttacked){    
                 let player = world.entities[this.target.id]
                 var damage = this.damage
@@ -695,7 +704,7 @@ class Enemy extends Entity{
                         this.inventory[this.invSelected] = {...holdableItems["Hand"]}
                     }
                 }
-                dealDamageTo(damage, this, player)
+                dealDamageTo(damage, this, player, null, this.worldID)
                 this.justAttacked = true
             } else if(this.targetType == "pickable"){
                 let item = world.pickables[this.target.id]
@@ -724,50 +733,31 @@ class Enemy extends Entity{
         }
         this.xInc = this.dx * this.speed
         this.yInc = this.dy * this.speed
+
+        //knockback?
+        if(this.knockbackDue.x!=0){
+            this.xInc -= this.knockbackDue.x
+            this.knockbackDue.x = 0
+        }
+        if(this.knockbackDue.y!=0){
+            this.yInc -= this.knockbackDue.y
+            this.knockbackDue.y = 0   
+        }
+
         //Can't go out of frame
         if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L){this.xInc = 0}
         if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D){this.yInc = 0}
         
-        //update onWall
-        /*
-        let oW = false
-        for(let w in world.structures){
-            let obstacle = world.structures[w]
-            let width = this.width/2
-            let height = this.height/2
-            if(obstacle.class == "Stairs"
-            && this.x > obstacle.x-obstacle.width/2 
-            && this.x < obstacle.x+obstacle.width/2
-            && this.y > obstacle.y-obstacle.height/2
-            && this.y < obstacle.y+obstacle.height/2
-            && !this.onWall){
-                oW = true;
-                break;
-            } else if(this.onWall){
-                if(((obstacle.class == "Wall" || obstacle.class == "Stairs")
-                && this.x > obstacle.x-obstacle.width/2-width 
-                && this.x < obstacle.x+obstacle.width/2+width
-                && this.y > obstacle.y-obstacle.height/2-height 
-                && this.y < obstacle.y+obstacle.height/2+height)
-                || (obstacle.class=="Tree"
-                && Math.sqrt(Math.pow(this.x-obstacle.x,2) + Math.pow(this.y-obstacle.y,2)) < entitySize + obstacle.obstructionRadius)) {
-                    oW = true
-                    break;
-                }
-            }
-        }*/
         this.onWall = getOnWallStatus(world.obstacles, this)
 
         //update
-        let possibleNewXY = checkCollision(world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID)
+        let possibleNewXY = checkCollision(this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID, world["entities"])
 
         if(possibleNewXY.addLakeParticle){
             createParticle(worlds[this.worldID], this.x, this.y, this.id)
         }
 
-        let newCoords = this.onWall?
-        { tx: this.xInc, ty: this.yInc }
-        :possibleNewXY
+        let newCoords = possibleNewXY
 
         this.xInc = newCoords.tx
         this.yInc = newCoords.ty
@@ -792,9 +782,9 @@ class Boss extends Enemy{
 
         let world = worlds[this.worldID]
         if(this.health == this.maxHealth){
-            for(let e in world.enemies){
-                if (world.enemies[e].type=="Summoned Lord"){
-                    delete world.enemies[e]
+            for(let e in world.entities){
+                if (world.entities[e].type=="Summoned Lord"){
+                    delete world.entities[e]
                     this.summonGuards = false
                     this.summoned = 0
                 }
@@ -813,7 +803,7 @@ class Boss extends Enemy{
                 for(let j = 0; j < 2; j ++){
                     let id = `@Summoned${i}${j}${random(65536,0)}`
                     let y = (j * spread) - spread
-                    worlds[this.worldID].enemies[id] = new Enemy("Summoned Lord", true, x, y, id)
+                    worlds[this.worldID].entities[id] = new Enemy("Summoned Lord", true, x, y, id)
                     this.summoned++
                 }
             }
@@ -903,8 +893,8 @@ class Archer extends Enemy{
                         this.targetY = random(mp/2,-mp/2)
                     }
                 }  
-                super.moveMove()
             }
+            super.moveMove()
         } else{
             this.speed = this.maxSpeed
             super.move()
@@ -950,6 +940,7 @@ const enemyObj = {
         giveXP : 100,
         generationProbability:60, //out of 100
         deathMessages:["You died from a monster.", "A monster hit you.", "You were slain by a monster"],
+        knockbackDist:5,
     },
     "Lord":{
         type:"Lord",
@@ -970,6 +961,7 @@ const enemyObj = {
         giveXP : 500,
         generationProbability:30, //out of 100
         deathMessages:["You died from a monster leader.", "A monster lord killed you."],
+        knockbackDist:10,
     },
     "Archer":{
         type:"Archer", 
@@ -992,7 +984,8 @@ const enemyObj = {
         ], 
         giveXP : 150,
         generationProbability:25, //out of 100
-        deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."]
+        deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."],
+        knockbackDist:5,
     },
 
     "Summoned Lord":{
@@ -1015,6 +1008,7 @@ const enemyObj = {
         giveXP : 500,
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."],
+        knockbackDist:10,
     },
     "Boss":{
         type:"Boss", 
@@ -1030,7 +1024,7 @@ const enemyObj = {
         giveXP : 2500,
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."],
-
+        knockbackDist:20,
     },
 
     // Normal --> Small --> Tiny
@@ -1055,6 +1049,7 @@ const enemyObj = {
         giveXP : 2000,
         generationProbability:10,//100
         deathMessages:["You died from a vantacite monster.", "A vantacite monster squashed you.", "You saw a vantacite monster."],
+        knockbackDist:50,
     },
     "Small Vantacite Monster":{
         type:"Small Vantacite Monster", 
@@ -1077,6 +1072,7 @@ const enemyObj = {
         giveXP : 1000,
         generationProbability:20,
         deathMessages:["You died from a mini vantacite monster.", "A small vantacite monster hit you.", "You saw a vantacite monster (a small one)."],
+        knockbackDist:7.5,
     },
     "Tiny Vantacite Monster":{
         type:"Tiny Vantacite Monster", 
@@ -1099,6 +1095,7 @@ const enemyObj = {
         giveXP : 500,
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from a tiny vantacite monster.", "A tiny vantacite monster hit you.", "You saw a vantacite monster (a tiny one)."],
+        knockbackDist:5,
     },
     "Very Tiny Vantacite Monster":{
         type:"Very Tiny Vantacite Monster", 
@@ -1121,6 +1118,7 @@ const enemyObj = {
         giveXP : 250,
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from a very small vantacite monster.", "A very small vantacite monster hit you.", "You saw a vantacite monster (a very small one)."],
+        knockbackDist:1,
     }
 }
 var bossID = "Boss"
@@ -1145,9 +1143,12 @@ const projectilesObj = {
 class Projectile{
     constructor(worldID, name, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
         this.worldID = worldID
+        this.id = createRandomString(10)
         this.name = name //key inside holdable items!
         this.x = x
         this.y = y
+        this.knockbackDue = {x:0, y:0}
+        this.knockbackDist = 5
         this.rotation = dir + Math.PI/2//for drawing (neds to be rotwated 90 deg)
         this.direction = dir //for direction purposes
         this.speed = speed?speed:projectilesObj[name].speed
@@ -1178,6 +1179,8 @@ function createArrow(entity, arrowDirection, holdDuration, worldID="Main"){
     )
 }
 function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
+    if(from == to) return
+    if(!to) return
     let world = worlds[worldID]
     //deal initial damage...first...are they immune
     if(to.immuneDuration <= 0) { to.health -= damage } 
@@ -1241,6 +1244,18 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
             }
         }
         console.log(to.deathMessage)
+    }
+    //guess not!
+    else{
+        var hitFromDirection = Math.atan2(to.y-from.y, to.x-from.x)
+        //console.log(hitFromDirection)
+        var goToDirection = hitFromDirection + Math.PI
+        // apply KNOCKBACK
+
+        var kbd = (from.knockbackDist) * (1-to.knockbackResistance)
+        //console.log(worlds[worldID].entities[to.id], Object.keys(worlds[worldID].entities).filter(i => worlds[worldID].entities[i].isPlayer))
+        worlds[worldID].entities[to.id].knockbackDue.x = kbd * Math.cos(goToDirection)
+        worlds[worldID].entities[to.id].knockbackDue.y = kbd * Math.sin(goToDirection)
     }
 }
 
@@ -1341,9 +1356,9 @@ function createWorld(
                         relX: a.x + c*wallSize, 
                         relY: a.y + r*wallSize 
                     }
-                    let sID = createRandomString(20)
+                    let sID = `STRUCTURE${createRandomString(20)}`
                     if(blueprint[r][c] == "W"){
-                        worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
+                        worlds[id].structures[sID] = new Wall(nC, sID, wallSize, id)
                     } else if(blueprint[r][c] == "S"){
                         //allStairs.push({r:r,c:c,id:sID, blueprint:blueprint})
 
@@ -1351,8 +1366,8 @@ function createWorld(
                         console.log(stairRotation)
                         if(stairRotation != -1){
                             worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, stairRotation, id) //rotate none as a placeholder
-                        } else {
-                            worlds[id].structures[`STRUCTURE${sID}`] = new Wall(nC, sID, wallSize, id)
+                        } else { 
+                            worlds[id].structures[sID] = new Wall(nC, sID, wallSize, id)
                         }
                     }
                 }
@@ -1380,7 +1395,6 @@ function createWorld(
         if(newTree.x && newTree.y) worlds[id].trees[`Tree${tID}`] = newTree
     }
 
-
     // ASSIGN OBSTACLES TO WORLD DATA
     worlds[id].obstacles = Object.assign({}, worlds[id].structures, worlds[id].trees)
 
@@ -1391,7 +1405,7 @@ function createWorld(
 createWorld("Main")
 //INITIALIZE BOSS
 toggleOpeningsToArena(true, "Main")
-worlds["Main"].enemies[bossID] = new Boss()
+worlds["Main"].entities[bossID] = new Boss()
 
 // CREATE SAMPLE WORLD
 createWorld("World1", 1500, 0, 10, 1, 2, 0, 1)
@@ -1407,7 +1421,7 @@ setInterval(()=>{
         //spawn in boss?
         //console.log(bossCountDownTime)
         if(worldID == "Main"){
-            if (!world.enemies[bossID] && !startedCountdown){
+            if (!world.entities[bossID] && !startedCountdown){
                 toggleOpeningsToArena(false, "Main");
                 startedCountdown = true
                 bossCountDownTime = bossCountDownTimeMax; // seconds  
@@ -1417,130 +1431,130 @@ setInterval(()=>{
                     if (bossCountDownTime === 0) {
                         clearInterval(countdownInterval); // Stop the countdown interval
                         toggleOpeningsToArena(true, "Main")
-                        world.enemies[bossID] = new Boss()
+                        world.entities[bossID] = new Boss()
                         startedCountdown = false
                         console.log("The boss has entered the arena.");
                     }
                 }, 1000);
             }
         }
-        //Spawn in enemies (chance of)
-        if(Object.keys(world.enemies).length < world.amountOfEnemies){
+        //Spawn in entities (chance of)
+        if(Object.keys(world.entities).length < world.amountOfEnemies){
             var randomKey = Object.keys(enemyObj)[random(Object.keys(enemyObj).length-1, 0)]
             if(random(100, 1) < enemyObj[randomKey].generationProbability){
                 var nC = findSpawn(entitySize, worldID)
                 if(nC.x && nC.y){
                     let id = createRandomString(20)
                     if(randomKey === "Archer"){
-                        world.enemies[id] = new Archer(nC.x, nC.y, id, worldID)
+                        world.entities[id] = new Archer(nC.x, nC.y, id, worldID)
                     } else{
-                        world.enemies[id] = new Enemy(randomKey, false, nC.x, nC.y, id, worldID)
+                        world.entities[id] = new Enemy(randomKey, false, nC.x, nC.y, id, worldID)
                     }
                 } else console.log(worldID, "Abandon generation --> mob")
             }
         }
         //the boss has no immune!...
-        if(world.enemies[bossID]) world.enemies[bossID].immuneDuration = 0
-        //Move and update enemies' health
-        for(let e in world.enemies){
-            //...unless there is a lord...
-            if(worldID == "Main" && world.enemies[e].type == "Summoned Lord"){
-                world.enemies[bossID].immuneDuration = MAX_IMMUNE_DURATION
-            }
-            world.enemies[e].move()
-            if(world.enemies[e].health <= 0) {
-                let pick = random(world.enemies[e].lootTable.length-1, 0) 
-                let enemy = world.enemies[e]
-                //find if percentage beats
-                //drop one thing...only one......
-                let loot = enemy.lootTable[pick]
-                if(random(100, 1) <= loot.generationProbability){
-                    var id = createID()
-                    world.pickables[id] = new Pickable(
-                        id, 
-                        world.enemies[e].x, 
-                        world.enemies[e].y, 
-                        loot, 
-                        0, loot.durability, loot.stackSize)
-                }
-                dropAll(enemy.id, "enemy", worldID)
-
-                //if special...
-                // VANTACITE MONSTER
-                if(enemy.type == "Vantacite Monster"){
-                    //one splits to 2 small
-                    let spread = entitySize * 2
-                    //1
-                    let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
-                    let split1 = new Enemy("Small Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
-                    //2
-                    let c2 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
-                    let split2 = new Enemy("Small Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
-                    
-                    //Add them
-                    world.enemies[split1.id] = split1
-                    world.enemies[split2.id] = split2
-                } else if(enemy.type == "Small Vantacite Monster"){
-                    //small splits to 4 tiny
-                    let spread = entitySize
-                    //1
-                    let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
-                    let split1 = new Enemy("Tiny Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
-                    //2
-                    let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
-                    let split2 = new Enemy("Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
-                    //3
-                    let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
-                    let split3 = new Enemy("Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
-                    //4
-                    let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
-                    let split4 = new Enemy("Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
-
-                    //Add them
-                    world.enemies[split1.id] = split1
-                    world.enemies[split2.id] = split2
-                    world.enemies[split3.id] = split3
-                    world.enemies[split4.id] = split4
-                } else if(enemy.type == "Tiny Vantacite Monster"){
-                    //small splits to 4 very small ones
-                    let spread = entitySize
-                    //1
-                    let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
-                    let split1 = new Enemy("Very Tiny Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
-                    //2
-                    let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
-                    let split2 = new Enemy("Very Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
-                    //3
-                    let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
-                    let split3 = new Enemy("Very Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
-                    //4
-                    let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
-                    let split4 = new Enemy("Very Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
-
-                    //Add them
-                    world.enemies[split1.id] = split1
-                    world.enemies[split2.id] = split2
-                    world.enemies[split3.id] = split3
-                    world.enemies[split4.id] = split4
-                }
-
-
-
-                delete world.enemies[e]
-            }
-        }
-
-        //manage player vars
+        if(world.entities[bossID]) world.entities[bossID].immuneDuration = 0
+        //Move and update entities' health
         for(let e in world.entities){
             let entity = world.entities[e]
-            if(entity.health < entity.maxHealth){
-                world.entities[e].health += 0.01
+            if(!entity.isPlayer){
+                //...unless there is a lord...
+                if(worldID == "Main" && world.entities[e].type == "Summoned Lord"){
+                    world.entities[bossID].immuneDuration = MAX_IMMUNE_DURATION
+                }
+                world.entities[e].move()
+                if(world.entities[e].health <= 0) {
+                    let pick = random(world.entities[e].lootTable.length-1, 0) 
+                    let enemy = world.entities[e]
+                    //find if percentage beats
+                    //drop one thing...only one......
+                    let loot = enemy.lootTable[pick]
+                    if(random(100, 1) <= loot.generationProbability){
+                        var id = createID()
+                        world.pickables[id] = new Pickable(
+                            id, 
+                            world.entities[e].x, 
+                            world.entities[e].y, 
+                            loot, 
+                            0, loot.durability, loot.stackSize)
+                    }
+                    dropAll(enemy.id, "enemy", worldID)
+
+                    //if special...
+                    // VANTACITE MONSTER
+                    if(enemy.type == "Vantacite Monster"){
+                        //one splits to 2 small
+                        let spread = entitySize * 2
+                        //1
+                        let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
+                        let split1 = new Enemy("Small Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
+                        //2
+                        let c2 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
+                        let split2 = new Enemy("Small Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
+                        
+                        //Add them
+                        world.entities[split1.id] = split1
+                        world.entities[split2.id] = split2
+                    } else if(enemy.type == "Small Vantacite Monster"){
+                        //small splits to 4 tiny
+                        let spread = entitySize
+                        //1
+                        let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
+                        let split1 = new Enemy("Tiny Vantacite Monster", true, c1.x, c1.y, createID(),  worldID)
+                        //2
+                        let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
+                        let split2 = new Enemy("Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
+                        //3
+                        let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
+                        let split3 = new Enemy("Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
+                        //4
+                        let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
+                        let split4 = new Enemy("Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
+
+                        //Add them
+                        world.entities[split1.id] = split1
+                        world.entities[split2.id] = split2
+                        world.entities[split3.id] = split3
+                        world.entities[split4.id] = split4
+                    } else if(enemy.type == "Tiny Vantacite Monster"){
+                        //small splits to 4 very small ones
+                        let spread = entitySize
+                        //1
+                        let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
+                        let split1 = new Enemy("Very Tiny Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
+                        //2
+                        let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
+                        let split2 = new Enemy("Very Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
+                        //3
+                        let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
+                        let split3 = new Enemy("Very Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
+                        //4
+                        let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
+                        let split4 = new Enemy("Very Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
+
+                        //Add them
+                        world.entities[split1.id] = split1
+                        world.entities[split2.id] = split2
+                        world.entities[split3.id] = split3
+                        world.entities[split4.id] = split4
+                    }
+
+
+
+                    delete world.entities[e]
+                }
             }
-            if(entity.health <= 0){
-                world.entities[e].isDead = true // This player is NOW dead!!
-            }
-            if(entity.immuneDuration > 0){
-                world.entities[e].immuneDuration -= 1 
+            else{
+                if(entity.health < entity.maxHealth){
+                    world.entities[e].health += 0.01
+                }
+                if(entity.health <= 0){
+                    world.entities[e].isDead = true // This player is NOW dead!!
+                }
+                if(entity.immuneDuration > 0){
+                    world.entities[e].immuneDuration -= 1 
+                }
             }
         }
 
@@ -1632,7 +1646,7 @@ setInterval(()=>{
             }
 
             // Check collision with walls
-            let collision = checkCollision(world.obstacles, world.lakes, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height), projectile.worldID);
+            let collision = checkCollision(projectile.id, world.obstacles, world.lakes, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height), projectile.worldID);
             
             // Check if the projectile goes out of bounds
             if (!(projectile.x + collision.tx > world.BORDERS.L && projectile.x + collision.tx < world.BORDERS.R && projectile.y + collision.ty > world.BORDERS.D && projectile.y + collision.ty < world.BORDERS.U)) {
@@ -1660,36 +1674,34 @@ setInterval(()=>{
             projectile.x += collision.tx;
             projectile.y += collision.ty;
 
-            // Damage entities and enemies
-            let damageables = [world.entities, world.enemies];
-            damageables.forEach(obj => {
-                for (let k in obj) {
-                    let entity = obj[k];
-                    // Check if projectile hits entity
-                    if (projectile.x > entity.x - entitySize / 2 &&
-                        projectile.x < entity.x + entity.width - entitySize / 2 &&
-                        projectile.y > entity.y - entitySize / 2 &&
-                        projectile.y < entity.y + entity.height - entitySize / 2) {
-                        // Decrease entity health by projectile damage
-                        dealDamageTo(projectile.damage, projectile, entity, key, projectile.worldID)
-                        
-                        if(projectile.durability != Infinity 
-                        && projectile.durability > 0){
-                            var pid = createRandomString(20)
-                            world.pickables[pid] = new Pickable(
-                                pid, 
-                                projectile.x, 
-                                projectile.y, 
-                                projectile,
-                                projectile.rotation, 
-                                projectile.durability
-                            );
-                        }
-                        delete world.projectiles[key];
-                        break;
+            // Damage entities and entities
+            let obj = world.entities
+            for (let k in obj) {
+                let entity = obj[k];
+                // Check if projectile hits entity
+                if (projectile.x > entity.x - entitySize / 2 &&
+                    projectile.x < entity.x + entity.width - entitySize / 2 &&
+                    projectile.y > entity.y - entitySize / 2 &&
+                    projectile.y < entity.y + entity.height - entitySize / 2) {
+                    // Decrease entity health by projectile damage
+                    dealDamageTo(projectile.damage, projectile, entity, key, projectile.worldID)
+                    
+                    if(projectile.durability != Infinity 
+                    && projectile.durability > 0){
+                        var pid = createRandomString(20)
+                        world.pickables[pid] = new Pickable(
+                            pid, 
+                            projectile.x, 
+                            projectile.y, 
+                            projectile,
+                            projectile.rotation, 
+                            projectile.durability
+                        );
                     }
+                    delete world.projectiles[key];
+                    break;
                 }
-            });
+            }
         }
 
         
@@ -1769,6 +1781,14 @@ io.sockets.on("connection", (socket)=>{
                 Object.assign(entity, { x, y, rotation, invSelected, speed, onWall });
 
                 if (data.reorder) entity.inventory = inventory; //only update inventory if reordering...
+
+                //update KNOCKBACK for player!
+                if(data.resetX){
+                    worlds[data.worldID].entities[data.id].knockbackDue.x = 0
+                }
+                if(data.resetY){
+                    worlds[data.worldID].entities[data.id].knockbackDue.y = 0
+                }
             } else if(!player.isDead){
                 console.log("ID", data.id, "was added to pool")
                 world.entities[data.id] = player
@@ -1809,6 +1829,14 @@ io.sockets.on("connection", (socket)=>{
             global_player = player
         }
     })
+    /*
+    // update movement
+    socket.on("resetKnockbackX", (data)=>{
+        
+    })
+    socket.on("resetKnockbackY", (data)=>{
+        worlds[data.worldID].entities[data.id].knockbackDue.y = 0
+    })*/
 
     socket.on("requestUpdateDataFromServer", (data)=>{
         try{
@@ -1818,7 +1846,8 @@ io.sockets.on("connection", (socket)=>{
             let player = entities[data.id]
             let updateContent = [world.borderRect] //always have the border
 
-            let players = Object.values(entities).filter(player => !player.isDead) //filter out the "alive players"
+            let activeEntities = Object.values(entities).filter(player => !player.isDead) //filter out the "alive activeEntities"
+            let players = Object.values(activeEntities).filter(i=>i.isPlayer)
 
             if(data.worldID){
                 let world = worlds[data.worldID]
@@ -1826,7 +1855,7 @@ io.sockets.on("connection", (socket)=>{
                 let updateLi = [
                     world.lakes, world.markets, world.structures, //landmarks
                     world.particles, //um...
-                    players, world.enemies, //entities
+                    activeEntities, //entities
                     world.pickables, world.projectiles, //items
                     world.trees //um....
                 ];
@@ -1861,8 +1890,10 @@ io.sockets.on("connection", (socket)=>{
                 socket.emit("sendUpdateDataToClient", {
                     updateContent: updateContent,
                     player: player,
-                    serverPlayerCount: Object.keys(world.entities).length,
-                    leaderboard: Object.values(world.entities)
+                    entities: activeEntities,
+                    serverEntityCount: Object.keys(activeEntities).length,
+                    serverPlayerCount: Object.keys(players).length,
+                    leaderboard: Object.values(players)
                     .sort((a, b) => b.kills - a.kills)
                     .slice(0, 5)
                     .map(player => ({ username: player.username, kills: player.kills, xp: player.xp, id: player.id })), 
@@ -2018,18 +2049,6 @@ io.sockets.on("connection", (socket)=>{
                     && entity.y + entity.height/2 > mouseY
                     ){
                         dealDamageTo(damage, player, entity, null, data.worldID)
-                        didDamage = true // turn to true
-                    }
-                }
-                for(let e in world.enemies){    
-                    let entity = world.enemies[e]
-                    if(//Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
-                    //&& 
-                    entity.x - entity.width/2 < mouseX 
-                    && entity.x + entity.width/2 > mouseX
-                    && entity.y - entity.height/2 < mouseY 
-                    && entity.y + entity.height/2 > mouseY){
-                        dealDamageTo(damage, player, entity, null, data.worldID)                      
                         didDamage = true // turn to true
                     }
                 }

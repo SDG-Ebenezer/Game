@@ -31,7 +31,8 @@
             <h1 id="title">Game</h1>
 
             <div id="usernameInputDiv">
-                <input id="username" class="text_input" placeholder="Username..." maxlength="25">
+                <input id="username" autocomplete="off"
+                class="text_input" placeholder="Username..." maxlength="25">
             </div>
 
             <div id="skin_decider_div">
@@ -81,7 +82,7 @@
             </div>
             
             <div id="join_game">
-                <input id="join_game_input" class="text_input" placeholder="Game ID" maxlength="6">
+                <input autocomplete="off" id="join_game_input" class="text_input" placeholder="Game ID" maxlength="6">
                 <button onclick="joinGame()" id="joinGameBtn">Join World</button>
             </div>
 

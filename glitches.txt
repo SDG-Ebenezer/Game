@@ -1,0 +1,7 @@
+BUGS!
+* [FIXED] Collision Checking is NOT working. Player (potentially bots) can move in an out of some walls/entities/etc. randomly?
+* [FIXED] Archers do not take knockback
+
+TODO:
+* [COMPLETE] Players take knockback
+* Find and patch all the times the ID does not equal the KEY

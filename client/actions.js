@@ -54,12 +54,16 @@ var marketsList = []
 var marketOpen = false //
 
 var obstacles = {}
+var entities = {}
 
 //var speedFactor = 1 //updated later, 1 as default
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
 socket.on("sendStartData", (data)=>{
+    initiateGameLoop()
+    setupGame()
+
     borders = data.bordersObj
     //walls = data.structuresObj //send for map
     player = data.player
@@ -95,8 +99,22 @@ socket.on("reupdate", (data)=>{
 /** @UPDATE !! */
 // DRAWING FUNCTION
 var scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
-var maxScale = scale
+var maxScale = scale 
 var minScale = maxScale - 0.2
+/*
+const MAXMAXSCALE = 1
+const MINMINSCALE = .4
+window.addEventListener("wheel", (e)=> {
+    var increment = -e.deltaY/1000
+    if(MINMINSCALE < scale && scale < MAXMAXSCALE
+    ){
+        maxScale += increment
+        minScale += increment
+        scale = minScale
+    }
+    console.log(increment, minScale, maxScale)
+})*/
+
 /******* DRAWING FUNCTION RIGHT HERE!! ************************************/
 function updateCanv(info, serverPlayerCount, leaderboard){
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -317,6 +335,7 @@ socket.on("sendUpdateDataToClient", (info) => {
      * death.
      */
     updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard);
+    entities = info.entities
 });
 
 /** @GAME_DETAILS */
@@ -407,23 +426,6 @@ function gActivateSpeedBar() {
 
     let div = document.getElementById("floatingInfoDiv")
     if(displayHelp){
-        /*
-        let x = ginfo.width / 2
-        let y = ginfo.height - gBarHeight * 2
-        let w = 500
-        let h = 40
-        // Draw translucent white background
-        gctx.save()
-        gctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-        gctx.fillRect(x - w/2, y - h/2, w, h);
-
-        // Draw text
-        gctx.fillStyle = "black";
-        gctx.font = `${h / 2}px ${defaultFontFamily}`
-        gctx.textAlign = "center";
-        gctx.fillText("Hold a Key and then Press [X] to Sprint", x , y);
-        gctx.restore()
-        */
         let text = "<span>Hold a Key and then Press <img src=\"imgs/IconsK_X.png\" width=20 height=20> to Sprint</span>"
         
         div.innerHTML = text
@@ -1043,50 +1045,21 @@ window.createNewWorld = function createNewWorld(){
 }
 window.gameOn = false
 function startGame(worldID = "Main", createWorld=false, username=null){
-    {
-        gameOn = true
-        
-        //zoom in spawn effect
-        scale = minScale
-        //reset or set these:
-        tx = 0
-        ty = 0
-        
-        //set these:
-        /************ RESET BTNS *********************/
-        //document.getElementById("exitGameBtn").style.display = "none"
-        document.getElementById("preGame_Stuff_OuterDiv").style.display = "none"
-        document.getElementById("startGameBtn").style.display = "none"
-        document.getElementById("gameOver").style.display = "none"
-        /************ ADD EVENT LISTENERS *********************/
-        document.addEventListener("keydown", keydown)
-        document.addEventListener("keyup", keyup)
-        document.addEventListener("mousemove", mousemove)
-        document.addEventListener("mousedown", mousedown)
-        document.addEventListener("mouseup", mouseup)
-        // (for mobile)
-        document.addEventListener("touchstart", touchstart)
-        document.addEventListener("touchend", touchend)
-        
-        /**Show game divs */
-        document.getElementById("inGame_Stuff").style.display = "block"
-        /* Add leave game icon btn*/
-        document.getElementById("exitGameIconBtn").style.display = "block"
-        /*****************************************************/
-        //ask server for starting data and create new ID
-        var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
+    /*****************************************************/
+    //ask server for starting data and create new ID
+    var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
+    console.log("World ID = ", worldID)
+    socket.emit("askForStartData", {
+        username: username?username:document.getElementById("username").value,
+        img:selectedValue,
+        worldID:worldID, //WORLD THAT THE PLAYER JOINS
+        createWorld:createWorld
+    })//start game loop
 
-        //if(selectedValue=="Player5"){worldID = "World1"}
-
-        console.log("World ID = ", worldID)
-        socket.emit("askForStartData", {
-            username: username?username:document.getElementById("username").value,
-            img:selectedValue,
-            worldID:worldID, //WORLD THAT THE PLAYER JOINS
-            createWorld:createWorld
-        })
-    }
-    //start game loop
+    //Actual stuff called when server responds.
+}
+// Starts the game loop
+function initiateGameLoop(){
     gameLoopInt = setInterval(()=>{
         //player update
         if(player && updateAgain && canPlay) {
@@ -1100,6 +1073,19 @@ function startGame(worldID = "Main", createWorld=false, username=null){
                 performActions() //get tx,ty from keys
                 //close market if attacked
                 if(lastHealthBeforeMarket > player.health) toggleMarket()
+                
+                var resetX = false
+                var resetY = false
+                //knockback?
+                if(player.knockbackDue.x!=0){
+                    tx -= player.knockbackDue.x
+                    resetX = true
+                }
+                if(player.knockbackDue.y!=0){
+                    ty -= player.knockbackDue.y
+                    resetY = true
+                }
+
                 //check if in border
                 if (player.x + tx >= borders.R 
                 || player.x + tx <= borders.L){
@@ -1110,39 +1096,10 @@ function startGame(worldID = "Main", createWorld=false, username=null){
                     ty = 0
                 }
 
-                //update onWall
-                /*
-                let oW = false
-                 //ascendables
-                for(let o in check){
-                    let obstacle = check[o]
-                    let width = player.width/2
-                    let height = player.height/2
-                    if(obstacle.class == "Stairs"
-                    && player.x > obstacle.x-obstacle.width/2 
-                    && player.x < obstacle.x+obstacle.width/2
-                    && player.y > obstacle.y-obstacle.height/2
-                    && player.y < obstacle.y+obstacle.height/2
-                    && !player.onWall){
-                        oW = true;
-                        break;
-                    } else if(player.onWall){
-                        if(((obstacle.class == "Wall" || obstacle.class == "Stairs")
-                        && player.x > obstacle.x-obstacle.width/2-width 
-                        && player.x < obstacle.x+obstacle.width/2+width
-                        && player.y > obstacle.y-obstacle.height/2-height 
-                         && player.y < obstacle.y+obstacle.height/2+height)
-                        || (obstacle.class=="Tree"
-                        && Math.sqrt(Math.pow(player.x-obstacle.x,2) + Math.pow(player.y-obstacle.y,2)) < entitySize + obstacle.obstructionRadius)) {
-                            oW = true
-                            break;
-                        }
-                    }
-                }*/
                 player.onWall = getOnWallStatus(obstacles, player)//oW
 
                 //check if hit wall
-                let possibleNewXY = checkCollision(obstacles, lakesList, player.x, player.y, tx, ty, player.onWall, player.width==player.height?player.width:Math.max(player.width, player.height))
+                let possibleNewXY = checkCollision(player.id, obstacles, lakesList, player.x, player.y, tx, ty, player.onWall, null, true, player.width==player.height?player.width:Math.max(player.width, player.height), player.worldID, entities)
                 //add particles
                 if(possibleNewXY.addLakeParticle){
                     socket.emit("addParticles", {
@@ -1153,7 +1110,7 @@ function startGame(worldID = "Main", createWorld=false, username=null){
                     })
                 }
 
-                let newCoords = player.onWall?{tx,ty}:possibleNewXY
+                let newCoords = possibleNewXY
                 tx = newCoords.tx
                 ty = newCoords.ty
 
@@ -1166,6 +1123,8 @@ function startGame(worldID = "Main", createWorld=false, username=null){
                     id:player.id,
                     reorder: reorderInventory,
                     worldID:player.worldID,
+                    resetX:resetX,
+                    resetY:resetY
                 })  
 
                 let inMarket = false
@@ -1210,6 +1169,35 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         }
     }, 0.01) //0.01
 }
+// Function that turns things off/on as needed when game begins
+function setupGame(){
+    gameOn = true
+    //zoom in spawn effect
+    scale = minScale
+    //reset or set these:
+    tx = 0
+    ty = 0
+    //set these:
+    /************ RESET BTNS *********************/
+    //document.getElementById("exitGameBtn").style.display = "none"
+    document.getElementById("preGame_Stuff_OuterDiv").style.display = "none"
+    document.getElementById("startGameBtn").style.display = "none"
+    document.getElementById("gameOver").style.display = "none"
+    /************ ADD EVENT LISTENERS *********************/
+    document.addEventListener("keydown", keydown)
+    document.addEventListener("keyup", keyup)
+    document.addEventListener("mousemove", mousemove)
+    document.addEventListener("mousedown", mousedown)
+    document.addEventListener("mouseup", mouseup)
+    // (for mobile)
+    document.addEventListener("touchstart", touchstart)
+    document.addEventListener("touchend", touchend)
+    
+    /**Show game divs */
+    document.getElementById("inGame_Stuff").style.display = "block"
+    /* Add leave game icon btn*/
+    document.getElementById("exitGameIconBtn").style.display = "block"
+}
 window.startGame = startGame
 window.rejoinGame = function rejoinGame(){
     clearInterval(gameLoopInt)
@@ -1217,9 +1205,11 @@ window.rejoinGame = function rejoinGame(){
     console.log(player.worldID)
     startGame(player.worldID, false, player.username)
 }
+// Function that turns things off/on as needed when game is over
 window.exitGame = function exitGame(){
     gameOn = false
     canPlay = false // turn off
+    speedTime = speedTimeMax //reset speed!!
     document.getElementById("gameOver").style.display = "none"
     clearInterval(gameLoopInt) 
     //make home screen visible again
@@ -1442,28 +1432,3 @@ window.leaveGame = function leaveGame(){
         exitGame()
     }
 }
-
-/*
-// Detect when a player leaves the tab (open)
-var stillGone = false
-//he left the tab
-window.addEventListener("blur", () => {
-    stillGone = true
-    leaveTabConsequence()
-});
-//he's back
-window.addEventListener("focus", () => {
-    stillGone = false
-});
-//he shifted windows
-document.addEventListener("visibilitychange", () => {
-    //page hidden
-    if (document.hidden) {
-        stillGone = true
-        leaveTabConsequence()
-    } 
-    //page not hidden
-    else {
-        stillGone = false
-    }
-});*/
