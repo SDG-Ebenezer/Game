@@ -177,7 +177,7 @@ export const holdableItems = {
         inMarket:true,
         immuneDuration: MAX_IMMUNE_DURATION//s
     },
-    /*
+    
     "Debug":{
         name:"Debug", // MUST MATCH KEY!
         class:"Sword",
@@ -194,7 +194,7 @@ export const holdableItems = {
         cooldownTime: 1 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:false
-    },*/
+    },
 }
 
 export const random = (max, min) => Math.floor(Math.random() * (max - min + 1)) + min
@@ -231,7 +231,7 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
     let newX = playerX + tx;
     let newY = playerY + ty;
     var obstructionPadding = size/2 
-    
+
     // check obstacles (trees/walls)
     if(!onWall){
         for(let w in obstacles){
@@ -280,24 +280,6 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
             if(Math.sqrt(Math.pow(newY-y,2) + Math.pow(playerX-x,2)) < s){
                 ty = 0
             }
-            /*
-            let width = obstacle.width
-            let height = obstacle.height 
-            let obstacleX = obstacle.x - width/2
-            let obstacleY = obstacle.y - height/2
-            if (newX + s >= obstacleX &&
-                newX - s <= obstacleX + width &&
-                obstacleY  <= playerY + s && 
-                playerY - s <= obstacleY + height) {
-                tx = 0;
-            }
-            if (newY + s >= obstacleY &&
-                newY - s <= obstacleY + height &&
-                obstacleX <= playerX + s && 
-                playerX - s <= obstacleX + width) {
-                ty = 0;
-            }
-            */
         }
     }
     
@@ -307,15 +289,25 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
             let distanceSquared = Math.pow(lake.x - playerX, 2) + Math.pow(lake.y - playerY, 2);
             if (distanceSquared <= Math.pow(lake.radius, 2)) {
                 if (distanceSquared <= Math.pow(lake.radius - size * 2, 2)) {
-                    return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor, addLakeParticle:true };
+                    return { 
+                        tx: tx * lake.decreaseSpeedFactor, 
+                        ty: ty * lake.decreaseSpeedFactor, 
+                        addLakeParticle:true,
+                    };
                 } else{
-                    return { tx: tx * lake.decreaseSpeedFactor, ty: ty * lake.decreaseSpeedFactor, addLakeParticle:false };
+                    return { 
+                        tx: tx * lake.decreaseSpeedFactor, 
+                        ty: ty * lake.decreaseSpeedFactor, 
+                        addLakeParticle:false 
+                    };
                 }
             }
         }
     }
-    
-    return { tx, ty };
+    return { 
+        tx:tx, 
+        ty:ty,
+    };
 }
 
 export function test(){

@@ -372,7 +372,7 @@ function findSpawn(size=0, worldID="Main") {
         y = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
         //cannot spawn on structures or markets 
         let thisWorld = worlds[worldID]
-        let li1 = [thisWorld.structures, thisWorld.markets]
+        let li1 = [thisWorld.structures, thisWorld.markets, thisWorld.entities]
         li1.forEach(obj=>{
             for (let sKey in obj) {
                 let st = obj[sKey];
@@ -407,6 +407,72 @@ function findSpawn(size=0, worldID="Main") {
     }
     return { x, y };
 }
+function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
+    let tries = 1000 //5000 tries to spawn in, else terminate
+    let world = worlds[worldID]
+    for(let i = 0; i < tries; i++){
+        let rad = random(Math.round(Math.PI * 100 * 2), 0)/100
+        let xx = x + Math.cos(rad) * random(spread, 0)
+        let yy = y + Math.sin(rad) * random(spread, 0)
+        
+        //ENTITIES
+        for(let i in world.entities){
+            let entity = world.entities[i]
+            let distFromEntity = Math.sqrt(Math.pow(entity.x - xx, 2) + Math.pow(entity.y - yy, 2))
+            if(size > distFromEntity){
+                return {
+                    x:null, 
+                    y:null
+                }
+            }
+        }        
+        //OBSTACLE
+        for(let i in world.obstacles){
+            let obstacle = world.obstacles[i]
+            let distFromObstacle = Math.sqrt(Math.pow(obstacle.x - xx, 2) + Math.pow(obstacle.y - yy, 2))
+            if(size > distFromObstacle){
+                return {
+                    x:null, 
+                    y:null
+                }
+            }
+        }
+        //BORDER
+        var borders = world.BORDERS
+        if(xx - size < borders.L
+        || xx + size > borders.R
+        || yy - size < borders.D
+        || yy + size > borders.U){
+            return {
+                x:null, 
+                y:null
+            }
+        }
+        console.log("SUCCESS!")
+        return {
+            x:xx, 
+            y:yy
+        }
+    }
+    
+}
+function summon(enemyKey, x, y, spread, amount, worldID, frequency=50){
+    let enemy = enemyObj[enemyKey]
+    let i = 0
+    let abcInterval = setInterval(()=>{
+        let coords = findSpawnAround(x, y, Math.max(enemy.w, enemy.h), spread, worldID)
+        let xx = coords.x
+        let yy = coords.y
+        if(xx && yy) {
+            let id = createID()
+            worlds[worldID].entities[id] = new Enemy(enemyKey, false, xx, yy, createID(), worldID)
+            i ++
+        }
+        //give up if more than 1000 tries or if the requested amount is satisfied
+        if(i == amount || i > 1000) clearInterval(abcInterval)
+    }, frequency)
+}
+
 function borderInPoints(x, y, worldID){
     let borders = worlds[worldID].BORDERS
     if(x < borders.L){
@@ -541,7 +607,7 @@ class Player extends Entity{
         this.username = (username == "")? "Player":username;
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Hand"]},//Debug"]},
+            {...holdableItems["Debug"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
@@ -596,6 +662,7 @@ class Enemy extends Entity{
         this.targetData = {}
     }
     findTarget(){
+        this.targetData = {}
         let minDist = this.detectRange//10**10
         let world = worlds[this.worldID]
         let players = Object.values(world.entities).filter(i => i.isPlayer)
@@ -611,13 +678,14 @@ class Enemy extends Entity{
             }
         }
         // if no player is found, then pick things up
-        if(!this.targetData && this.inventory.some(item => item.name === "Hand")){
+        if(Object.keys(this.targetData).length == 0 
+        && this.inventory.some(item => item.name === "Hand")){
             for (let i in world.pickables) {
                 let item = world.pickables[i]
                 let dist = Math.sqrt(Math.pow(item.x - this.x, 2) + Math.pow(item.y - this.y, 2));
                 if (dist < minDist && item && item.class!="Coin") {
                     minDist = dist;
-                    targetData = {
+                    this.targetData = {
                         key:item.id,
                         targetType:"pickable"
                     }; //item target
@@ -772,7 +840,6 @@ class Boss extends Enemy{
     constructor(x=0, y=0){
         super("Boss", true, x, y, bossID)
         this.summonGuards = false
-        this.summoned = 0
     }
     move(){
         if(this.health < this.maxHealth * 3/4){
@@ -786,7 +853,6 @@ class Boss extends Enemy{
                 if (world.entities[e].type=="Summoned Lord"){
                     delete world.entities[e]
                     this.summonGuards = false
-                    this.summoned = 0
                 }
             }
         } else if (this.health < this.maxHealth){
@@ -794,19 +860,11 @@ class Boss extends Enemy{
             this.health += 0.01 //* speedFactor
         }
     }
-    summonInGuards(){
-        let spread = 100
+    summonInGuards(guardCount = 16, spread = 500){
+        //manual summon
         if(!this.summonGuards){
             this.summonGuards = true
-            for(let i = 0; i < 2; i ++){
-                let x = (i * spread) - spread
-                for(let j = 0; j < 2; j ++){
-                    let id = `@Summoned${i}${j}${random(65536,0)}`
-                    let y = (j * spread) - spread
-                    worlds[this.worldID].entities[id] = new Enemy("Summoned Lord", true, x, y, id)
-                    this.summoned++
-                }
-            }
+            summon("Summoned Lord", this.x, this.y, spread, guardCount, this.worldID)
         }
     }
 }
@@ -1485,63 +1543,17 @@ setInterval(()=>{
                     // VANTACITE MONSTER
                     if(enemy.type == "Vantacite Monster"){
                         //one splits to 2 small
-                        let spread = entitySize * 2
-                        //1
-                        let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
-                        let split1 = new Enemy("Small Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
-                        //2
-                        let c2 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
-                        let split2 = new Enemy("Small Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
-                        
-                        //Add them
-                        world.entities[split1.id] = split1
-                        world.entities[split2.id] = split2
+                        let spread = enemyObj["Small Vantacite Monster"].w * 3
+                        summon("Small Vantacite Monster", enemy.x, enemy.y, spread, 2, worldID)
                     } else if(enemy.type == "Small Vantacite Monster"){
                         //small splits to 4 tiny
-                        let spread = entitySize
-                        //1
-                        let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
-                        let split1 = new Enemy("Tiny Vantacite Monster", true, c1.x, c1.y, createID(),  worldID)
-                        //2
-                        let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
-                        let split2 = new Enemy("Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
-                        //3
-                        let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
-                        let split3 = new Enemy("Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
-                        //4
-                        let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
-                        let split4 = new Enemy("Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
-
-                        //Add them
-                        world.entities[split1.id] = split1
-                        world.entities[split2.id] = split2
-                        world.entities[split3.id] = split3
-                        world.entities[split4.id] = split4
+                        let spread = enemyObj["Tiny Vantacite Monster"].w * 3
+                        summon("Tiny Vantacite Monster", enemy.x, enemy.y, spread, 4, worldID)
                     } else if(enemy.type == "Tiny Vantacite Monster"){
                         //small splits to 4 very small ones
-                        let spread = entitySize
-                        //1
-                        let c1 = borderInPoints(enemy.x + spread, enemy.y + spread, worldID)
-                        let split1 = new Enemy("Very Tiny Vantacite Monster", true, c1.x, c1.y, createID(), worldID)
-                        //2
-                        let c2 = borderInPoints(enemy.x + spread, enemy.y - spread, worldID)
-                        let split2 = new Enemy("Very Tiny Vantacite Monster", true, c2.x, c2.y, createID(), worldID)
-                        //3
-                        let c3 = borderInPoints(enemy.x - spread, enemy.y + spread, worldID)
-                        let split3 = new Enemy("Very Tiny Vantacite Monster", true, c3.x, c3.y, createID(), worldID)
-                        //4
-                        let c4 = borderInPoints(enemy.x - spread, enemy.y - spread, worldID)
-                        let split4 = new Enemy("Very Tiny Vantacite Monster", true, c4.x, c4.y, createID(), worldID)
-
-                        //Add them
-                        world.entities[split1.id] = split1
-                        world.entities[split2.id] = split2
-                        world.entities[split3.id] = split3
-                        world.entities[split4.id] = split4
+                        let spread = enemyObj["Very Tiny Vantacite Monster"].w * 3
+                        summon("Very Tiny Vantacite Monster", enemy.x, enemy.y, spread, 4, worldID)
                     }
-
-
-
                     delete world.entities[e]
                 }
             }
@@ -1713,6 +1725,7 @@ setInterval(()=>{
 
 // * * * SOCKET * * * //
 import { Server as SocketIOServer } from 'socket.io';
+import { setInterval } from "timers";
 
 // Assuming `serv` is your HTTP server instance:
 const io = new SocketIOServer(serv, {});

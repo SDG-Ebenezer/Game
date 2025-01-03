@@ -1,7 +1,9 @@
 BUGS!
-* [FIXED] Collision Checking is NOT working. Player (potentially bots) can move in an out of some walls/entities/etc. randomly?
-* [FIXED] Archers do not take knockback
+* [FIXED] CLOSED 12/31/24 | Collision Checking is NOT working. Player (potentially bots) can move in an out of some walls/entities/etc. randomly? OPEN 12/30/24.
+* [FIXED] CLOSED 12/31/24 | Archers do not take knockback. OPEN 12/30/24.
+* [FIXED] CLOSED 01/02/25 | Spawn on players! OPEN 1/2/25.
+* [FIXED] CLOSED 01/02/25 | Monsters do not pick up pickables anymore... OPEN 01/02/25.
 
 TODO:
-* [COMPLETE] Players take knockback
-* Find and patch all the times the ID does not equal the KEY
+* [COMPLETE] 12/31/24 | Players take knockback
+* [IN_PROGR] 12/31/24 | Find and patch all the times the ID does not equal the KEY
