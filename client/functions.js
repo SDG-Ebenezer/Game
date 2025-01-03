@@ -21,6 +21,7 @@ export const holdableItems = {
         cooldownTime: 5 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:false,
+        knockback:0, //percent
     },
     "Iron Sword":{
         name:"Iron Sword", // MUST MATCH KEY!
@@ -37,7 +38,8 @@ export const holdableItems = {
         hitRange: 175,
         cooldownTime: 5 , //* 1/speedFactor, //mms till next use
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:10, //percent
     },
     "Gold Sword":{
         name:"Gold Sword", // MUST MATCH KEY!
@@ -55,6 +57,7 @@ export const holdableItems = {
         cooldownTime: 15 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:true,
+        knockback:5, //percent
     },
     "Diamond Sword":{
         name:"Diamond Sword", // MUST MATCH KEY!
@@ -71,7 +74,8 @@ export const holdableItems = {
         hitRange: 150,
         cooldownTime: 10 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:30, //percent
     },
     "Plasma Sword":{
         name:"Plasma Sword", // MUST MATCH KEY!
@@ -79,7 +83,7 @@ export const holdableItems = {
         imgSrc:"/imgs/Sword4.png",
         durability:100,
         maxDurability:100,
-        damage:50,
+        damage:80,
         generationProbability:1, //out of 100
         rotation:SWORD_ROTATION,
         stackSize:1,
@@ -88,15 +92,16 @@ export const holdableItems = {
         hitRange: 125,
         cooldownTime: 50 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:60, //percent
     },
     "Vantacite Sword":{
         name:"Vantacite Sword", // MUST MATCH KEY!
         class:"Sword",
         imgSrc:"/imgs/Sword5.png",
-        durability:200,
-        maxDurability:200,
-        damage:100,
+        durability:50,
+        maxDurability:50,
+        damage:250,
         generationProbability:0.1, // 1 in 1000
         rotation:SWORD_ROTATION, //rad
         stackSize:1,
@@ -105,7 +110,8 @@ export const holdableItems = {
         hitRange: 85,
         cooldownTime: 200 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:100, //percent
     },
     "Arrow":{
         name:"Arrow", // MUST MATCH KEY!
@@ -122,7 +128,8 @@ export const holdableItems = {
         hitRange: null,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:0, //percent (SEE PROJECTILES)
     },
     "Bow":{
         name:"Bow",  // MUST MATCH KEY!
@@ -140,7 +147,8 @@ export const holdableItems = {
         hitRange: MAX_LOAD,
         cooldownTime: 0, //20 bc now hold down for power/damage
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:0, //percent
     },
     "Spear":{
         name:"Spear", // MUST MATCH KEY!
@@ -157,7 +165,8 @@ export const holdableItems = {
         hitRange: MAX_LOAD,
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
-        inMarket:true
+        inMarket:true,
+        knockback:0, //percent (SEE PROJECTILES)
     },
     "Force Shield":{
         name:"Force Shield", // MUST MATCH KEY!
@@ -175,7 +184,8 @@ export const holdableItems = {
         cooldownTime: 0 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:true,
-        immuneDuration: MAX_IMMUNE_DURATION//s
+        immuneDuration: MAX_IMMUNE_DURATION,//s
+        knockback:0, //percent 
     },
     
     "Debug":{
@@ -193,7 +203,8 @@ export const holdableItems = {
         hitRange: 1000,
         cooldownTime: 1 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
-        inMarket:false
+        inMarket:false,
+        knockback:0, //percent 
     },
 }
 
@@ -268,20 +279,48 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
     }
 
     // check entities
-    for(let e in entities){
-        let obstacle = entities[e]
-        let s = size/2 + Math.min(obstacle.width, obstacle.height)/4
-        if(obstacle.id != playerID){
-            var x = obstacle.x
-            var y = obstacle.y
-            if(Math.sqrt(Math.pow(newX-x,2) + Math.pow(playerY-y,2)) < s){
-                tx = 0
+    for (let e in entities) {
+        let obstacle = entities[e];
+        if (obstacle.id != playerID) {
+            // Player bounding box
+            let letlet =  entitySize/4
+            let playerWidth = size / 2 - letlet;
+            let playerHeight = size / 2 - letlet;
+            
+            // Obstacle bounding box
+            let obstacleWidth = obstacle.width / 2 - letlet;
+            let obstacleHeight = obstacle.height / 2 - letlet;
+
+            // Obstacle position
+            let obstacleLeft = obstacle.x - obstacleWidth;
+            let obstacleRight = obstacle.x + obstacleWidth;
+            let obstacleTop = obstacle.y - obstacleHeight;
+            let obstacleBottom = obstacle.y + obstacleHeight;
+
+            // New player positions
+            let playerLeft = newX - playerWidth;
+            let playerRight = newX + playerWidth;
+            let playerTop = newY - playerHeight;
+            let playerBottom = newY + playerHeight;
+
+            // Horizontal collision
+            if (playerRight > obstacleLeft &&
+                playerLeft < obstacleRight &&
+                playerBottom > obstacleTop &&
+                playerTop < obstacleBottom) {
+                tx = 0; // Stop horizontal movement
             }
-            if(Math.sqrt(Math.pow(newY-y,2) + Math.pow(playerX-x,2)) < s){
-                ty = 0
+
+            // Vertical collision
+            if (playerBottom > obstacleTop &&
+                playerTop < obstacleBottom &&
+                playerRight > obstacleLeft &&
+                playerLeft < obstacleRight) {
+                ty = 0; // Stop vertical movement
             }
         }
     }
+
     
     if (!onWall && particlesTF) {
         for (let l in lakes) {

@@ -3,6 +3,7 @@ BUGS!
 * [FIXED] CLOSED 12/31/24 | Archers do not take knockback. OPEN 12/30/24.
 * [FIXED] CLOSED 01/02/25 | Spawn on players! OPEN 1/2/25.
 * [FIXED] CLOSED 01/02/25 | Monsters do not pick up pickables anymore... OPEN 01/02/25.
+* [ERROR] OPEN   01/03/25 | Hitting a just spawned vantacite monster glitches. The error is worlds[WorldID].entities[to.id] is UNDEFINED. OPEN 01/03/25.
 
 TODO:
 * [COMPLETE] 12/31/24 | Players take knockback

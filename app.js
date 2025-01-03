@@ -448,7 +448,7 @@ function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
                 y:null
             }
         }
-        console.log("SUCCESS!")
+        
         return {
             x:xx, 
             y:yy
@@ -456,7 +456,7 @@ function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
     }
     
 }
-function summon(enemyKey, x, y, spread, amount, worldID, frequency=50){
+function summon(enemyKey, x, y, spread, amount, worldID, frequency=10){
     let enemy = enemyObj[enemyKey]
     let i = 0
     let abcInterval = setInterval(()=>{
@@ -465,11 +465,11 @@ function summon(enemyKey, x, y, spread, amount, worldID, frequency=50){
         let yy = coords.y
         if(xx && yy) {
             let id = createID()
-            worlds[worldID].entities[id] = new Enemy(enemyKey, false, xx, yy, createID(), worldID)
+            worlds[worldID].entities[id] = new Enemy(enemyKey, false, xx, yy, id, worldID)
             i ++
         }
-        //give up if more than 1000 tries or if the requested amount is satisfied
-        if(i == amount || i > 1000) clearInterval(abcInterval)
+        //give up if more than 100 tries or if the requested amount is satisfied
+        if(i == amount || i > 100) clearInterval(abcInterval)
     }, frequency)
 }
 
@@ -566,7 +566,7 @@ function dropAll(id, type="player", worldID="Main"){
 
 /**************************** @ENTITIES *************/
 class Entity {
-    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, worldID="Main") {
+    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, knockbackResistance=0, worldID="Main") {
         this.id = id;
         this.class = "Entity"
         this.x = x;
@@ -576,7 +576,7 @@ class Entity {
             y:0
         }
         this.knockbackDist = knockbackDist // hit back
-        this.knockbackResistance = 0 //in percentage (e.g. 0.1)
+        this.knockbackResistance = knockbackResistance * (0.01) //in percentage (e.g. 0%, 86%)
         this.type = type;
         this.rotation = 0;               //changing this 
                                          // changes nothing, 
@@ -603,11 +603,11 @@ class Entity {
 
 class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100){
-        super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), 5, worldID)
+        super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), 5, 0, worldID)
         this.username = (username == "")? "Player":username;
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Debug"]},
+            {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
@@ -627,213 +627,207 @@ class Player extends Entity{
     }
 }
 
-class Enemy extends Entity{
-    constructor(enemyObjKey, onWall, x, y, id, worldID="Main", inventory=[], invSelected=0){
-        var enemy = enemyObj[enemyObjKey]
-        super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, enemy.knockbackDist, worldID)
-        this.username = "BOT_Enemy"
-        this.detectRange = enemy.detectRange
-        this.damage = enemy.damage
-        this.target
+class Enemy extends Entity {
+    constructor(enemyObjKey, onWall, x, y, id, worldID = "Main", inventory = [], invSelected = 0) {
+        const enemy = enemyObj[enemyObjKey];
+        super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, enemy.knockbackDist, enemy.knockbackResistance, worldID);
+
+        this.username = "BOT_Enemy";
+        this.detectRange = enemy.detectRange;
+        this.damage = enemy.damage;
+        this.target = null;
         this.dx = 0;
-        this.dy = 0;   
-        this.moving = false   
-        this.justAttacked = false
-        this.cooldownTime = 0 //s
-        this.cooldownDuration = enemy.reloadTime //ms
-        this.cooldownSF = 1 //speed/decrease length of reloadTime in slower/faster servers
-        /** @this.lootable - what it drops*/
-        this.lootTable = enemy.lootTable
-        this.xp = enemy.giveXP
-        
-        this.inventorySize = 1
-        this.inventory = inventory.length===0 ? Array.from(
-            { length: this.inventorySize }, 
-            () => (
-                {...holdableItems["Hand"]}
-            )) : inventory
-        this.invSelected = invSelected
+        this.dy = 0;
+        this.moving = false;
+        this.justAttacked = false;
+        this.cooldownTime = 0;
+        this.cooldownDuration = enemy.reloadTime;
+        this.cooldownSF = 1;
+        this.lootTable = enemy.lootTable;
+        this.xp = enemy.giveXP;
 
-        this.targetX = 0
-        this.targetY = 0
-        this.targetType
-        this.onWall = onWall //onWall = true if special spawn
+        this.inventorySize = 1;
+        this.inventory = inventory.length === 0
+            ? Array.from({ length: this.inventorySize }, () => ({ ...holdableItems["Hand"] }))
+            : inventory;
+        this.invSelected = invSelected;
 
-        this.targetData = {}
+        this.targetX = 0;
+        this.targetY = 0;
+        this.targetType = null;
+        this.onWall = onWall;
+
+        this.targetData = {};
+        this.targetList = {};
     }
-    findTarget(){
-        this.targetData = {}
-        let minDist = this.detectRange//10**10
-        let world = worlds[this.worldID]
-        let players = Object.values(world.entities).filter(i => i.isPlayer)
-        for (let i in players) {
-            let plyr = players[i]
-            let dist = Math.sqrt(Math.pow(plyr.x - this.x, 2) + Math.pow(plyr.y - this.y, 2));
-            if (dist < minDist && plyr) {
+
+    findTarget() {
+        this.targetData = {};
+        let minDist = this.detectRange;
+        const world = worlds[this.worldID];
+        const players = Object.values(world.entities).filter(entity => entity.isPlayer);
+
+        for (const player of players) {
+            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            if (dist < minDist) {
                 minDist = dist;
-                this.targetData = {
-                    key:plyr.id,
-                    targetType:"player"
-                } //player target
+                this.targetData = { key: player.id, targetType: "player" };
             }
         }
-        // if no player is found, then pick things up
-        if(Object.keys(this.targetData).length == 0 
-        && this.inventory.some(item => item.name === "Hand")){
-            for (let i in world.pickables) {
-                let item = world.pickables[i]
-                let dist = Math.sqrt(Math.pow(item.x - this.x, 2) + Math.pow(item.y - this.y, 2));
-                if (dist < minDist && item && item.class!="Coin") {
+
+        if (Object.keys(this.targetData).length === 0 && this.inventory.some(item => item.name === "Hand")) {
+            for (const item of Object.values(world.pickables)) {
+                const dist = Math.hypot(item.x - this.x, item.y - this.y);
+                if (dist < minDist && item.class !== "Coin") {
                     minDist = dist;
-                    this.targetData = {
-                        key:item.id,
-                        targetType:"pickable"
-                    }; //item target
+                    this.targetData = { key: item.id, targetType: "pickable" };
                 }
             }
         }
-        if(this.targetData!=undefined) {
-            if(this.targetData.targetType == "player"){
-                this.target = world.entities[this.targetData.key]
-            } else if(this.targetData.targetType == "pickable"){
-                this.target = world.pickables[this.targetData.key]
-            }
-            this.targetType = this.targetData.targetType
-        }
-        else{this.target = null}
-    }
-    damageCoolDown(){
-        if(this.justAttacked){
-            this.cooldownTime ++
-            //adds up until over
-            if(this.cooldownTime * this.cooldownSF >= this.cooldownDuration) {
-                this.cooldownTime = 0
-                this.justAttacked = false
-            }
+
+        if (this.targetData.key) {
+            this.target = this.targetData.targetType === "player"
+                ? world.entities[this.targetData.key]
+                : world.pickables[this.targetData.key];
+            this.targetType = this.targetData.targetType;
+        } else {
+            this.target = null;
         }
     }
-    //AI, decisions made here
+
+    damageCoolDown() {
+        if (this.justAttacked) {
+            this.cooldownTime++;
+            if (this.cooldownTime * this.cooldownSF >= this.cooldownDuration) {
+                this.cooldownTime = 0;
+                this.justAttacked = false;
+            }
+        }
+    }
+
     move() {
-        //console.log(this.worldID)
-        let world = worlds[this.worldID] //this world
+        const world = worlds[this.worldID];
 
-        this.findTarget()
-        this.damageCoolDown()
-        // Calculate the distance between the enemy and the user
-        //dx, dy = target x, y
-        this.dx = this.dy = this.dist = 0
-        var distanceToTarget
-        if(this.target) {
-            distanceToTarget = Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2)
-        }
-        else {distanceToTarget = 10**10}
+        this.findTarget();
+        this.damageCoolDown();
+        this.dx = this.dy = 0;
+        let distanceToTarget = this.target ? Math.hypot(this.target.x - this.x, this.target.y - this.y) : Infinity;
 
-        if(distanceToTarget <= this.detectRange) { // Is player within range?
-            this.status = "Attack"
+        if (distanceToTarget <= this.detectRange) {
+            this.status = "Attack";
             this.dx = this.target.x - this.x;
             this.dy = this.target.y - this.y;
             this.moving = true;
         } else if (!this.moving) {
-            this.status = "Wander"
-
-            let mp = world.mapSize
-
-            this.targetX = random(mp/2,-mp/2)
-            this.targetY = random(mp/2,-mp/2)
-            this.dx = this.targetX - this.x;
-            this.dy = this.targetY - this.y;
-            this.moving = true;
-            setTimeout(() => {
-                this.moving = false;
-            }, 10000); // Stay at the target location for 10 seconds
+            this.status = "Wander";
+            this.setRandomTarget(world);
         } else {
             this.dx = this.targetX - this.x;
             this.dy = this.targetY - this.y;
-            // if at destination, find new one
-            if(this.dx < 1 && this.dy < 1) {
-
-                let mp = world.mapSize
-
-                this.targetX = random(mp/2,-mp/2)
-                this.targetY = random(mp/2,-mp/2)
+            if (Math.abs(this.dx) < this.width && Math.abs(this.dy) < this.height) {
+                this.setRandomTarget(world);
             }
-        }           
-        this.moveMove()
-        // Check for damage
-        if(distanceToTarget < Math.min(this.width, this.height)*0.8){ //Dist to hit (melee)
-            if(this.targetType == "player" && !this.justAttacked){    
-                let player = world.entities[this.target.id]
-                var damage = this.damage
-                var tool = this.inventory[this.invSelected]
-                if(tool.class == "Sword"){
-                    damage += tool.damage
-                    this.inventory[this.invSelected].durability -= 1
-                    if(this.inventory[this.invSelected].durability <= 0){
-                        this.inventory[this.invSelected] = {...holdableItems["Hand"]}
-                    }
-                }
-                dealDamageTo(damage, this, player, null, this.worldID)
-                this.justAttacked = true
-            } else if(this.targetType == "pickable"){
-                let item = world.pickables[this.target.id]
-                for(let i in this.inventory){
-                    let slotName = this.inventory[i].name
-                    //acquire item pick up item
-                    if(slotName == "Hand"){
-                        let nItem = { ...holdableItems[item.itemName], stackSize:item.stackSize, durability:item.durability}
-                        this.inventory[i] = nItem
-                        delete world.pickables[item.id]
-                        break
-                    }
-                }
+        }
+
+        this.moveMove();
+        this.handleInteraction(world, distanceToTarget);
+    }
+
+    setRandomTarget(world) {
+        const mp = world.mapSize;
+        this.targetX = random(mp / 2, -mp / 2);
+        this.targetY = random(mp / 2, -mp / 2);
+        this.moving = true;
+        setTimeout(() => (this.moving = false), 10000);
+    }
+
+    handleInteraction(world, distanceToTarget) {
+        if (distanceToTarget < Math.min(this.width, this.height) * 0.8 && this.target) {
+            if (this.targetType === "player" && !this.justAttacked) {
+                this.attackPlayer(world);
+            } else if (this.targetType === "pickable") {
+                this.pickUpItem(world);
             }
         }
     }
-    //the actual moving is done here
-    moveMove(){
-        var world = worlds[this.worldID]
 
-        this.dist = Math.sqrt(this.dx ** 2 + this.dy ** 2);
-        // Normalize the distance
-        if(this.dist > 0){
+    attackPlayer(world) {
+        const player = world.entities[this.target.id];
+        let damage = this.damage;
+        const tool = this.inventory[this.invSelected];
+
+        if (tool.class === "Sword") {
+            damage += tool.damage;
+            tool.durability--;
+            if (tool.durability <= 0) {
+                this.inventory[this.invSelected] = { ...holdableItems["Hand"] };
+            }
+        }
+
+        dealDamageTo(damage, this, player, null, this.worldID);
+        this.justAttacked = true;
+    }
+
+    pickUpItem(world) {
+        var item = world.pickables[this.target.id];
+        for (let slot in this.inventory) {
+            if (this.inventory[slot].name === "Hand") {
+                this.inventory[slot] = { ...holdableItems[item.itemName], stackSize: item.stackSize, durability: item.durability };
+                delete world.pickables[item.id];
+                break;
+            }
+        }
+    }
+
+    moveMove() {
+        const world = worlds[this.worldID];
+
+        this.dist = Math.hypot(this.dx, this.dy);
+        if (this.dist > 0) {
             this.dx /= this.dist;
             this.dy /= this.dist;
         }
-        this.xInc = this.dx * this.speed
-        this.yInc = this.dy * this.speed
 
-        //knockback?
-        if(this.knockbackDue.x!=0){
-            this.xInc -= this.knockbackDue.x
-            this.knockbackDue.x = 0
-        }
-        if(this.knockbackDue.y!=0){
-            this.yInc -= this.knockbackDue.y
-            this.knockbackDue.y = 0   
-        }
+        this.xInc = this.dx * this.speed;
+        this.yInc = this.dy * this.speed;
 
-        //Can't go out of frame
-        if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L){this.xInc = 0}
-        if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D){this.yInc = 0}
-        
-        this.onWall = getOnWallStatus(world.obstacles, this)
+        this.applyKnockback();
+        this.preventOutOfBounds(world);
 
-        //update
-        let possibleNewXY = checkCollision(this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this, true, this.width==this.height?this.width:Math.max(this.width, this.height), this.worldID, world["entities"])
+        const newCoords = checkCollision(
+            this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this,
+            true, this.width === this.height ? this.width : Math.max(this.width, this.height), this.worldID, world.entities
+        );
 
-        if(possibleNewXY.addLakeParticle){
-            createParticle(worlds[this.worldID], this.x, this.y, this.id)
+        if (newCoords.addLakeParticle) {
+            createParticle(world, this.x, this.y, this.id);
         }
 
-        let newCoords = possibleNewXY
+        this.x += newCoords.tx;
+        this.y += newCoords.ty;
+        this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation;
+    }
 
-        this.xInc = newCoords.tx
-        this.yInc = newCoords.ty
+    applyKnockback() {
+        if (this.knockbackDue.x !== 0) {
+            this.xInc -= this.knockbackDue.x;
+            this.knockbackDue.x = 0;
+        }
+        if (this.knockbackDue.y !== 0) {
+            this.yInc -= this.knockbackDue.y;
+            this.knockbackDue.y = 0;
+        }
+    }
 
-        // UPDATE
-        this.x += this.xInc
-        this.y += this.yInc
-        this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation
+    preventOutOfBounds(world) {
+        if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L) {
+            this.xInc = 0;
+        }
+        if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D) {
+            this.yInc = 0;
+        }
+
+        this.onWall = getOnWallStatus(world.obstacles, this);
     }
 }
 class Boss extends Enemy{
@@ -850,6 +844,7 @@ class Boss extends Enemy{
         let world = worlds[this.worldID]
         if(this.health == this.maxHealth){
             for(let e in world.entities){
+                // if health regenerates, remove summoned lords
                 if (world.entities[e].type=="Summoned Lord"){
                     delete world.entities[e]
                     this.summonGuards = false
@@ -860,7 +855,7 @@ class Boss extends Enemy{
             this.health += 0.01 //* speedFactor
         }
     }
-    summonInGuards(guardCount = 16, spread = 500){
+    summonInGuards(guardCount = 8, spread = 500){
         //manual summon
         if(!this.summonGuards){
             this.summonGuards = true
@@ -999,6 +994,7 @@ const enemyObj = {
         generationProbability:60, //out of 100
         deathMessages:["You died from a monster.", "A monster hit you.", "You were slain by a monster"],
         knockbackDist:5,
+        knockbackResistance:0,
     },
     "Lord":{
         type:"Lord",
@@ -1020,6 +1016,7 @@ const enemyObj = {
         generationProbability:30, //out of 100
         deathMessages:["You died from a monster leader.", "A monster lord killed you."],
         knockbackDist:10,
+        knockbackResistance:60,
     },
     "Archer":{
         type:"Archer", 
@@ -1044,6 +1041,7 @@ const enemyObj = {
         generationProbability:25, //out of 100
         deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."],
         knockbackDist:5,
+        knockbackResistance:0,
     },
 
     "Summoned Lord":{
@@ -1067,6 +1065,7 @@ const enemyObj = {
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died trying to kill the boss.", "A monster lord killed you.", "You died by a monster summoned by the boss."],
         knockbackDist:10,
+        knockbackResistance:80,
     },
     "Boss":{
         type:"Boss", 
@@ -1083,6 +1082,7 @@ const enemyObj = {
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from the most powerful mob in the game.", "You were punished by the boss", "The boss killed you."],
         knockbackDist:20,
+        knockbackResistance:80,
     },
 
     // Normal --> Small --> Tiny
@@ -1108,6 +1108,7 @@ const enemyObj = {
         generationProbability:10,//100
         deathMessages:["You died from a vantacite monster.", "A vantacite monster squashed you.", "You saw a vantacite monster."],
         knockbackDist:50,
+        knockbackResistance:80,
     },
     "Small Vantacite Monster":{
         type:"Small Vantacite Monster", 
@@ -1131,6 +1132,7 @@ const enemyObj = {
         generationProbability:20,
         deathMessages:["You died from a mini vantacite monster.", "A small vantacite monster hit you.", "You saw a vantacite monster (a small one)."],
         knockbackDist:7.5,
+        knockbackResistance:60,
     },
     "Tiny Vantacite Monster":{
         type:"Tiny Vantacite Monster", 
@@ -1154,6 +1156,7 @@ const enemyObj = {
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from a tiny vantacite monster.", "A tiny vantacite monster hit you.", "You saw a vantacite monster (a tiny one)."],
         knockbackDist:5,
+        knockbackResistance:30,
     },
     "Very Tiny Vantacite Monster":{
         type:"Very Tiny Vantacite Monster", 
@@ -1177,6 +1180,7 @@ const enemyObj = {
         generationProbability:0, //spawns in special occasions
         deathMessages:["You died from a very small vantacite monster.", "A very small vantacite monster hit you.", "You saw a vantacite monster (a very small one)."],
         knockbackDist:1,
+        knockbackResistance:0,
     }
 }
 var bossID = "Boss"
@@ -1309,9 +1313,10 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
         //console.log(hitFromDirection)
         var goToDirection = hitFromDirection + Math.PI
         // apply KNOCKBACK
+        var toolHeld = from.inventory[from.invSelected]
 
-        var kbd = (from.knockbackDist) * (1-to.knockbackResistance)
-        //console.log(worlds[worldID].entities[to.id], Object.keys(worlds[worldID].entities).filter(i => worlds[worldID].entities[i].isPlayer))
+        var kbd = (from.knockbackDist) * (1-to.knockbackResistance) * (1+(toolHeld.knockback/100))
+
         worlds[worldID].entities[to.id].knockbackDue.x = kbd * Math.cos(goToDirection)
         worlds[worldID].entities[to.id].knockbackDue.y = kbd * Math.sin(goToDirection)
     }
@@ -1563,6 +1568,7 @@ setInterval(()=>{
                 }
                 if(entity.health <= 0){
                     world.entities[e].isDead = true // This player is NOW dead!!
+                    Object.values(world.entities[e]).filter(i => !i.isDead)
                 }
                 if(entity.immuneDuration > 0){
                     world.entities[e].immuneDuration -= 1 
@@ -1691,10 +1697,10 @@ setInterval(()=>{
             for (let k in obj) {
                 let entity = obj[k];
                 // Check if projectile hits entity
-                if (projectile.x > entity.x - entitySize / 2 &&
-                    projectile.x < entity.x + entity.width - entitySize / 2 &&
-                    projectile.y > entity.y - entitySize / 2 &&
-                    projectile.y < entity.y + entity.height - entitySize / 2) {
+                if (projectile.x > entity.x - entity.width / 2 &&
+                    projectile.x < entity.x + entity.width / 2 &&
+                    projectile.y > entity.y - entity.height / 2 &&
+                    projectile.y < entity.y + entity.height / 2) {
                     // Decrease entity health by projectile damage
                     dealDamageTo(projectile.damage, projectile, entity, key, projectile.worldID)
                     
@@ -1714,9 +1720,7 @@ setInterval(()=>{
                     break;
                 }
             }
-        }
-
-        
+        } 
     }
 }, FPS)
 
@@ -1895,7 +1899,9 @@ io.sockets.on("connection", (socket)=>{
                 //ONLY dies if send death message!!
                 if(player && player.isDead){// player.health <= 0
                     dropAll(id, "player", data.worldID)
+                    console.log(worlds[data.worldID].entities[id])
                     delete worlds[data.worldID].entities[id]
+                    console.log(worlds[data.worldID].entities[id])
                     socket.emit("gameOver")
                 }
 
