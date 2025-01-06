@@ -27,9 +27,9 @@ app.use("/client", express.static(__dirname + "/client"))
 
 const PORT = process.env.PORT || 1111 //server PORT
 serv.listen(PORT)
-console.log("Online @ " + PORT)
+console.log("RUNNING Online @ " + PORT)
 
-const DEBUG = true
+const DEBUG = false
 
 /************ CONSTS/VARS *********************/
 
@@ -159,38 +159,38 @@ function findStairRotation(row, column, blueprint, indicator="S"){
     let c = column
     let possibleRotations = []
 
-    console.log(blueprint, r, c)
+    if(DEBUG) console.log(blueprint, r, c)
 
     if(blueprint[r][c] !== indicator){
-        console.log("This is not a stair!")
+        if(DEBUG) console.log("This is not a stair!")
         return null
     }
     
     if(blueprint[r-1] && blueprint[r-1][c]
         && blueprint[r-1][c] == "W"
     ){
-        console.log("Somethin' is above this...")
+        if(DEBUG) console.log("Somethin' is above this...")
         possibleRotations.push(0)
     }
     if(blueprint[r+1] && blueprint[r+1][c]
         && blueprint[r+1][c] == "W"
     ){
-        console.log("Somethin' is below this...")
+        if(DEBUG) console.log("Somethin' is below this...")
         possibleRotations.push(Math.PI)
     }
     if(blueprint[r] && blueprint[r][c-1]
         && blueprint[r][c-1] == "W"
     ){
-        console.log("Somethin' is left of this...")
+        if(DEBUG) console.log("Somethin' is left of this...")
         possibleRotations.push(Math.PI*3/2)
     }
     if(blueprint[r] && blueprint[r][c+1]
         && blueprint[r][c+1] == "W"
     ){
-        console.log("Somethin' is right of this...")
+        if(DEBUG) console.log("Somethin' is right of this...")
         possibleRotations.push(Math.PI/2)
     }
-    console.log(possibleRotations, possibleRotations[0])
+    if(DEBUG) console.log(possibleRotations, possibleRotations[0])
     //if stair is by itself (0) or if surrounded (all 4) make it a wall...
     if (possibleRotations.length == 0 || possibleRotations.length == 4
     ) return -1
@@ -605,9 +605,10 @@ class Player extends Entity{
     constructor(x, y, username, imgSrc="/imgs/Player.png", worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100){
         super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), 5, 0, worldID)
         this.username = (username == "")? "Player":username;
+        this.kindOfEntity = "Player"
         this.kills = 0
         this.inventory = [
-            {...holdableItems["Hand"]},
+            {...holdableItems[DEBUG?"Debug":"Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
@@ -633,6 +634,7 @@ class Enemy extends Entity {
         super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, enemy.knockbackDist, enemy.knockbackResistance, worldID);
 
         this.username = "BOT_Enemy";
+        this.kindOfEntity = "Bot"
         this.detectRange = enemy.detectRange;
         this.damage = enemy.damage;
         this.target = null;
@@ -658,7 +660,7 @@ class Enemy extends Entity {
         this.onWall = onWall;
 
         this.targetData = {};
-        this.targetList = {};
+        this.grudges = {} //ONLY IDS! OTHERWISE RECURSION!
     }
 
     findTarget() {
@@ -666,15 +668,36 @@ class Enemy extends Entity {
         let minDist = this.detectRange;
         const world = worlds[this.worldID];
         const players = Object.values(world.entities).filter(entity => entity.isPlayer);
+        // KK    
+        for(let g in this.grudges){
+            let grudgeID = this.grudges[g]
+            if(!world.entities[grudgeID]){
+                delete this.grudges[g]
+                continue;
+            }
 
-        for (const player of players) {
-            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            let grudgeXY = (({x, y}) => ({x, y}))(world.entities[grudgeID])
+            if(!grudgeXY.x || !grudgeXY.y){
+                delete this.grudges[g]
+                continue;
+            }
+            const dist = Math.hypot(grudgeXY.x - this.x, grudgeXY.y - this.y);
             if (dist < minDist) {
                 minDist = dist;
-                this.targetData = { key: player.id, targetType: "player" };
+                this.targetData = { key: grudgeID, targetType: "player" };
             }
         }
-
+        // Nothing yet?
+        if(Object.keys(this.targetData).length === 0){
+            for (const player of players) {
+                const dist = Math.hypot(player.x - this.x, player.y - this.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    this.targetData = { key: player.id, targetType: "player" };
+                }
+            }
+        }
+        // Nothing yet?
         if (Object.keys(this.targetData).length === 0 && this.inventory.some(item => item.name === "Hand")) {
             for (const item of Object.values(world.pickables)) {
                 const dist = Math.hypot(item.x - this.x, item.y - this.y);
@@ -686,9 +709,14 @@ class Enemy extends Entity {
         }
 
         if (this.targetData.key) {
-            this.target = this.targetData.targetType === "player"
-                ? world.entities[this.targetData.key]
-                : world.pickables[this.targetData.key];
+            let original
+            if(this.targetData.targetType === "player"){
+                original = world.entities[this.targetData.key]
+                
+            } else{
+                original = world.pickables[this.targetData.key]
+            }
+            this.target = (({ x, y, id, width, height }) => ({ x, y, id, width, height }))(original)
             this.targetType = this.targetData.targetType;
         } else {
             this.target = null;
@@ -742,39 +770,36 @@ class Enemy extends Entity {
     }
 
     handleInteraction(world, distanceToTarget) {
-        if (distanceToTarget < Math.min(this.width, this.height) * 0.8 && this.target) {
+        if (this.target 
+        && distanceToTarget < 
+        (Math.max(this.width, this.height)/2) * 0.8 
+        + (Math.max(this.target.width, this.target.height)/2) * 0.8){//ATTACK!!
             if (this.targetType === "player" && !this.justAttacked) {
-                this.attackPlayer(world);
-            } else if (this.targetType === "pickable") {
-                this.pickUpItem(world);
-            }
-        }
-    }
-
-    attackPlayer(world) {
-        const player = world.entities[this.target.id];
-        let damage = this.damage;
-        const tool = this.inventory[this.invSelected];
-
-        if (tool.class === "Sword") {
-            damage += tool.damage;
-            tool.durability--;
-            if (tool.durability <= 0) {
-                this.inventory[this.invSelected] = { ...holdableItems["Hand"] };
-            }
-        }
-
-        dealDamageTo(damage, this, player, null, this.worldID);
-        this.justAttacked = true;
-    }
-
-    pickUpItem(world) {
-        var item = world.pickables[this.target.id];
-        for (let slot in this.inventory) {
-            if (this.inventory[slot].name === "Hand") {
-                this.inventory[slot] = { ...holdableItems[item.itemName], stackSize: item.stackSize, durability: item.durability };
-                delete world.pickables[item.id];
-                break;
+                let player = world.entities[this.target.id];
+                let damage = this.damage;
+                const tool = this.inventory[this.invSelected];
+                if (tool.class === "Sword") {
+                    // USE SWORD/TOOL
+                    damage += tool.damage;
+                    tool.durability--;
+                    if (tool.durability <= 0) {
+                        this.inventory[this.invSelected] = { ...holdableItems["Hand"] };
+                    }
+                }
+                // ELIGIBLE! DEAL DAMAGE!
+                dealDamageTo(damage, this, player, null, this.worldID);
+                this.justAttacked = true;
+            } 
+            // PICK IT UP!!            
+            else if (this.targetType === "pickable") {
+                var item = world.pickables[this.target.id];
+                for (let slot in this.inventory) {
+                    if (this.inventory[slot].name === "Hand") {
+                        this.inventory[slot] = { ...holdableItems[item.itemName], stackSize: item.stackSize, durability: item.durability };
+                        delete world.pickables[item.id];
+                        break;
+                    }
+                }
             }
         }
     }
@@ -791,8 +816,23 @@ class Enemy extends Entity {
         this.xInc = this.dx * this.speed;
         this.yInc = this.dy * this.speed;
 
-        this.applyKnockback();
-        this.preventOutOfBounds(world);
+        if (this.knockbackDue.x !== 0) {
+            this.xInc -= this.knockbackDue.x;
+            this.knockbackDue.x = 0;
+        }
+        if (this.knockbackDue.y !== 0) {
+            this.yInc -= this.knockbackDue.y;
+            this.knockbackDue.y = 0;
+        }
+        
+        if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L) {
+            this.xInc = 0;
+        }
+        if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D) {
+            this.yInc = 0;
+        }
+
+        this.onWall = getOnWallStatus(world.obstacles, this);
 
         const newCoords = checkCollision(
             this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this,
@@ -806,28 +846,6 @@ class Enemy extends Entity {
         this.x += newCoords.tx;
         this.y += newCoords.ty;
         this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation;
-    }
-
-    applyKnockback() {
-        if (this.knockbackDue.x !== 0) {
-            this.xInc -= this.knockbackDue.x;
-            this.knockbackDue.x = 0;
-        }
-        if (this.knockbackDue.y !== 0) {
-            this.yInc -= this.knockbackDue.y;
-            this.knockbackDue.y = 0;
-        }
-    }
-
-    preventOutOfBounds(world) {
-        if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L) {
-            this.xInc = 0;
-        }
-        if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D) {
-            this.yInc = 0;
-        }
-
-        this.onWall = getOnWallStatus(world.obstacles, this);
     }
 }
 class Boss extends Enemy{
@@ -863,112 +881,145 @@ class Boss extends Enemy{
         }
     }
 }
-class Archer extends Enemy{
-    constructor(x, y, id, worldID){
-        let data = structuredClone(enemyObj["Archer"])
-        super("Archer", false, x, y, id, worldID, data.inventory, data.invSelected)
-        this.shootRange = data.shootRange // to walk closer before shooting...
-        this.holdDuration = 0
-        this.holdNum = 0
+class Archer extends Enemy {
+    constructor(x, y, id, worldID) {
+        let data = structuredClone(enemyObj["Archer"]);
+        super("Archer", false, x, y, id, worldID, data.inventory, data.invSelected);
+        this.shootRange = data.shootRange; // To walk closer before shooting...
+        this.holdDuration = 0;
+        this.holdNum = 0;
+        this.safeDistance = this.shootRange / 2; // Minimum distance to maintain from the target
+        this.isPaused = false; // To manage shooting pause
     }
-    move(){
-        let world = worlds[this.worldID]
 
-        //move normally if not holding bow
-        if(this.inventory[this.invSelected].name == "Bow"){
-            super.findTarget()
-            super.damageCoolDown()
-            
-            this.dx = this.dy = this.dist = 0
-            var distanceToTarget
-            
-            if(this.target) {
-                distanceToTarget = Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2)
+    move() {
+        let world = worlds[this.worldID];
+
+        if (this.inventory[this.invSelected].name == "Bow") {
+            super.findTarget();
+            super.damageCoolDown();
+
+            this.dx = this.dy = this.dist = 0;
+            let distanceToTarget;
+
+            if (this.target) {
+                distanceToTarget = Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2);
+            } else {
+                distanceToTarget = 10 ** 10;
             }
-            else {distanceToTarget = 10**10}
 
-            // Is player within detection range?
-            if(distanceToTarget <= this.detectRange) { 
-                //Attack mode...ON!
-                this.status = "Attack"
+            if (distanceToTarget <= this.detectRange) {
+                this.status = "Attack";
                 this.dx = this.target.x - this.x;
                 this.dy = this.target.y - this.y;
-                this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation
-                this.moving = true; //aka, dont stray from the player now...
-                //is the player still too far away to shoot?
-                if(distanceToTarget > this.shootRange){
-                    //YES!...then get closer to shoot
-                    this.speed = this.maxSpeed 
-                    super.moveMove() 
-                } else {
-                    //NO!...attack!!
-                    //Did you just attack?
-                    if(!this.justAttacked){
-                        //Apparently NO!...
-                        this.speed = 0 //stop movement
-                        
-                        //load up...
-                        //holdNum/30 = duration of loading
-                        this.holdNum += 1
-                        this.holdDuration = Math.floor(this.holdNum/(100*this.cooldownSF)) > 5?5:Math.floor(this.holdNum/30)+1
-                        //change imgSrc
-                        this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`
-                        //fire!
-                        if(this.holdDuration == 5) {
-                            this.shootArrow(this.holdDuration) //FIRE!!
-                            this.holdNum = 0 //reset
+                this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation;
+
+                if (distanceToTarget > this.shootRange) {
+                    // Get closer to shoot
+                    this.speed = this.maxSpeed;
+                    this.holdNum += 1; // Start loading bow while moving
+                    this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                    this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
+                    super.moveMove();
+                } else if (distanceToTarget < this.safeDistance) {
+                    // Flee mode: Move away from the target
+                    this.status = "Flee";
+                    if (!this.isPaused) {
+                        this.speed = this.maxSpeed;
+                        this.dx = this.x - this.target.x;
+                        this.dy = this.y - this.target.y;
+
+                        // Continue loading bow while fleeing
+                        this.holdNum += 1;
+                        this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                        this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
+
+                        // Stop to shoot if fully loaded
+                        if (this.holdDuration === 5 && !this.justAttacked) {
+                            this.isPaused = true; // Pause fleeing to shoot
+                            this.speed = 0; // Stop movement
+                            setTimeout(() => {
+                                this.shootArrow(this.holdDuration);
+                                this.holdNum = 0; // Reset loading
+                                this.isPaused = false; // Resume fleeing
+                            }, 1000); // 1-second pause to aim and shoot
                         }
+
+                        if (!this.isPaused) super.moveMove(); // Keep fleeing if not paused
+                    }
+                } else {
+                    // Stop and attack when at a safe distance
+                    this.speed = 0; // Stop movement
+                    this.holdNum += 1;
+                    this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                    this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
+
+                    if (this.holdDuration === 5 && !this.justAttacked) {
+                        this.shootArrow(this.holdDuration);
+                        this.holdNum = 0; // Reset loading
                     }
                 }
-            } else{ 
-                this.speed = this.maxSpeed
+            } else {
+                // Wander if target is out of range
+                this.speed = this.maxSpeed;
                 if (!this.moving) {
-                    this.status = "Wander"
+                    this.status = "Wander";
+                    let mp = world.mapSize;
 
-                    let mp = world.mapSize
-
-                    this.targetX = random(mp/2,-mp/2)
-                    this.targetY = random(mp/2,-mp/2)
+                    this.targetX = random(mp / 2, -mp / 2);
+                    this.targetY = random(mp / 2, -mp / 2);
                     this.dx = this.targetX - this.x;
                     this.dy = this.targetY - this.y;
                     this.moving = true;
+
                     setTimeout(() => {
                         this.moving = false;
                     }, 10000); // Stay at the target location for 10 seconds
                 } else {
                     this.dx = this.targetX - this.x;
                     this.dy = this.targetY - this.y;
-                    // if at destination, find new one
-                    if(this.dx < 1 && this.dy < 1) {
-                        let mp = world.mapSize
 
-                        this.targetX = random(mp/2,-mp/2)
-                        this.targetY = random(mp/2,-mp/2)
+                    if (Math.abs(this.dx) < 1 && Math.abs(this.dy) < 1) {
+                        let mp = world.mapSize;
+
+                        this.targetX = random(mp / 2, -mp / 2);
+                        this.targetY = random(mp / 2, -mp / 2);
                     }
-                }  
+                }
+                super.moveMove();
             }
-            super.moveMove()
-        } else{
-            this.speed = this.maxSpeed
-            super.move()
+        } else {
+            // Default movement when not holding a bow
+            this.speed = this.maxSpeed;
+            super.move();
         }
     }
-    shootArrow(holdDuration){
-        this.justAttacked = true //you just attacked... -_-
-        let arrowOffsetMaxDeg = 10//deg // how many IN DEGREES +- can be offset shot
-        let arrowDirection = this.rotation + this.defaultRotation + Math.PI + (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI/180))) //possible +- 45 deg offset shot
-        //SHOOT ARROW!
-        //make da arrow
-        createArrow(this, arrowDirection, holdDuration, this.worldID)
-        this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png"
 
-        this.inventory[this.invSelected].durability -= 1
-        //bow breaks !? O_O
-        if(this.inventory[this.invSelected].durability <= 0){
-            this.inventory[this.invSelected] = {...holdableItems["Hand"]}
+    shootArrow(holdDuration) {
+        this.justAttacked = true; // You just attacked
+        const arrowOffsetMaxDeg = 10; // Maximum offset angle in degrees
+        const arrowDirection =
+            this.rotation +
+            this.defaultRotation +
+            Math.PI +
+            (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI / 180))); // Offset shot direction
+
+        // Shoot the arrow
+        createArrow(this, arrowDirection, holdDuration, this.worldID);
+        this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png";
+
+        // Reduce bow durability
+        this.inventory[this.invSelected].durability -= 1;
+
+        // Break bow if durability is 0
+        if (this.inventory[this.invSelected].durability <= 0) {
+            this.inventory[this.invSelected] = { ...holdableItems["Hand"] };
         }
     }
 }
+
+
+
 
 /*************************** @ENEMY_GENERATOR *************/
 // nested objects, so enemyObj are deep copies `structuredClone()`
@@ -979,7 +1030,7 @@ const enemyObj = {
         imgSrc:"/imgs/Enemy.png",
         damage: 5,
         detectRange: 400,
-        reloadTime: 50,
+        reloadTime: 25,
         speed: 5,
         health: 100,
         w:entitySize,
@@ -1001,7 +1052,7 @@ const enemyObj = {
         imgSrc:"/imgs/Enemy_Lord.png",
         damage: 40,
         detectRange: 750,
-        reloadTime: 100,
+        reloadTime: 50,
         speed: 2.5,
         health: 500,
         w:entitySize * 4/3,
@@ -1038,7 +1089,7 @@ const enemyObj = {
             {...holdableItems["Bow"]}
         ], 
         giveXP : 150,
-        generationProbability:25, //out of 100
+        generationProbability:50, //out of 100
         deathMessages:["An archer shot you.", "A monster shot you with an arrow.", "You were killed by an archer's arrow."],
         knockbackDist:5,
         knockbackResistance:0,
@@ -1192,18 +1243,20 @@ const projectilesObj = {
         damage:holdableItems["Arrow"].damage,
         flightDuration:10,
         imgSrc:"/imgs/Arrow.png",
-        speed:10
+        speed:10,
+        knockbackPercent:50,
     },
     "Spear":{
         name:"Spear",
         damage:holdableItems["Spear"].damage,
         flightDuration:50,
         imgSrc:"/imgs/Spear.png", 
-        speed:20
+        speed:20,
+        knockbackPercent:300,
     }
 }
 class Projectile{
-    constructor(worldID, name, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
+    constructor(worldID, id, name, x, y, w, h, dir, whoShot, durability, speed=null, duration=null, damage=null){
         this.worldID = worldID
         this.id = createRandomString(10)
         this.name = name //key inside holdable items!
@@ -1229,31 +1282,38 @@ class Projectile{
 }
 function createArrow(entity, arrowDirection, holdDuration, worldID="Main"){
     let world = worlds[worldID]
-    world.projectiles[createID()] = new Projectile(
-        worldID,
+    let id = createRandomString(10, true)
+    world.projectiles[id] = new Projectile(
+        worldID, 
+        id,
         "Arrow", 
-        entity.x + Math.cos(arrowDirection) * entitySize, 
-        entity.y + Math.sin(arrowDirection) * entitySize, 
+        entity.x + Math.cos(arrowDirection) * entity.width/2, 
+        entity.y + Math.sin(arrowDirection) * entity.height/2, 
         50, 50, arrowDirection, entity, holdableItems["Arrow"].durability,
         projectilesObj["Arrow"].speed + 2.5 * (holdDuration-1), //ZOOM
         projectilesObj["Arrow"].flightDuration + 10 * (holdDuration-1), //wee! 
         projectilesObj["Arrow"].damage + 5 * (holdDuration-1), //that's gotta hurt
     )
 }
+
+/******** DAMAGE ********/
 function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
     if(from == to) return
     if(!to) return
     let world = worlds[worldID]
+
     //deal initial damage...first...are they immune
-    if(to.immuneDuration <= 0) { to.health -= damage } 
-    //they are, I guess...
+    if(to.immuneDuration <= 0) { 
+        to.health -= damage 
+    } 
+
     //bosses have an exception...
     else if(to.type !== "Boss") { to.immuneDuration -= damage * 10 } //deal damage to immunity instead 
     
     // dead...?
     if(to.health <= 0){
         // from bots
-        if(from.username=="BOT_Enemy") {
+        if(from.kindOfEntity == "Bot") {
             let data = enemyObj[from.type]
             to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
         }
@@ -1294,7 +1354,6 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
                 else{
                     let data = enemyObj["Archer"]
                     to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
-                    //console.log("An archer shot ", to.username, to.id)
                 }
             } 
             // from player melee
@@ -1302,23 +1361,44 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
                 from.xp += Math.floor(to.xp * 0.8 )// give player xp
                 from.kills ++
                 to.deathMessage = `${to.username} was slain by ${from.username}`
-                //console.log(to.deathMessage)
             }
         }
-        console.log(to.deathMessage)
     }
-    //guess not!
+    //guess not! Knockback!!
     else{
         var hitFromDirection = Math.atan2(to.y-from.y, to.x-from.x)
-        //console.log(hitFromDirection)
         var goToDirection = hitFromDirection + Math.PI
         // apply KNOCKBACK
-        var toolHeld = from.inventory[from.invSelected]
+        var toolHeldKnockback
+        // is it a projectile?
+        if(projectileKey && world.projectiles[projectileKey]){
+            // what kind?
+            let typeOfProjectile = world.projectiles[projectileKey].name
+            // get knockback amount
+            toolHeldKnockback = projectilesObj[typeOfProjectile].knockbackPercent
+        }
+        //no it's not...
+        else{
+            //use tool knockback
+            if(DEBUG) console.log("From:", from)
+            toolHeldKnockback = from.inventory[from.invSelected].knockback
+        }
 
-        var kbd = (from.knockbackDist) * (1-to.knockbackResistance) * (1+(toolHeld.knockback/100))
+        // calculate total knockback
+        var kbd = (from.knockbackDist) * (1-to.knockbackResistance) * (1+(toolHeldKnockback/100))
 
+        // apply knockback
         worlds[worldID].entities[to.id].knockbackDue.x = kbd * Math.cos(goToDirection)
         worlds[worldID].entities[to.id].knockbackDue.y = kbd * Math.sin(goToDirection)
+
+        // if your a bot, you have a grudge now...
+        if (to.kindOfEntity == "Bot"){
+            //if it's a projectile, target the owner, else the source.
+            let newGrudgeID = projectileKey?from.whoShot.id:from.id
+            if(!to.grudges[newGrudgeID] && newGrudgeID !== to.id) {
+                to.grudges[newGrudgeID] = newGrudgeID
+            }
+        }
     }
 }
 
@@ -1366,7 +1446,7 @@ function createWorld(
                     // and the columns are read differently in 
                     // this function findStairRotation.
                     let stairRotation = findStairRotation(c, r, mainStructureBlueprint)
-                    console.log(stairRotation)
+                    if(DEBUG) console.log(stairRotation)
                     if(stairRotation != -1){
                         worlds[id].structures[sID] = new Stairs(wall.relX, wall.relY, sID, wallSize, stairRotation, id) 
                     } else{
@@ -1426,7 +1506,7 @@ function createWorld(
                         //allStairs.push({r:r,c:c,id:sID, blueprint:blueprint})
 
                         let stairRotation = findStairRotation(r, c, blueprint)
-                        console.log(stairRotation)
+                        if(DEBUG) console.log(stairRotation)
                         if(stairRotation != -1){
                             worlds[id].structures[sID] = new Stairs(nC.relX, nC.relY, sID, wallSize, stairRotation, id) //rotate none as a placeholder
                         } else { 
@@ -1482,7 +1562,6 @@ setInterval(()=>{
     for(let worldID in worlds){
         let world = worlds[worldID]
         //spawn in boss?
-        //console.log(bossCountDownTime)
         if(worldID == "Main"){
             if (!world.entities[bossID] && !startedCountdown){
                 toggleOpeningsToArena(false, "Main");
@@ -1696,6 +1775,10 @@ setInterval(()=>{
             let obj = world.entities
             for (let k in obj) {
                 let entity = obj[k];
+
+                // CANNOT BE SHOT BY YOUR OWN PROJECTILE!
+                if(entity == projectile.whoShot) continue
+
                 // Check if projectile hits entity
                 if (projectile.x > entity.x - entity.width / 2 &&
                     projectile.x < entity.x + entity.width / 2 &&
@@ -1750,7 +1833,7 @@ io.sockets.on("connection", (socket)=>{
             if(data.worldID in worlds) data.worldID = createRandomString(6)
             //add world    
             createWorld(data.worldID, 2000)
-            console.log(data.worldID)
+            if(DEBUG) console.log("World ID --> ", data.worldID)
         }
 
         //huh...
@@ -1809,26 +1892,8 @@ io.sockets.on("connection", (socket)=>{
             } else if(!player.isDead){
                 console.log("ID", data.id, "was added to pool")
                 world.entities[data.id] = player
-                // put on top of wall if regenerated
-                for (let w in worlds[data.worldID].obstacles) {
-                    let obstacle = worlds[data.worldID].obstacles[w];
-                    if(obstacle.class=="Wall"){
-                        if (obstacle.x - obstacle.width / 2 < player.x 
-                        && player.x > obstacle.x + obstacle.width / 2 
-                        && obstacle.y - obstacle.height / 2 < player.y 
-                        && player.y > obstacle.y + obstacle.height / 2) {
-                            console.log("Put player on wall.");
-                            player.onWall = true;
-                            break;
-                        }
-                    } else if(obstacle.class=="Tree"){
-                        if (Math.sqrt(Math.pow(obstacle.x-player.x,2) + Math.pow(obstacle.y-player.y,2)) < obstacle.obstructionRadius + entitySize) {
-                            console.log("Put player on tree.");
-                            player.onWall = true;
-                            break;
-                        }
-                    }
-                }
+                // automatically make this true, so if you spawn on a tree, you good
+                world.entities[data.id].onWall = true
                 //
                 socket.emit("reupdate", {
                     bordersObj:world.BORDERS,
@@ -1895,13 +1960,10 @@ io.sockets.on("connection", (socket)=>{
                     }
                 });
                 
-                //delete killed players 
                 //ONLY dies if send death message!!
                 if(player && player.isDead){// player.health <= 0
                     dropAll(id, "player", data.worldID)
-                    console.log(worlds[data.worldID].entities[id])
                     delete worlds[data.worldID].entities[id]
-                    console.log(worlds[data.worldID].entities[id])
                     socket.emit("gameOver")
                 }
 
@@ -2037,8 +2099,10 @@ io.sockets.on("connection", (socket)=>{
                 
                 tool.durability -= 1
 
-                world.projectiles[createID()] = new Projectile(
+                let projectileID = createID()
+                world.projectiles[projectileID] = new Projectile(
                     data.worldID,
+                    projectileID,
                     "Spear", 
                     player.x + Math.cos(spearDirection) * entitySize, 
                     player.y + Math.sin(spearDirection) * entitySize, 
