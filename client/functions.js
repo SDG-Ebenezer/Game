@@ -279,17 +279,19 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
     }
 
     // check entities
+    //MAKE THIS CIRCULAR
     for (let e in entities) {
         let obstacle = entities[e];
         if (obstacle.id != playerID) {
             // Player bounding box
-            let letlet =  entitySize/4
-            let playerWidth = size / 2 - letlet;
-            let playerHeight = size / 2 - letlet;
+            let letlet =  1//entitySize/8
+            let ssff = 0.5
+            let playerWidth = (size * ssff)/2//- letlet;
+            let playerHeight = (size * ssff)/2//- letlet;
             
             // Obstacle bounding box
-            let obstacleWidth = obstacle.width / 2 - letlet;
-            let obstacleHeight = obstacle.height / 2 - letlet;
+            let obstacleWidth = (obstacle.width * ssff)/2//- letlet;
+            let obstacleHeight = (obstacle.height * ssff)/2//- letlet;
 
             // Obstacle position
             let obstacleLeft = obstacle.x - obstacleWidth;

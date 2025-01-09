@@ -565,10 +565,77 @@ function dropAll(id, type="player", worldID="Main"){
 }
 
 /**************************** @ENTITIES *************/
+const entityImgSrcs = {
+    "Player1":{
+        "Wandering":"/imgs/Player.png",
+        "Hitting1":"/imgs/Player_Hitting1.png",
+        "Hitting2":"/imgs/Player_Hitting2.png"
+    },
+    "Player2":{
+        "Wandering":"/imgs/Player2.png",
+        "Hitting1":"/imgs/Player2_Hitting1.png",
+        "Hitting2":"/imgs/Player2_Hitting2.png"
+    },
+    "Player3":{
+        "Wandering":"/imgs/Player3.png",
+        "Hitting1":"/imgs/Player3_Hitting1.png",
+        "Hitting2":"/imgs/Player3_Hitting2.png"
+    },
+    "Player4":{
+        "Wandering":"/imgs/Player4.png",
+        "Hitting1":"/imgs/Player4_Hitting1.png",
+        "Hitting2":"/imgs/Player4_Hitting2.png"
+    },
+    "Player5":{
+        "Wandering":"/imgs/Player5.png",
+        "Hitting1":"/imgs/Player5_Hitting1.png",
+        "Hitting2":"/imgs/Player5_Hitting2.png"
+    },
+    "Normal Enemy":{
+        "Wandering":"/imgs/Enemy.png",
+        "Attacking":null,
+        "Hitting":"/imgs/Enemy_Hitting.png",
+    },
+    "Lord":{
+        "Wandering":"/imgs/Enemy_Lord.png",
+        "Attacking":null,
+        "Hitting":"/imgs/Enemy_Lord_Hitting.png",
+    },
+    "Archer":{
+        "Wandering":"/imgs/Enemy_Archer.png",
+        "Attacking":null,
+        "Hitting":"/imgs/Enemy_Archer_Hitting.png",
+    },
+    "Summoned Lord":{
+        "Wandering":"/imgs/Enemy_Summoned_Lord.png",
+        "Attacking":null,
+        "Hitting":"/imgs/Enemy_Summoned_Lord_Hitting.png",
+    },
+    "Boss":{
+        "Wandering":"/imgs/Enemy_Elder.png",
+        "Attacking":null,
+        "Hitting":"/imgs/Enemy_Elder_Hitting.png",
+    },
+    //all small vantacite monsters part of this as well:
+    "Vantacite Monster":{
+        "Wandering":"/imgs/Enemy_Vantacite_Monster.png",
+        "Attacking":null,
+        "Hitting":"/imgs/Enemy_Vantacite_Monster_Hitting.png",
+    },
+
+}
 class Entity {
-    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, knockbackResistance=0, worldID="Main") {
+    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, knockbackResistance=0, worldID="Main", rl="R") {
         this.id = id;
         this.class = "Entity"
+        this.status = ["Wandering"]
+        /**ALL STATUSES:
+         * Wandering (default)
+         * Attacking
+         * Hitting
+         * Shooting (Archers only)
+         * Fleeing (Archers only)
+         */
         this.x = x;
         this.y = y;
         this.knockbackDue = {
@@ -598,22 +665,50 @@ class Entity {
         this.xp = xp
         this.kills = 0
         this.worldID = worldID
+
+        this.rl = rl // RIGHTY OR LEFTY
+    }
+
+    giveStatus(status, addOrRemove = "ADD") {
+        var order = {
+            "Wandering": 2,
+            "Attacking": 1,
+            "Hitting": 0,
+            "Shooting": 0,
+            "Fleeing": 2,
+        }; // Lower the value, higher the priority
+    
+        if (!this.status.includes(status)) {
+            this.status.push(status);
+        }
+    
+        // Sort the status array to ensure prioritized ones come first
+        this.status.sort((a, b) => (order[a] || Infinity) - (order[b] || Infinity));
+        this.status.reverse()
+    
+        if (this.status.includes(status)) {
+            setTimeout(() => {
+                if (this.status.includes(status)) {
+                    this.status.splice(this.status.indexOf(status), 1);
+                }
+            }, 250);
+        }
     }
 }
 
 class Player extends Entity{
-    constructor(x, y, username, imgSrc="/imgs/Player.png", worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100){
-        super(type, imgSrc, speed * 2, w, h, x, y, health, 5000, "PLAYER"+createID(), 5, 0, worldID)
+    constructor(x, y, username, imgSrc=entityImgSrcs["Player1"], worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100, id="PLAYER"+createID(), inventory=[], xp=5000){
+        super(type, imgSrc, speed * 2, w, h, x, y, health, xp, id, 5, 0, worldID)
         this.username = (username == "")? "Player":username;
         this.kindOfEntity = "Player"
         this.kills = 0
-        this.inventory = [
+        this.inventory = inventory.length==0?[
             {...holdableItems[DEBUG?"Debug":"Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
-        ];
+        ]:inventory
         this.invSelected = 0
         this.hitSize = 40
         this.isPlayer = true
@@ -634,6 +729,7 @@ class Enemy extends Entity {
         super(enemy.type, enemy.imgSrc, enemy.speed, enemy.w, enemy.h, x, y, enemy.health, 0, id, enemy.knockbackDist, enemy.knockbackResistance, worldID);
 
         this.username = "BOT_Enemy";
+        this.enemyKey = enemyObjKey
         this.kindOfEntity = "Bot"
         this.detectRange = enemy.detectRange;
         this.damage = enemy.damage;
@@ -742,12 +838,11 @@ class Enemy extends Entity {
         let distanceToTarget = this.target ? Math.hypot(this.target.x - this.x, this.target.y - this.y) : Infinity;
 
         if (distanceToTarget <= this.detectRange) {
-            this.status = "Attack";
+            this.giveStatus("Attacking")
             this.dx = this.target.x - this.x;
             this.dy = this.target.y - this.y;
             this.moving = true;
         } else if (!this.moving) {
-            this.status = "Wander";
             this.setRandomTarget(world);
         } else {
             this.dx = this.targetX - this.x;
@@ -786,6 +881,9 @@ class Enemy extends Entity {
                         this.inventory[this.invSelected] = { ...holdableItems["Hand"] };
                     }
                 }
+                //get status
+                this.giveStatus("Hitting")//normal hitting!
+
                 // ELIGIBLE! DEAL DAMAGE!
                 dealDamageTo(damage, this, player, null, this.worldID);
                 this.justAttacked = true;
@@ -909,7 +1007,7 @@ class Archer extends Enemy {
             }
 
             if (distanceToTarget <= this.detectRange) {
-                this.status = "Attack";
+                this.giveStatus("Attacking");
                 this.dx = this.target.x - this.x;
                 this.dy = this.target.y - this.y;
                 this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation;
@@ -919,11 +1017,12 @@ class Archer extends Enemy {
                     this.speed = this.maxSpeed;
                     this.holdNum += 1; // Start loading bow while moving
                     this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                    // update bow phase
                     this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
                     super.moveMove();
                 } else if (distanceToTarget < this.safeDistance) {
                     // Flee mode: Move away from the target
-                    this.status = "Flee";
+                    this.giveStatus("Fleeing")
                     if (!this.isPaused) {
                         this.speed = this.maxSpeed;
                         this.dx = this.x - this.target.x;
@@ -932,6 +1031,7 @@ class Archer extends Enemy {
                         // Continue loading bow while fleeing
                         this.holdNum += 1;
                         this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                        // update bow phase
                         this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
 
                         // Stop to shoot if fully loaded
@@ -952,6 +1052,7 @@ class Archer extends Enemy {
                     this.speed = 0; // Stop movement
                     this.holdNum += 1;
                     this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                    // update bow phase
                     this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
 
                     if (this.holdDuration === 5 && !this.justAttacked) {
@@ -963,7 +1064,6 @@ class Archer extends Enemy {
                 // Wander if target is out of range
                 this.speed = this.maxSpeed;
                 if (!this.moving) {
-                    this.status = "Wander";
                     let mp = world.mapSize;
 
                     this.targetX = random(mp / 2, -mp / 2);
@@ -1003,9 +1103,10 @@ class Archer extends Enemy {
             this.defaultRotation +
             Math.PI +
             (random(1, -1) * (random(arrowOffsetMaxDeg, 0) * (Math.PI / 180))); // Offset shot direction
-
+        this.giveStatus("Shooting")
         // Shoot the arrow
         createArrow(this, arrowDirection, holdDuration, this.worldID);
+        // update bow phase
         this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png";
 
         // Reduce bow durability
@@ -1020,14 +1121,13 @@ class Archer extends Enemy {
 
 
 
-
 /*************************** @ENEMY_GENERATOR *************/
 // nested objects, so enemyObj are deep copies `structuredClone()`
 //const maxEnemyCount = Math.floor(Math.sqrt(mp**2/400**2)) //1 per 400 sq px
 const enemyObj = {
     "Normal":{
         type:"Normal",
-        imgSrc:"/imgs/Enemy.png",
+        imgSrc:entityImgSrcs["Normal Enemy"],
         damage: 5,
         detectRange: 400,
         reloadTime: 25,
@@ -1049,7 +1149,7 @@ const enemyObj = {
     },
     "Lord":{
         type:"Lord",
-        imgSrc:"/imgs/Enemy_Lord.png",
+        imgSrc:entityImgSrcs["Lord"],
         damage: 40,
         detectRange: 750,
         reloadTime: 50,
@@ -1071,7 +1171,7 @@ const enemyObj = {
     },
     "Archer":{
         type:"Archer", 
-        imgSrc:"/imgs/Enemy_Archer.png", 
+        imgSrc:entityImgSrcs["Archer"], 
         damage:10, 
         detectRange:750, 
         reloadTime:100, 
@@ -1097,7 +1197,7 @@ const enemyObj = {
 
     "Summoned Lord":{
         type:"Summoned Lord", 
-        imgSrc:"/imgs/Enemy_Summoned_Lord.png", 
+        imgSrc:entityImgSrcs["Summoned Lord"], 
         damage:10, 
         detectRange:750, 
         reloadTime:20, 
@@ -1120,7 +1220,7 @@ const enemyObj = {
     },
     "Boss":{
         type:"Boss", 
-        imgSrc:"/imgs/Enemy_Elder.png", 
+        imgSrc:entityImgSrcs["Boss"], 
         damage:100, 
         detectRange:500, 
         reloadTime:100, 
@@ -1139,7 +1239,7 @@ const enemyObj = {
     // Normal --> Small --> Tiny
     "Vantacite Monster":{
         type:"Vantacite Monster", 
-        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        imgSrc:entityImgSrcs["Vantacite Monster"], 
         damage:95, 
         detectRange:500, 
         reloadTime:100, 
@@ -1163,7 +1263,7 @@ const enemyObj = {
     },
     "Small Vantacite Monster":{
         type:"Small Vantacite Monster", 
-        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        imgSrc:entityImgSrcs["Vantacite Monster"], 
         damage:40, 
         detectRange:500, 
         reloadTime:50, 
@@ -1187,7 +1287,7 @@ const enemyObj = {
     },
     "Tiny Vantacite Monster":{
         type:"Tiny Vantacite Monster", 
-        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        imgSrc:entityImgSrcs["Vantacite Monster"], 
         damage:20, 
         detectRange:500, 
         reloadTime:30, 
@@ -1211,7 +1311,7 @@ const enemyObj = {
     },
     "Very Tiny Vantacite Monster":{
         type:"Very Tiny Vantacite Monster", 
-        imgSrc:"/imgs/Enemy_Vantacite_Monster.png", 
+        imgSrc:entityImgSrcs["Vantacite Monster"], 
         damage:5, 
         detectRange:500, 
         reloadTime:5, 
@@ -1844,7 +1944,8 @@ io.sockets.on("connection", (socket)=>{
         }
 
         let nC = findSpawn(entitySize, data.worldID)
-        let player = new Player(nC.x, nC.y, data.username, `/imgs/${data.img}.png`, data.worldID)
+        console.log("Spawned in type", data.img)
+        let player = new Player(nC.x, nC.y, data.username, entityImgSrcs[data.img], data.worldID)
 
         //var worldID = "Main"
         if(data.worldID in worlds){
@@ -1891,7 +1992,7 @@ io.sockets.on("connection", (socket)=>{
                 }
             } else if(!player.isDead){
                 console.log("ID", data.id, "was added to pool")
-                world.entities[data.id] = player
+                world.entities[data.id] = new Player(player.x, player.y, player.username, player.imgSrc, player.worldID, player.type, player.speed, player.w, player.h, player.health, data.id, player.inventory, player.xp)
                 // automatically make this true, so if you spawn on a tree, you good
                 world.entities[data.id].onWall = true
                 //
@@ -2097,6 +2198,8 @@ io.sockets.on("connection", (socket)=>{
             } else if(tool.name === "Spear"){
                 let spearDirection = player.rotation + player.defaultRotation + Math.PI;
                 
+                player.giveStatus("Shooting")
+                
                 tool.durability -= 1
 
                 let projectileID = createID()
@@ -2131,6 +2234,17 @@ io.sockets.on("connection", (socket)=>{
                     && entity.y - entity.height/2 < mouseY 
                     && entity.y + entity.height/2 > mouseY
                     ){
+                        if(player.inventory[player.invSelected].name != "Hand"){
+                            if(player.rl == "R"){
+                                //righty
+                                player.giveStatus("Hitting1")
+                            }
+                            else if(player.rl == "L"){
+                                //lefty
+                                player.giveStatus("Hitting2")
+                            }
+                        }
+                        else player.giveStatus(`Hitting${random(2,1)}`)
                         dealDamageTo(damage, player, entity, null, data.worldID)
                         didDamage = true // turn to true
                     }

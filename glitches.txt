@@ -4,6 +4,7 @@ BUGS!
 * [FIXED] CLOSED 01/02/25 | Spawn on players! OPEN 1/2/25.
 * [FIXED] CLOSED 01/02/25 | Monsters do not pick up pickables anymore... OPEN 01/02/25.
 * [ERROR] OPEN   01/03/25 | Hitting a just spawned vantacite monster glitches. The error is worlds[WorldID].entities[to.id] is UNDEFINED. OPEN 01/03/25.
+* [ERROR] OPEN   01/06/25 | The checkCollision function tests based on square areas. Make it circular so that you can go around players like trees. Must implement a way to detect if going up, and something is over you you don't stop! OPEN 01/06/25
 
 TODO:
 * [COMPLETE] 12/31/24 | Players take knockback

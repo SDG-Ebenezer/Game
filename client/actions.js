@@ -70,9 +70,13 @@ socket.on("sendStartData", (data)=>{
     mapSize = data.mapSize
 
     //player img
-    var pimg = new Image()
-    pimg.src = player.imgSrc
-    images[player.imgSrc] = pimg 
+    for(let i in player.imgSrc){
+        let img = player.imgSrc[i]
+        let pimg = new Image()
+        pimg.src = player.imgSrc[img]
+        images[player.imgSrc[img]] = pimg 
+    }
+    
 
     canPlay = true
     updateAgain = true
@@ -151,9 +155,18 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.fillStyle = item.color;
             ctx.fillRect(item.x, item.y, item.width, item.height)
         }
-        else{    
-            let pic = item.imgSrc
-
+        else{ 
+            let pic
+            if(typeof(item.imgSrc) == "string"){
+                pic = item.imgSrc
+            }  
+            else{
+                if (item.status && item.imgSrc[item.status[0]]) {
+                    pic = item.imgSrc[item.status[0]]
+                } else {
+                    pic = item.imgSrc["Wandering"]
+                }
+            }
             //Draw tree opaque function
             if(item.class == "Tree"){
                 if(Math.sqrt(Math.pow(player.x - item.x, 2) + Math.pow(player.y - item.y, 2)) > 250){ // dist till tree is not opaque
@@ -199,9 +212,16 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 let holdingIconSize = 50
                 let x = -item.width/2
                 let y = item.height/2
+                let extraRot = 0
+                if(item.status[0].slice(0, 7) == "Hitting"){
+                    console.log("Ho!")
+                    x += item.width/10
+                    y += item.height/10
+                    extraRot = -Math.PI/8
+                }
                 ctx.translate(x,y)
                 //all items default rotated by Math.PI
-                ctx.rotate(Math.PI + heldItem.rotation)
+                ctx.rotate(Math.PI + heldItem.rotation + extraRot)
                 //ctx.fillStyle="red"
                 //ctx.fillRect(-5,-5,10,10)
                 ctx.drawImage(images[p],-holdingIconSize/2,-holdingIconSize/2,holdingIconSize,holdingIconSize)
@@ -426,8 +446,7 @@ function gActivateSpeedBar() {
 
     let div = document.getElementById("floatingInfoDiv")
     if(displayHelp){
-        let text = "<span>Hold a Key and then Press <img src=\"imgs/IconsK_X.png\" width=20 height=20> to Sprint</span>"
-        
+        let text = "<span>Move and Hold <img src=\"imgs/IconsK_X.png\" width=20 height=20> to Sprint</span>"
         div.innerHTML = text
         div.style.display = "block"
         div.style.left = mouse.x+canvas.width/2-350
@@ -512,18 +531,18 @@ function gMap(){
     if(document.getElementById("mapOnOffSlider").checked == false) return
 
     let paddingForMapOn = 15
-    let size = mapOff?(canvas.height * 1/6):Math.min(canvas.height, canvas.width)-paddingForMapOn //added pIcSize to balance out offset
+    let size = mapOff?(canvas.height * 1/6):Math.min(canvas.height, canvas.width)-paddingForMapOn //added mapSfSize to balance out offset
     let sf = size/mapSize //scale factor
-    let pIcSize = (n)=>n*sf
+    let mapSfSize = (n) => n * sf
     let x = mapOff?0:canvas.width/2 - size/2 - paddingForMapOn/4
     let y = mapOff?(canvas.height - gBarHeight * 3.5 - size):canvas.height/2 - size/2 - paddingForMapOn/4
 
     //background
     gctx.fillStyle = "#000000dd"
-    gctx.fillRect(x,y,size+pIcSize(player.width),size+pIcSize(player.height))
+    gctx.fillRect(x,y,size+mapSfSize(player.width),size+mapSfSize(player.height))
     gctx.lineWidth = 2.5
     gctx.strokeStyle = "#ffffffaa"
-    gctx.strokeRect(x,y,size+pIcSize(player.width),size+pIcSize(player.height))
+    gctx.strokeRect(x,y,size+mapSfSize(player.width),size+mapSfSize(player.height))
     
     //structures + markets
     gctx.save()
@@ -531,8 +550,7 @@ function gMap(){
     
     
     //draw lakes on map
-    for(let i in lakesList){
-        let lake = lakesList[i]
+    for(const lake of lakesList){
         gctx.fillStyle = "#188B8F"
         gctx.beginPath();
         gctx.arc(lake.x * sf, lake.y * sf, lake.size * sf, 0, Math.PI * 2, true);
@@ -540,25 +558,29 @@ function gMap(){
         gctx.fill();
     }
     //draw walls on map
-    for(let i in wallsList){
-        let wall = wallsList[i]
+    for(const wall of wallsList){
         if(wall.class == "Wall") {gctx.fillStyle = "gray"}
         else {gctx.fillStyle = "green"}
-        gctx.fillRect(wall.x*sf,wall.y*sf,pIcSize(wall.width),pIcSize(wall.height))
+        gctx.fillRect(wall.x*sf,wall.y*sf,mapSfSize(wall.width),mapSfSize(wall.height))
     }
     //draw markets on map
-    for(let i in marketsList){
-        let market = marketsList[i]
+    for(const market of marketsList){
         gctx.fillStyle = "#1E90FF"
-        gctx.fillRect(market.x*sf,market.y*sf,pIcSize(market.width),pIcSize(market.height))
+        gctx.fillRect(market.x*sf,market.y*sf,mapSfSize(market.width),mapSfSize(market.height))
     }
 
     gctx.restore()
-
     gctx.save()
     gctx.translate(x+size/2,y+size/2)
+    //draw important entities
+    for(let key in entities){
+        let e = entities[key]
+        gctx.fillStyle = "green"
+        gctx.fillRect(e.x*sf,e.y*sf,mapSfSize(100),mapSfSize(100))
+    }
+
     gctx.fillStyle = "red"
-    gctx.fillRect(player.x*sf,player.y*sf,pIcSize(100),pIcSize(100))
+    gctx.fillRect(player.x*sf,player.y*sf,mapSfSize(100),mapSfSize(100))
     gctx.restore()
 }
 
@@ -1063,6 +1085,7 @@ function initiateGameLoop(){
     gameLoopInt = setInterval(()=>{
         //player update
         if(player && updateAgain && canPlay) {
+            console.log(player.status)
             //update worldIDDiv
             if(player.worldID){
                 document.getElementById("worldIDDiv").style.display = "block"
