@@ -456,22 +456,7 @@ function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
     }
     
 }
-function summon(enemyKey, x, y, spread, amount, worldID, frequency=10){
-    let enemy = enemyObj[enemyKey]
-    let i = 0
-    let abcInterval = setInterval(()=>{
-        let coords = findSpawnAround(x, y, Math.max(enemy.w, enemy.h), spread, worldID)
-        let xx = coords.x
-        let yy = coords.y
-        if(xx && yy) {
-            let id = createID()
-            worlds[worldID].entities[id] = new Enemy(enemyKey, false, xx, yy, id, worldID)
-            i ++
-        }
-        //give up if more than 100 tries or if the requested amount is satisfied
-        if(i == amount || i > 100) clearInterval(abcInterval)
-    }, frequency)
-}
+
 
 function borderInPoints(x, y, worldID){
     let borders = worlds[worldID].BORDERS
@@ -757,6 +742,8 @@ class Enemy extends Entity {
 
         this.targetData = {};
         this.grudges = {} //ONLY IDS! OTHERWISE RECURSION!
+
+        this.freeze = false
     }
 
     findTarget() {
@@ -825,6 +812,11 @@ class Enemy extends Entity {
             if (this.cooldownTime * this.cooldownSF >= this.cooldownDuration) {
                 this.cooldownTime = 0;
                 this.justAttacked = false;
+            }
+            // MELEE ATTACK ONLY
+            if(this.status[0].slice(0,7) == "Hitting"){
+                this.freeze = true
+                setTimeout(()=>{this.freeze = false}, 250)
             }
         }
     }
@@ -905,45 +897,49 @@ class Enemy extends Entity {
     moveMove() {
         const world = worlds[this.worldID];
 
-        this.dist = Math.hypot(this.dx, this.dy);
-        if (this.dist > 0) {
-            this.dx /= this.dist;
-            this.dy /= this.dist;
-        }
+        if(!this.freeze){ 
+            this.dist = Math.hypot(this.dx, this.dy);
+            if (this.dist > 0) {
+                this.dx /= this.dist;
+                this.dy /= this.dist;
+            }
 
-        this.xInc = this.dx * this.speed;
-        this.yInc = this.dy * this.speed;
+            this.xInc = this.dx * this.speed;
+            this.yInc = this.dy * this.speed;
 
-        if (this.knockbackDue.x !== 0) {
-            this.xInc -= this.knockbackDue.x;
-            this.knockbackDue.x = 0;
-        }
-        if (this.knockbackDue.y !== 0) {
-            this.yInc -= this.knockbackDue.y;
-            this.knockbackDue.y = 0;
-        }
+            if (this.knockbackDue.x !== 0) {
+                this.xInc -= this.knockbackDue.x;
+                this.knockbackDue.x = 0;
+            }
+            if (this.knockbackDue.y !== 0) {
+                this.yInc -= this.knockbackDue.y;
+                this.knockbackDue.y = 0;
+            }
+            
+            if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L) {
+                this.xInc = 0;
+            }
+            if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D) {
+                this.yInc = 0;
+            }
+
+            this.onWall = getOnWallStatus(world.obstacles, this);
+
+            const newCoords = checkCollision(
+                this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this,
+                true, this.width === this.height ? this.width : Math.max(this.width, this.height), this.worldID, world.entities
+            );
+
+            if (newCoords.addLakeParticle) {
+                createParticle(world, this.x, this.y, this.id);
+            }
+
+            this.x += newCoords.tx;
+            this.y += newCoords.ty;
+            this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation;
+        } 
+
         
-        if (this.x + this.xInc > world.BORDERS.R || this.x + this.xInc < world.BORDERS.L) {
-            this.xInc = 0;
-        }
-        if (this.y + this.yInc > world.BORDERS.U || this.y + this.yInc < world.BORDERS.D) {
-            this.yInc = 0;
-        }
-
-        this.onWall = getOnWallStatus(world.obstacles, this);
-
-        const newCoords = checkCollision(
-            this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this,
-            true, this.width === this.height ? this.width : Math.max(this.width, this.height), this.worldID, world.entities
-        );
-
-        if (newCoords.addLakeParticle) {
-            createParticle(world, this.x, this.y, this.id);
-        }
-
-        this.x += newCoords.tx;
-        this.y += newCoords.ty;
-        this.rotation = Math.atan2(this.dy, this.dx) + this.defaultRotation;
     }
 }
 class Boss extends Enemy{
@@ -1118,8 +1114,22 @@ class Archer extends Enemy {
         }
     }
 }
-
-
+function summon(enemyKey, x, y, spread, amount, worldID, frequency=10){
+    let enemy = enemyObj[enemyKey]
+    let i = 0
+    let abcInterval = setInterval(()=>{
+        let coords = findSpawnAround(x, y, Math.max(enemy.w, enemy.h), spread, worldID)
+        let xx = coords.x
+        let yy = coords.y
+        if(xx && yy) {
+            let id = createID()
+            worlds[worldID].entities[id] = new Enemy(enemyKey, true, xx, yy, id, worldID)
+            i ++
+        }
+        //give up if more than 100 tries or if the requested amount is satisfied
+        if(i == amount || i > 100) clearInterval(abcInterval)
+    }, frequency)
+}
 
 /*************************** @ENEMY_GENERATOR *************/
 // nested objects, so enemyObj are deep copies `structuredClone()`

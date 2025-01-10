@@ -231,6 +231,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         ctx.restore() 
         
         //SHOW HEALTH (formerly showHealth() method)
+        // health bar
         if(item.health < item.maxHealth && item.showH){
             let w = 50
             let h = 10
@@ -241,7 +242,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.fillStyle = "rgb(0,0,0, 0.5)"
             ctx.fillRect(x, y, w, h)
             ctx.fillStyle = "rgb(0,235,0, 0.8)"
-            ctx.fillRect(x, y, w * (item.health/item.maxHealth), h)
+            ctx.fillRect(x, y, w * (item.health/item.maxHealth>0?item.health/item.maxHealth:0), h)
             ctx.restore()
         }   
 
@@ -527,15 +528,21 @@ function dLeaderboardData(serverPlayerCount, leaderboard){
     document.getElementById("playersInServer").innerHTML = `Players in server: ${serverPlayerCount}`
 }
 var mapOff = true
-function gMap(){
+function gMap(showBots=true){
     if(document.getElementById("mapOnOffSlider").checked == false) return
 
     let paddingForMapOn = 15
-    let size = mapOff?(canvas.height * 1/6):Math.min(canvas.height, canvas.width)-paddingForMapOn //added mapSfSize to balance out offset
+    let size = mapOff
+            ?(canvas.height * 1/6)
+            :Math.min(canvas.height, canvas.width)-paddingForMapOn -gBarHeight * 4
     let sf = size/mapSize //scale factor
     let mapSfSize = (n) => n * sf
-    let x = mapOff?0:canvas.width/2 - size/2 - paddingForMapOn/4
-    let y = mapOff?(canvas.height - gBarHeight * 3.5 - size):canvas.height/2 - size/2 - paddingForMapOn/4
+    let x = mapOff
+            ?0
+            :canvas.width/2 - size/2 - paddingForMapOn/4
+    let y = mapOff
+            ?(canvas.height - gBarHeight * 3.5 - size)
+            :canvas.height/2 - size/2 - paddingForMapOn/4
 
     //background
     gctx.fillStyle = "#000000dd"
@@ -573,10 +580,18 @@ function gMap(){
     gctx.save()
     gctx.translate(x+size/2,y+size/2)
     //draw important entities
-    for(let key in entities){
-        let e = entities[key]
-        gctx.fillStyle = "green"
-        gctx.fillRect(e.x*sf,e.y*sf,mapSfSize(100),mapSfSize(100))
+    if(showBots){
+        for(let key in entities){
+            let e = entities[key]
+            if(e.enemyKey == "Boss"){
+                gctx.fillStyle = "#810000" // maroon red
+            } else if (e.enemyKey == "Summoned Lord"){
+                gctx.fillStyle = "#00817b" //aqua marine blue
+            } else{
+                gctx.fillStyle = "#5e9900" //savannah green
+            }
+            gctx.fillRect(e.x*sf,e.y*sf,mapSfSize(100),mapSfSize(100))
+        }
     }
 
     gctx.fillStyle = "red"
