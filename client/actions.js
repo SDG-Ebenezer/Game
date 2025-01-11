@@ -60,31 +60,80 @@ var entities = {}
 
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
-socket.on("sendStartData", (data)=>{
-    initiateGameLoop()
-    setupGame()
+socket.on("sendStartData", (data) => {
+    // Show the loading screen
+    document.getElementById("loading").style.display = "flex";
+    document.getElementById("loading").style.zIndex = 1000;
+    console.log("Loading all images...");
 
-    borders = data.bordersObj
-    //walls = data.structuresObj //send for map
-    player = data.player
-    mapSize = data.mapSize
+    let totalImgs = data.allImgs.length; // Total images to load
+    let loadedImgs = 0; // Counter for loaded images
+    let currentProgress = 0; // Current progress of the progress bar
 
-    //player img
-    for(let i in player.imgSrc){
-        let img = player.imgSrc[i]
-        let pimg = new Image()
-        pimg.src = player.imgSrc[img]
-        images[player.imgSrc[img]] = pimg 
+    const updateProgressBar = (targetProgress) => {
+        const step = 0.5; // Adjust this value to control speed (smaller = slower)
+        const interval = 100; // Update interval in milliseconds
+
+        const intervalId = setInterval(() => {
+            if (currentProgress < targetProgress) {
+                currentProgress += step;
+                document.getElementById("loadingPercent").innerHTML = `${Math.round(currentProgress, 3)}%`
+                document.getElementById("loadingRect").style.width = `calc(${currentProgress}% - 2.5px)`;
+            } else {
+                clearInterval(intervalId);
+            }
+        }, interval);
+    };
+
+    // Load all images
+    for (let i in data.allImgs) {
+        let imgSrc = `/imgs/${data.allImgs[i]}`;
+        let newImg = new Image();
+
+        // Handle when an image is fully loaded
+        newImg.onload = () => {
+            loadedImgs++; // Increment the loaded counter
+
+            // Calculate target progress
+            let loadImgCompletion = (loadedImgs / totalImgs) * 100;
+
+            // Gradually update the progress bar to the target
+            updateProgressBar(loadImgCompletion);
+
+            console.log("Loaded:", imgSrc, "Progress:", loadImgCompletion);
+
+            // When all images are loaded, proceed
+            if (loadedImgs >= totalImgs) {
+                setTimeout(() => {
+                    document.getElementById("loading").style.display = "none"; // Hide loading screen
+                    console.log("All images loaded. Initializing game...");
+
+                    // Initialize game components
+                    borders = data.bordersObj;
+                    player = data.player;
+                    mapSize = data.mapSize;
+
+                    wallsList = data.walls; // Map walls
+                    lakesList = data.lakes; // Map lakes
+                    marketsList = data.markets; // Map markets
+
+                    initiateGameLoop();
+                    setupGame();
+                    canPlay = true;
+                    updateAgain = true;
+                }, 2000); // Optional delay for smooth transition
+            }
+        };
+
+        // Set the image source to start loading
+        newImg.src = imgSrc;
+
+        // Store the image for later use
+        images[imgSrc] = newImg;
     }
-    
+});
 
-    canPlay = true
-    updateAgain = true
 
-    wallsList = data.walls //send for map
-    lakesList = data.lakes //send for map
-    marketsList = data.markets //send for map
-})
 //Make sure added variables are also emitted from the server-side
 socket.on("reupdate", (data)=>{
     canPlay = true
@@ -183,6 +232,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
 
             //create a loaded image if not existant
             if(!images[pic]){
+                console.log("Image NONEXISTANT!", pic)
                 images[pic] = new Image()
                 images[pic].src = pic
             }
@@ -214,7 +264,6 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 let y = item.height/2
                 let extraRot = 0
                 if(item.status[0].slice(0, 7) == "Hitting"){
-                    console.log("Ho!")
                     x += item.width/10
                     y += item.height/10
                     extraRot = -Math.PI/8
@@ -1066,7 +1115,7 @@ var gameLoopInt // TO BE THE GAME LOOPA! (currently undefined)
 window.joinGame = function joinGame(value=null){
     if(!value){
         value = document.getElementById("join_game_input").value
-        console.log(value)
+        console.log("Game ID: ", value)
     }
 
     startGame(value)
@@ -1077,11 +1126,11 @@ window.createNewWorld = function createNewWorld(){
     for(let i = 0; i < 6; i ++){
         st += String(random(9, 0))
     }
-    console.log(st)
+    console.log("New Game ID String:", st)
     startGame(st, true)
 }
 window.gameOn = false
-function startGame(worldID = "Main", createWorld=false, username=null){
+function startGame(worldID = "Main", createWorld=false, username=null, worldSize=2000, botCount=null, lakeCount=null, structureCount=null, marketCount=null){
     /*****************************************************/
     //ask server for starting data and create new ID
     var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
@@ -1090,7 +1139,14 @@ function startGame(worldID = "Main", createWorld=false, username=null){
         username: username?username:document.getElementById("username").value,
         img:selectedValue,
         worldID:worldID, //WORLD THAT THE PLAYER JOINS
-        createWorld:createWorld
+        createWorldData:{
+            wantToCreateWorld:createWorld,
+            worldSize:worldSize,
+            botCount:botCount,
+            lakeCount:lakeCount,
+            structureCount:structureCount,
+            marketCount:marketCount
+        },
     })//start game loop
 
     //Actual stuff called when server responds.
@@ -1100,7 +1156,6 @@ function initiateGameLoop(){
     gameLoopInt = setInterval(()=>{
         //player update
         if(player && updateAgain && canPlay) {
-            console.log(player.status)
             //update worldIDDiv
             if(player.worldID){
                 document.getElementById("worldIDDiv").style.display = "block"
@@ -1240,7 +1295,7 @@ window.startGame = startGame
 window.rejoinGame = function rejoinGame(){
     clearInterval(gameLoopInt)
     canPlay = false
-    console.log(player.worldID)
+    console.log("Rejoin WORLDID: ", player.worldID)
     startGame(player.worldID, false, player.username)
 }
 // Function that turns things off/on as needed when game is over
@@ -1430,7 +1485,7 @@ socket.on('connect', () => {
 // Disconnected...
 socket.on("disconnect", ()=>{
     console.log('Disconnected from server');
-    waitDiv.style.display = 'block';
+    waitDiv.style.display = 'flex';
     disconnectTimeout = setInterval(addDot, 1000);
 })
 
@@ -1449,7 +1504,6 @@ function addDot() {
 window.addEventListener('beforeunload', function(event) {
     if(gameOn) event.preventDefault()
     let stillPlaying = gameOn?confirm("Are you sure you want to leave?"):false
-    console.log(gameOn, stillPlaying)
     if (stillPlaying) {
         socket.emit("playerClosedTab", {
             player:player,

@@ -11,6 +11,20 @@ import express from 'express';
 import { Server } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs  from 'fs'
+
+var folderPath = './client/imgs';
+var allImgs = []
+try {
+    const files = fs.readdirSync(folderPath);
+    files.forEach(file => {
+        allImgs.push(String(file))
+    });
+    console.log("Successfully copied all IMG paths in ./client/imgs/")
+} catch (err) {
+    console.error('Unable to scan directory: ' + err);
+}
+
 
 var app = express();
 var serv = Server(app);
@@ -1937,17 +1951,29 @@ io.sockets.on("connection", (socket)=>{
     //
     socket.on("askForStartData", function(data){
         //creating world?
-        if(data.createWorld){
+        if(data.createWorldData.wantToCreateWorld){
             //just makin sure... 0.0000...1% change of this code running
             //just to be safe...
-            if(data.worldID in worlds) data.worldID = createRandomString(6)
+            if(data.worldID in worlds) {
+                data.worldID = createRandomString(6)
+            }
             //add world    
-            createWorld(data.worldID, 2000)
+            createWorld(
+                data.worldID, 
+                data.worldSize, 
+                data.botCount,
+                null,
+                data.lakeCount,
+                data.structureCount,
+                null,
+                data.marketCount
+            )
             if(DEBUG) console.log("World ID --> ", data.worldID)
         }
 
         //huh...
-        if(!data.createWorld && !(data.worldID in worlds)){
+        if(!data.createWorldData.wantToCreateWorld 
+        && !(data.worldID in worlds)){
             //invalid worldID, return...nothing happened here
             socket.emit("noWorld")
             return //go home
@@ -1973,7 +1999,8 @@ io.sockets.on("connection", (socket)=>{
                 markets: Object.values(world.markets), //send for map
                 holdables: holdableItems,
                 //speedFactor: speedFactor, //how much one is affected by a speed boost (sprint)
-                maxImmuneDuration:MAX_IMMUNE_DURATION //maximum immune time
+                maxImmuneDuration:MAX_IMMUNE_DURATION, //maximum immune time
+                allImgs:allImgs, // all images send to load
             })
             console.log("Player ", player.username, player.id, "joined ", data.worldID, " world")
         } else console.log("NO world existing...", data.worldID)
