@@ -78,7 +78,7 @@ socket.on("sendStartData", (data) => {
             if (currentProgress < targetProgress) {
                 currentProgress += step;
                 document.getElementById("loadingPercent").innerHTML = `${Math.round(currentProgress, 3)}%`
-                document.getElementById("loadingRect").style.width = `calc(${currentProgress}% - 2.5px)`;
+                document.getElementById("loadingRect").style.width = `calc(${currentProgress}% - 5px)`;
             } else {
                 clearInterval(intervalId);
             }

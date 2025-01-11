@@ -584,7 +584,7 @@ input[type="radio"]:checked + img {
 }
 #loadingRect {
     width: 0;
-    height: 27.5px;
+    height: 26px;
     margin-top: 2.5px;
     margin-bottom: 2.5px;
     margin-left: 2.5px;
