@@ -1106,7 +1106,7 @@ class Archer extends Enemy {
     }
 
     shootArrow(holdDuration) {
-        if(this.isDead) return null
+        if(this.isDead || this.justAttacked) return null
         this.justAttacked = true; // You just attacked
         const arrowOffsetMaxDeg = 10; // Maximum offset angle in degrees
         const arrowDirection =
