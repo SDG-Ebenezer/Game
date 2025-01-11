@@ -63,6 +63,7 @@ var canPlay = false
 socket.on("sendStartData", (data) => {
     // Show the loading screen
     document.getElementById("loading").style.display = "flex";
+    setupGame();
     document.getElementById("loading").style.zIndex = 1000;
     console.log("Loading all images...");
 
@@ -118,7 +119,6 @@ socket.on("sendStartData", (data) => {
                     marketsList = data.markets; // Map markets
 
                     initiateGameLoop();
-                    setupGame();
                     canPlay = true;
                     updateAgain = true;
                 }, 2000); // Optional delay for smooth transition
@@ -1130,7 +1130,7 @@ window.createNewWorld = function createNewWorld(){
     startGame(st, true)
 }
 window.gameOn = false
-function startGame(worldID = "Main", createWorld=false, username=null, worldSize=2000, botCount=null, lakeCount=null, structureCount=null, marketCount=null){
+function startGame(worldID = "Main", createWorld=false, username=null, worldSize=1000, botCount=null, lakeCount=null, structureCount=null, marketCount=null){
     /*****************************************************/
     //ask server for starting data and create new ID
     var selectedValue = document.getElementById("skins-image-options").querySelector("input[name='option']:checked").value
@@ -1383,7 +1383,7 @@ window.toggleMarket = function toggleMarket(){
         marketOpen = true
     }
 }
-function createMarketBtn(items, xxxp=player.xp) {
+function createMarketBtn(items, xxxp=player.xp?player.xp:0) {
     var table = document.getElementById("marketBtnContainer"); 
     table.innerHTML = ''; 
    // table.style.top = 0
@@ -1502,15 +1502,16 @@ function addDot() {
 /********************************************************/
 // Detect when the user is leaving the page
 window.addEventListener('beforeunload', function(event) {
-    if(gameOn) event.preventDefault()
-    let stillPlaying = gameOn?confirm("Are you sure you want to leave?"):false
-    if (stillPlaying) {
-        socket.emit("playerClosedTab", {
-            player:player,
-            worldID:player.worldID
-        })
-        return null;
-    } 
+    if(gameOn) {
+        event.preventDefault()
+        if (confirm("Are you sure you want to leave?")) {
+            socket.emit("playerClosedTab", {
+                player:player,
+                worldID:player.worldID
+            })
+            return null;
+        } 
+    }
 })
 
 

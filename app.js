@@ -534,12 +534,10 @@ const coins = {
  * This function copies the inventory of an entity
  * in entities via the "id" parameter.
  */
-function dropAll(id, type="player", worldID="Main"){
+function dropAll(id, worldID="Main"){
     let world = worlds[worldID]
-    var from
-    if (type == "player") from = world.entities[id]
-    else if (type == "enemy") from = world.entities[id]
-
+    var from = world.entities[id]
+    console.log(from.id)
     if(from){
         from.inventory.forEach(slot=>{
             if(slot.name != "Hand"){
@@ -1049,9 +1047,11 @@ class Archer extends Enemy {
                             this.isPaused = true; // Pause fleeing to shoot
                             this.speed = 0; // Stop movement
                             setTimeout(() => {
-                                this.shootArrow(this.holdDuration);
-                                this.holdNum = 0; // Reset loading
-                                this.isPaused = false; // Resume fleeing
+                                if(this.health > 0){
+                                    this.shootArrow(this.holdDuration);
+                                    this.holdNum = 0; // Reset loading
+                                    this.isPaused = false; // Resume fleeing
+                                }
                             }, 1000); // 1-second pause to aim and shoot
                         }
 
@@ -1106,6 +1106,7 @@ class Archer extends Enemy {
     }
 
     shootArrow(holdDuration) {
+        if(this.isDead) return null
         this.justAttacked = true; // You just attacked
         const arrowOffsetMaxDeg = 10; // Maximum offset angle in degrees
         const arrowDirection =
@@ -1745,7 +1746,7 @@ setInterval(()=>{
                             loot, 
                             0, loot.durability, loot.stackSize)
                     }
-                    dropAll(enemy.id, "enemy", worldID)
+                    dropAll(enemy.id, worldID)
 
                     //if special...
                     // VANTACITE MONSTER
@@ -2100,7 +2101,7 @@ io.sockets.on("connection", (socket)=>{
                 
                 //ONLY dies if send death message!!
                 if(player && player.isDead){// player.health <= 0
-                    dropAll(id, "player", data.worldID)
+                    dropAll(id, data.worldID)
                     delete worlds[data.worldID].entities[id]
                     socket.emit("gameOver")
                 }
@@ -2423,13 +2424,20 @@ io.sockets.on("connection", (socket)=>{
         catch(err){
             if(global_player){
                 console.log("A player left the server and closed the tab...", global_player.id)
+                dropAll(global_player.id, global_player.worldID)
                 delete worlds[global_player.worldID].entities[global_player.id]
             } else console.log("The player just left...")
         }
     })
     socket.on("playerClosedTab", function(data){
-        if(data.worldID && worlds[data.worldID] && data.player && data.player.id && worlds[data.worldID].entities[data.player.id]){
-            dropAll(data.player.id, "player", data.worldID)
+        if(
+        data.worldID 
+        && worlds[data.worldID] 
+        && data.player 
+        && data.player.id 
+        && worlds[data.worldID].entities[data.player.id]){
+            console.log("Deleted PLAYER left tab ", data.player.id)
+            dropAll(data.player.id, data.worldID)
             delete worlds[data.worldID].entities[data.player.id]
         }
     })    
