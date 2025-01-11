@@ -1502,7 +1502,7 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
             toolHeldKnockback = projectilesObj[typeOfProjectile].knockbackPercent
         }
         //no it's not...
-        else{
+        else if(from.inventory){
             //use tool knockback
             if(DEBUG) console.log("From:", from)
             toolHeldKnockback = from.inventory[from.invSelected].knockback
