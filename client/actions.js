@@ -130,6 +130,10 @@ socket.on("sendStartData", (data) => {
 
         // Store the image for later use
         images[imgSrc] = newImg;
+
+        // RESET LOADING VARS
+        document.getElementById("loadingPercent").innerHTML = "0%"
+        document.getElementById("loadingRect").style.width = "0"
     }
 });
 
