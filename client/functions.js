@@ -238,9 +238,10 @@ export function getOnWallStatus(obstacles, player){
     return false
 }
 
-export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx, ty, onWall, who, particlesTF=true, size=entitySize, worldID="Main", entities={}) {
+export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx, ty, onWall, who, particlesTF=true, width=entitySize, height=entitySize, worldID="Main", entities={}) {
     let newX = playerX + tx;
     let newY = playerY + ty;
+    var size = Math.max(width, height)
     var obstructionPadding = size/2 
 
     // check obstacles (trees/walls)
@@ -274,7 +275,7 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
                 if(Math.sqrt(Math.pow(newY-treeCenterY,2) + Math.pow(playerX-treeCenterX,2)) < obstacle.obstructionRadius + (obstructionPadding/2)){
                     ty = 0
                 }
-            } 
+            }
         }
     }
 
@@ -283,46 +284,28 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
     for (let e in entities) {
         let obstacle = entities[e];
         if (obstacle.id != playerID) {
-            // Player bounding box
-            let letlet =  1//entitySize/8
-            let ssff = 0.5
-            let playerWidth = (size * ssff)/2//- letlet;
-            let playerHeight = (size * ssff)/2//- letlet;
-            
-            // Obstacle bounding box
-            let obstacleWidth = (obstacle.width * ssff)/2//- letlet;
-            let obstacleHeight = (obstacle.height * ssff)/2//- letlet;
+            //can't be yourself!
+            let factor = 0.6
+            let pw = width * factor
+            let ph = height * factor
+            let ow = obstacle.width * factor
+            let oh = obstacle.height * factor
 
-            // Obstacle position
-            let obstacleLeft = obstacle.x - obstacleWidth;
-            let obstacleRight = obstacle.x + obstacleWidth;
-            let obstacleTop = obstacle.y - obstacleHeight;
-            let obstacleBottom = obstacle.y + obstacleHeight;
-
-            // New player positions
-            let playerLeft = newX - playerWidth;
-            let playerRight = newX + playerWidth;
-            let playerTop = newY - playerHeight;
-            let playerBottom = newY + playerHeight;
-
-            // Horizontal collision
-            if (playerRight > obstacleLeft &&
-                playerLeft < obstacleRight &&
-                playerBottom > obstacleTop &&
-                playerTop < obstacleBottom) {
-                tx = 0; // Stop horizontal movement
+            if(newX + pw/2 > obstacle.x - ow/2
+            && newX - pw/2 < obstacle.x + ow/2
+            && playerY + ph/2 > obstacle.y - oh/2
+            && playerY - ph/2 < obstacle.y + oh/2){
+                tx = 0
             }
-
-            // Vertical collision
-            if (playerBottom > obstacleTop &&
-                playerTop < obstacleBottom &&
-                playerRight > obstacleLeft &&
-                playerLeft < obstacleRight) {
-                ty = 0; // Stop vertical movement
+            
+            if(newY + ph/2 > obstacle.y - oh/2
+            && newY - ph/2 < obstacle.y + oh/2
+            && playerX + pw/2 > obstacle.x - ow/2
+            && playerX - pw/2 < obstacle.x + ow/2){
+                ty = 0
             }
         }
     }
-
     
     if (!onWall && particlesTF) {
         for (let l in lakes) {

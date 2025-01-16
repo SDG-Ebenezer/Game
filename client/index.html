@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/imgs/Logo.ico">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <title>Game</title>
 </head>
 <body>
@@ -201,6 +202,7 @@
     <!-- settings -->
     <div id="settings">
         <h1 class="padText">SETTINGS:</h1>
+        <!--MAP ON/OFF-->
         <div class="switchSets">
             <label class="switch">
                 <input type="checkbox" id="mapOnOffSlider" checked>
@@ -208,12 +210,23 @@
             </label>
             <span class="settingsP">Map</span>
         </div>
+
+        <!--LEADERBOARD ON/OFF-->
         <div class="switchSets">
             <label class="switch">
                 <input type="checkbox" id="leaderboardOnOffSlider" checked>
                 <span class="slider"></span>
             </label>
             <span class="settingsP">Leaderboard</span>
+        </div>
+
+        <!--SHOW KILLS ON/OFF-->
+        <div class="switchSets">
+            <label class="switch">
+                <input type="checkbox" id="showKillsOnOffSlider">
+                <span class="slider"></span>
+            </label>
+            <span class="settingsP">Show Bot Kills</span>
         </div>
     </div>
 
@@ -252,8 +265,9 @@
         <div id="loadingPercent">0%</div>
         <div id="loadingBackground"><div id="loadingRect"></div></div>
     </div>
-<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-<script src="/client/preGame.js" ></script>
-<script src="/client/actions.js" type="module"></script>
+
+    
+    <script src="/client/preGame.js" ></script>
+    <script src="/client/actions.js" type="module"></script>
 </body>
 </html>

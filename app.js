@@ -8,10 +8,10 @@ import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollisio
 var app = express()
 //var serv = require("http").Server(app)
 import express from 'express';
-import { Server } from 'http';
+import { ClientRequest, Server } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs  from 'fs'
+import fs from 'fs'
 
 var folderPath = './client/imgs';
 var allImgs = []
@@ -97,8 +97,8 @@ class World {
         }
         this.borderRect = {
             id:"BorderRect",
-            x:-this.mapSize/4,
-            y:-this.mapSize/4,
+            x:0,///-this.mapSize/4,
+            y:0,///-this.mapSize/4,
             width:this.mapSize,
             height:this.mapSize,
             isRect:true,
@@ -163,10 +163,9 @@ var mainStructureBlueprint = [
     [ "N", "S", "W", "W", "W", "W", "W", "W", "W", "W", "S", "N" ],
 ]
     
-    
 var mainStructureW = mainStructureBlueprint[0].length; // width
 var mainStructureH = mainStructureBlueprint.length; // height (making it a square)
-var wallSize = 100
+const wallSize = 100
 
 function findStairRotation(row, column, blueprint, indicator="S"){
     let r = row
@@ -259,27 +258,38 @@ class Lake{
  * Particles are for animation, when an object steps
  * in water, climbs walls?, etc. For animation purposes.
  */
+const particlesObj = {
+    "lake":{
+        color: "#28707430",
+        duration: 95,
+        radiusMin: entitySize / 2,
+        radiusMax: entitySize * 2,
+        isCircle: true,
+        imgSrc: null
+    }
+}
 
 class Particle{
-    constructor(x, y, radius=random(entitySize/2, entitySize/5), worldID="Main"){
+    constructor(key, x, y, worldID="Main"){
+        let particleData = particlesObj[key]
+        this.key = key
         this.x = x
         this.y = y
-        this.duration = 95
-        this.color = "#28707430"
-        this.size = radius
-        this.radius = radius
+        this.duration = particleData.duration
+        this.color = particleData.color
+        this.size = particleData.radiusMin
+        this.radius = particleData.radiusMax
 
-        this.isCircle = true
+        this.isCircle = particleData.isCircle
 
         this.worldID = worldID
     }
 }
 
-
-var particleFrequency = 1000 // 
+const particleFrequency = 1000 // 
 function createParticle(world, x, y, fromID){
     if(random(100, 1) > 20){
-        world.particles[createID()] = new Particle(x, y)
+        world.particles[createRandomString(100)] = new Particle("lake", x, y)
         //particle timeout manages time til disappear
         world.particleTimeouts[fromID] = setTimeout(()=>{
             delete world.particleTimeouts[fromID]
@@ -288,7 +298,7 @@ function createParticle(world, x, y, fromID){
 }
 
 /**************************** @MARKETS *************/
-var marketSize = 200
+const marketSize = 200
 class Market{
     constructor(worldID, x, y, ID, imgSize=marketSize) {
         this.x = x;
@@ -369,9 +379,6 @@ class Tree {
 }
 
 /************************** @SPAWN_FINDER *************/
-/**
- * Everyone needs a home!
- */
 function findSpawn(size=0, worldID="Main") {
     let s = size
     let x, y
@@ -422,7 +429,7 @@ function findSpawn(size=0, worldID="Main") {
     return { x, y };
 }
 function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
-    let tries = 1000 //5000 tries to spawn in, else terminate
+    let tries = 100 //100 tries to spawn in, else terminate
     let world = worlds[worldID]
     for(let i = 0; i < tries; i++){
         let rad = random(Math.round(Math.PI * 100 * 2), 0)/100
@@ -471,26 +478,21 @@ function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
     
 }
 
-
 function borderInPoints(x, y, worldID){
     let borders = worlds[worldID].BORDERS
-    if(x < borders.L){
-        x = borders.L
-    } else if (x > borders.R){
-        x = borders.R
-    }
-    if(y < borders.D){
-        y = borders.D
-    } else if (y > borders.U){
-        y = borders.U
-    }
+    if(x < borders.L) x = borders.L
+    else if (x > borders.R) x = borders.R
+
+    if(y < borders.D) y = borders.D
+    else if (y > borders.U) y = borders.U
+    
     return { x, y }
 }
 
 /**************************** @PICKABLES *************/
 //need to update Pickable class
 const pickableSize = 10
-class Pickable{//*&*&*&
+class Pickable{
    constructor(id, x, y, obj, rotation=0, durability=1, stackSize=1, worldID="Main"){
        this.id = id
        this.x = x
@@ -526,7 +528,7 @@ const coins = {
         name:"Coin", 
         class:"Coin",
         imgSrc:"/imgs/Coin.png",
-        xpAmount:100,
+        xpAmount:250,
     }
 }
 //drop everything after death
@@ -537,25 +539,17 @@ const coins = {
 function dropAll(id, worldID="Main"){
     let world = worlds[worldID]
     var from = world.entities[id]
-    console.log(from.id)
+    if(!from || !from.id) return
+    console.log("Player left ID", from.id)
     if(from){
         from.inventory.forEach(slot=>{
             if(slot.name != "Hand"){
                 let scatterRange = entitySize * 2 // area of scattering items
                 let x = random(from.x + scatterRange, from.x - scatterRange)
                 let y = random(from.y + scatterRange, from.y - scatterRange)
-                if (x >= world.BORDERS.R){
-                    x = world.BORDERS.R
-                } else if(x <= world.BORDERS.L){
-                    x = world.BORDERS.L
-                }
-                if (y >= world.BORDERS.U){
-                    y = world.BORDERS.U
-                } else if (y <= world.BORDERS.D){
-                    y = world.BORDERS.D
-                }
+                let borderCheckXY = borderInPoints(x, y, worldID)
                 var id = createID()
-                world.pickables[id] = new Pickable(id,x,y,slot,0,slot.durability,slot.stackSize)
+                world.pickables[id] = new Pickable(id,borderCheckXY.x,borderCheckXY.y,slot,0,slot.durability,slot.stackSize)
             }
         })
     }
@@ -585,8 +579,8 @@ const entityImgSrcs = {
     },
     "Player5":{
         "Wandering":"/imgs/Player5.png",
-        "Hitting1":"/imgs/Player5_Hitting1.png",
-        "Hitting2":"/imgs/Player5_Hitting2.png"
+        "Hitting1":"/imgs/Player_5_Hitting1.png",
+        "Hitting2":"/imgs/Player_5_Hitting2.png"
     },
     "Normal Enemy":{
         "Wandering":"/imgs/Enemy.png",
@@ -698,7 +692,6 @@ class Player extends Entity{
         super(type, imgSrc, speed * 2, w, h, x, y, health, xp, id, 5, 0, worldID)
         this.username = (username == "")? "Player":username;
         this.kindOfEntity = "Player"
-        this.kills = 0
         this.inventory = inventory.length==0?[
             {...holdableItems[DEBUG?"Debug":"Hand"]},
             {...holdableItems["Hand"]},
@@ -939,7 +932,7 @@ class Enemy extends Entity {
 
             const newCoords = checkCollision(
                 this.id, world.obstacles, world.lakes, this.x, this.y, this.xInc, this.yInc, this.onWall, this,
-                true, this.width === this.height ? this.width : Math.max(this.width, this.height), this.worldID, world.entities
+                true, this.width, this.height, this.worldID, world.entities
             );
 
             if (newCoords.addLakeParticle) {
@@ -1246,7 +1239,7 @@ const enemyObj = {
     "Boss":{
         type:"Boss", 
         imgSrc:entityImgSrcs["Boss"], 
-        damage:100, 
+        damage:250, 
         detectRange:500, 
         reloadTime:100, 
         speed:4, 
@@ -1437,57 +1430,55 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
     
     // dead...?
     if(to.health <= 0){
-        // from bots
-        if(from.kindOfEntity == "Bot") {
-            let data = enemyObj[from.type]
-            to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
-        }
-        //all else...
-        else{
-            var key = projectileKey
-            // from projectiles...player + bot
-            if(projectileKey){
-                // death by arrow
-                if(!world.projectiles[key] || !world.projectiles[key].whoShot){
-                    to.deathMessage = "You were shot by an archer..."
-                } else if (world.entities.hasOwnProperty(world.projectiles[key].whoShot.id)) {
-                    /** IMPORTANT NOTE:
-                     * In this case, the "to" is who died because of
-                     * the "from", in this case, the projectile.
-                     * "whoShotIt" is defined as the archer/thrower
-                     */
-                    // If entity is killed, update player's stats
-                    let whoShotIt = world.projectiles[key].whoShot.username;
-                    //spear
-                    let messages = (from.name=="Spear")?[
-                        `${to.username} was impaled by a spear`,
-                        `${to.username} was impaled by ${whoShotIt}'s spear`,
-                    ]:[ //arrow...
-                        `${whoShotIt} killed ${to.username} with a ${from.name}.`,
-                        `${whoShotIt} shot ${to.username}.`,
-                        `The ${from.name} from ${whoShotIt} found its mark on ${to.username}.`,
-                        `${to.username} was sniped from afar by ${whoShotIt} with an ${from.name}.`
-                    ]
-                    let p = world.entities[world.projectiles[key].whoShot.id];
-                    p.xp += to.xp;
-                    p.kills++;
-                    let name = p.username
-                    if(to.username && to.username == p.username) name = "yourself."
-                    to.deathMessage = messages[Math.floor(Math.random() * messages.length)]
-                } 
-                //archer!
-                else{
-                    let data = enemyObj["Archer"]
-                    to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
-                }
+        var key = projectileKey
+        // from projectiles...player + bot
+        if(projectileKey){
+            // death by arrow
+            if(!world.projectiles[key] || !world.projectiles[key].whoShot){
+                to.deathMessage = "You were shot by an archer..."
+            } else if (world.entities.hasOwnProperty(world.projectiles[key].whoShot.id)) {
+                /** IMPORTANT NOTE:
+                 * In this case, the "to" is who died because of
+                 * the "from", in this case, the projectile.
+                 * "whoShotIt" is defined as the archer/thrower
+                 */
+                // If entity is killed, update player's stats
+                let whoShotIt = world.projectiles[key].whoShot.username;
+                //spear
+                let messages = (from.name=="Spear")?[
+                    `${to.username} was impaled by a spear`,
+                    `${to.username} was impaled by ${whoShotIt}'s spear`,
+                ]:[ //arrow...
+                    `${whoShotIt} killed ${to.username} with a ${from.name}.`,
+                    `${whoShotIt} shot ${to.username}.`,
+                    `The ${from.name} from ${whoShotIt} found its mark on ${to.username}.`,
+                    `${to.username} was sniped from afar by ${whoShotIt} with an ${from.name}.`
+                ]
+                let p = world.entities[world.projectiles[key].whoShot.id];
+                p.xp += to.xp;
+                p.kills++;
+                let name = p.username
+                if(to.username && to.username == p.username) name = "yourself."
+                to.deathMessage = messages[Math.floor(Math.random() * messages.length)]
             } 
-            // from player melee
-            else {
-                from.xp += Math.floor(to.xp * 0.8 )// give player xp
-                from.kills ++
+            //archer!
+            else{
+                let data = enemyObj["Archer"]
+                to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
+            }
+        } 
+        // from player melee
+        else {
+            if(from.kindOfEntity == "Bot") {
+                let data = enemyObj[from.type]
+                to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
+            } else {
                 to.deathMessage = `${to.username} was slain by ${from.username}`
             }
+            from.xp += Math.floor(to.xp * 0.8 )// give player xp
+            from.kills ++
         }
+        
     }
     //guess not! Knockback!!
     else{
@@ -1662,7 +1653,7 @@ function createWorld(
         //if the tree can be generated, add to pool
         if(newTree.x && newTree.y) worlds[id].trees[`Tree${tID}`] = newTree
     }
-
+    
     // ASSIGN OBSTACLES TO WORLD DATA
     worlds[id].obstacles = Object.assign({}, worlds[id].structures, worlds[id].trees)
 
@@ -1838,17 +1829,11 @@ setInterval(()=>{
         for (let key in world.projectiles) {
             let projectile = world.projectiles[key];
             // Check if projectile is out of the world
+
             let projectileOut = {x:null,y:null}
-            if(projectile.x < world.BORDERS.L){
-                projectileOut.x = world.BORDERS.L
-            } else if(projectile.x > world.BORDERS.R){
-                projectileOut.x = world.BORDERS.R
-            }
-            if(projectile.y < world.BORDERS.D){
-                projectileOut.y = world.BORDERS.D
-            } else if(projectile.y > world.BORDERS.U){
-                projectileOut.y = world.BORDERS.U
-            }
+
+            borderInPoints(projectile.x, projectile.y, projectile.worldID)
+
             if ((projectileOut.x || projectileOut.y) || projectile.duration <= 0) {
                 if(projectile.durability > 0){
                     // Create a pickable object at projectile's position
@@ -1868,7 +1853,7 @@ setInterval(()=>{
             }
 
             // Check collision with walls
-            let collision = checkCollision(projectile.id, world.obstacles, world.lakes, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width == projectile.height ? projectile.width : Math.max(projectile.width, projectile.height), projectile.worldID);
+            let collision = checkCollision(projectile.id, world.obstacles, world.lakes, projectile.x, projectile.y, projectile.speed * Math.cos(projectile.direction), projectile.speed * Math.sin(projectile.direction), projectile.whoShot.onWall, projectile, false, projectile.width, projectile.height, projectile.worldID);
             
             // Check if the projectile goes out of bounds
             if (!(projectile.x + collision.tx > world.BORDERS.L && projectile.x + collision.tx < world.BORDERS.R && projectile.y + collision.ty > world.BORDERS.D && projectile.y + collision.ty < world.BORDERS.U)) {
@@ -2424,7 +2409,6 @@ io.sockets.on("connection", (socket)=>{
         catch(err){
             if(global_player){
                 console.log("A player left the server and closed the tab...", global_player.id)
-                dropAll(global_player.id, global_player.worldID)
                 delete worlds[global_player.worldID].entities[global_player.id]
             } else console.log("The player just left...")
         }
@@ -2437,7 +2421,9 @@ io.sockets.on("connection", (socket)=>{
         && data.player.id 
         && worlds[data.worldID].entities[data.player.id]){
             console.log("Deleted PLAYER left tab ", data.player.id)
-            dropAll(data.player.id, data.worldID)
+            if(data.player && !data.player.isDead){
+                dropAll(data.player.id, data.worldID)
+            }
             delete worlds[data.worldID].entities[data.player.id]
         }
     })    

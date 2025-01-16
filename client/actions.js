@@ -50,11 +50,13 @@ var mapSize //defined soon!
 var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
+var lgList = []
 
 var marketOpen = false //
 
 var obstacles = {}
 var entities = {}
+
 
 //var speedFactor = 1 //updated later, 1 as default
 
@@ -135,8 +137,7 @@ socket.on("sendStartData", (data) => {
         document.getElementById("loadingPercent").innerHTML = "0%"
         document.getElementById("loadingRect").style.width = "0"
     }
-});
-
+})
 
 //Make sure added variables are also emitted from the server-side
 socket.on("reupdate", (data)=>{
@@ -150,7 +151,6 @@ socket.on("reupdate", (data)=>{
     lakesList = data.lakes
     marketsList = data.markets
 })
-
 
 /************************************************/
 /** @UPDATE !! */
@@ -206,7 +206,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.fill();
         } else if(item.isRect){
             ctx.fillStyle = item.color;
-            ctx.fillRect(item.x, item.y, item.width, item.height)
+            ctx.fillRect(-item.width/2, -item.height/2, item.width, item.height)
         }
         else{ 
             let pic
@@ -306,8 +306,10 @@ function updateCanv(info, serverPlayerCount, leaderboard){
             ctx.translate(item.x, item.y)
             let fontSize = 24;
             ctx.font = `${fontSize}px ${defaultFontFamily}`;
-            let username = item.username;
-            let width = ctx.measureText(username).width * 0.675 //to fill entire space (width of rect)
+            
+            var text = item.username
+
+            let width = ctx.measureText(text).width * 0.675 //to fill entire space (width of rect)
             let x = -width/1.4; //to get aligned with center
             let y = entitySize;
 
@@ -317,7 +319,29 @@ function updateCanv(info, serverPlayerCount, leaderboard){
 
             // Draw text
             ctx.fillStyle = "white";
-            ctx.fillText(username, x, y);
+            ctx.fillText(text, x, y);
+            ctx.restore()
+        } 
+        // bot? display kills?
+        else if(item.kills 
+        && document.getElementById("showKillsOnOffSlider").checked){
+            // Set text properties
+            ctx.save()
+            ctx.translate(item.x, item.y)
+            let fontSize = 24;
+            ctx.font = `${fontSize}px ${defaultFontFamily}`;
+            let k = "KILLS: " + item.kills;
+            let width = ctx.measureText(k).width * 0.675 //to fill entire space (width of rect)
+            let x = -width/1.4; //to get aligned with center
+            let y = entitySize;
+
+            // Draw background
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fillRect(x - 5, y - fontSize + 5, width * 1.5 + 10, fontSize + 10);
+
+            // Draw text
+            ctx.fillStyle = "#eee";
+            ctx.fillText(k, x, y);
             ctx.restore()
         }
 
@@ -1196,7 +1220,7 @@ function initiateGameLoop(){
                 player.onWall = getOnWallStatus(obstacles, player)//oW
 
                 //check if hit wall
-                let possibleNewXY = checkCollision(player.id, obstacles, lakesList, player.x, player.y, tx, ty, player.onWall, null, true, player.width==player.height?player.width:Math.max(player.width, player.height), player.worldID, entities)
+                let possibleNewXY = checkCollision(player.id, obstacles, lakesList, player.x, player.y, tx, ty, player.onWall, null, true, player.width, player.height, player.worldID, entities)
                 //add particles
                 if(possibleNewXY.addLakeParticle){
                     socket.emit("addParticles", {
@@ -1517,7 +1541,6 @@ window.addEventListener('beforeunload', function(event) {
         } 
     }
 })
-
 
 window.leaveGame = function leaveGame(){
     let goOrNot = confirm("Are you sure you want to leave? Your inventory, xp, and progress will not be saved.")
