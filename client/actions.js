@@ -63,6 +63,8 @@ var entities = {}
 //ALL W_VARS DEFINED AFTER SERVER SENDS DATA
 var canPlay = false
 socket.on("sendStartData", (data) => {
+    //..clear!
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     // Show the loading screen
     document.getElementById("loading").style.display = "flex";
     setupGame();
