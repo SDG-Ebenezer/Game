@@ -1352,6 +1352,8 @@ window.exitGame = function exitGame(){
     // (for mobile)
     document.removeEventListener("touchstart", touchstart)
     document.removeEventListener("touchend", touchend)
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
 }
 socket.on("noWorld", ()=>{
     console.log("no world...")
