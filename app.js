@@ -694,9 +694,9 @@ class Player extends Entity{
         this.kindOfEntity = "Player"
         this.inventory = inventory.length==0?[
             {...holdableItems[DEBUG?"Debug":"Hand"]},
-            {...holdableItems["Vantacite Sword"]},
-            {...holdableItems["Plasma Sword"]},
-            {...holdableItems["Diamond Sword"]},
+            {...holdableItems["Hand"]},
+            {...holdableItems["Hand"]},
+            {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
         ]:inventory
         this.invSelected = 0
