@@ -18,7 +18,7 @@ export const holdableItems = {
         maxStackSize:0,
         cost: Infinity, //market value
         hitRange: null,
-        cooldownTime: 5 , //* 1/speedFactor, //ms till next use
+        cooldownTime: 5, //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:false,
         knockback:0, //percent
@@ -36,7 +36,7 @@ export const holdableItems = {
         maxStackSize:1,
         cost: 2000, //market value
         hitRange: 175,
-        cooldownTime: 5 , //* 1/speedFactor, //mms till next use
+        cooldownTime: 2, //* 1/speedFactor, //mms till next use
         cooldownTimer: 0, 
         inMarket:true,
         knockback:10, //percent
@@ -47,14 +47,14 @@ export const holdableItems = {
         imgSrc:"/imgs/Sword2.png",
         durability:20,
         maxDurability:20,
-        damage:30,
+        damage:50,
         generationProbability:30, //out of 100
         rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 3500, //market value
         hitRange: 150,
-        cooldownTime: 15 , //* 1/speedFactor, //ms till next use
+        cooldownTime: 5 , //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:true,
         knockback:5, //percent
@@ -65,14 +65,14 @@ export const holdableItems = {
         imgSrc:"/imgs/Sword3.png",
         durability:60,
         maxDurability:60,
-        damage:40,
+        damage:60,
         generationProbability:10, //out of 100
         rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 5000, //market value
         hitRange: 150,
-        cooldownTime: 10 , //* 1/speedFactor, //ms till next use
+        cooldownTime: 5, //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:true,
         knockback:30, //percent
@@ -83,14 +83,14 @@ export const holdableItems = {
         imgSrc:"/imgs/Sword4.png",
         durability:100,
         maxDurability:100,
-        damage:80,
+        damage:90,
         generationProbability:1, //out of 100
         rotation:SWORD_ROTATION,
         stackSize:1,
         maxStackSize:1,
         cost: 10_000, //market value
         hitRange: 125,
-        cooldownTime: 50 , //* 1/speedFactor, //ms till next use
+        cooldownTime: 7, //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:true,
         knockback:60, //percent
@@ -108,7 +108,7 @@ export const holdableItems = {
         maxStackSize:1,
         cost: 30_000, //market value
         hitRange: 85,
-        cooldownTime: 200 , //* 1/speedFactor, //ms till next use
+        cooldownTime: 25, //* 1/speedFactor, //ms till next use
         cooldownTimer: 0, 
         inMarket:true,
         knockback:100, //percent

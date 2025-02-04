@@ -110,6 +110,50 @@
         <div id="healthBarBackground"></div>
         <div id="healthBar"></div>
         <span id="healthText">Health: <span id="healthQuantity"></span></span>
+
+        <!--Inventory-->
+        <div id="inventory">
+            <div id="slot1" draggable="true">
+                <div id="slot1Text">1</div>
+                <img id="slot1ImgSrc" src="" alt="">
+                <div id="slot1Durability"></div>
+                <div id="slot1Cooldown"></div>
+                <div id="slot1CooldownText"></div>
+                <div id="slot1Quantity"></div>
+            </div>
+            <div id="slot2" draggable="true">
+                <div id="slot2Text">2</div>
+                <img id="slot2ImgSrc" src="" alt="">
+                <div id="slot2Durability"></div>
+                <div id="slot2Cooldown"></div>
+                <div id="slot2CooldownText"></div>
+                <div id="slot2Quantity"></div>
+            </div>
+            <div id="slot3" draggable="true">
+                <div id="slot3Text">3</div>
+                <img id="slot3ImgSrc" src="" alt="">
+                <div id="slot3Durability"></div>
+                <div id="slot3Cooldown"></div>
+                <div id="slot3CooldownText"></div>
+                <div id="slot3Quantity"></div>
+            </div>
+            <div id="slot4" draggable="true">
+                <div id="slot4Text">4</div>
+                <img id="slot4ImgSrc" src="" alt="">
+                <div id="slot4Durability"></div>
+                <div id="slot4Cooldown"></div>
+                <div id="slot4CooldownText"></div>
+                <div id="slot4Quantity"></div>
+            </div>
+            <div id="slot5" draggable="true">
+                <div id="slot5Text">5</div>
+                <img id="slot5ImgSrc" src="" alt="">
+                <div id="slot5Durability"></div>
+                <div id="slot5Cooldown"></div>
+                <div id="slot5CooldownText"></div>
+                <div id="slot5Quantity"></div>
+            </div>
+        </div>
     </div>
     <div class="no_selection">            
         <div id="marketBtnDiv">
@@ -141,7 +185,7 @@
             </tr>
             <tr>
                 <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_Numbers15.png" alt="[1]-[5]" class="longKeyImg"/> </td>
-                <td class="keyImgTDs">Switch inventory item <br> You may also click on items to switch</td>
+                <td class="keyImgTDs">Switch inventory item <br> You may also click on items to switch. Items may NOT be switched during cooldown.</td>
             </tr>
             <tr>
                 <td class="keyImgTDs keyTDs"><img src="/imgs/IconsK_Q.png" alt="[Q]" class="keyImg"/></td> 
@@ -237,7 +281,7 @@
     <div id="floatingInfoDiv"></div>
 
 
-    <!-- Things on top of the screen... -->
+    <!-- MENU BAR Things on top of the screen... -->
     <div id="topStuff">
         <!-- World ID div -->
         <div>

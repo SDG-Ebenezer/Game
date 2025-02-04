@@ -317,6 +317,71 @@ input[type="radio"]:checked + img {
     background-color: none;
 }
 
+/*Inventory*/
+#inventory{
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #000000aa;
+    border: 4 px solid black;
+    display: flex;
+    flex-direction: row;
+}
+#slot1, #slot2, #slot3, #slot4, #slot5 {
+    position:relative;
+    width: 100px;
+    height: 100px;
+} 
+#slot1Text, #slot2Text, #slot3Text, #slot4Text, #slot5Text {
+    position: absolute;
+    color:white;
+} 
+#slot1ImgSrc, #slot2ImgSrc, #slot3ImgSrc, #slot4ImgSrc, #slot5ImgSrc {
+    width: 100px;
+    height: 100px;
+    display:none;
+} 
+#slot1Durability, #slot2Durability, #slot3Durability, #slot4Durability, #slot5Durability {
+    width:100px;
+    height:10px;
+    position:absolute;
+    bottom: 0;
+    display:none
+}
+/**Work on cooldown div*/
+#slot1Cooldown, #slot2Cooldown, #slot3Cooldown, #slot4Cooldown, #slot5Cooldown {
+    position:absolute;
+    bottom: 0;
+    width: 100%;
+    height: -100%;
+    background-color:#f1f1f1a4;
+    display:none;
+} 
+#slot1CooldownText, #slot2CooldownText, #slot3CooldownText, #slot4CooldownText, #slot5CooldownText{
+    color:#5a5a5a;
+    background-color: none;
+    position:absolute;
+    top:25%;
+    left:0;
+    text-align: center;
+    align-items: center;
+    justify-items: center;
+    display:flex;
+    flex-direction: column;
+    width:100%;
+    height:100%;
+    font-size:40px;
+    font-weight:bold;
+}
+#slot1Quantity, #slot2Quantity, #slot3Quantity, #slot4Quantity, #slot5Quantity{
+    position: absolute;
+    color:white;
+    bottom: 5;
+    right: 5;
+    font-size:20px;
+    
+}
+
 #title{
     color:white;
     text-align: center;

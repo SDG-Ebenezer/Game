@@ -50,7 +50,6 @@ var mapSize //defined soon!
 var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
-var lgList = []
 
 var marketOpen = false //
 
@@ -160,22 +159,15 @@ socket.on("reupdate", (data)=>{
 var scale = (Math.min(window.innerHeight, window.innerWidth)/8)/75
 var maxScale = scale 
 var minScale = maxScale - 0.2
-/*
-const MAXMAXSCALE = 1
-const MINMINSCALE = .4
-window.addEventListener("wheel", (e)=> {
-    var increment = -e.deltaY/1000
-    if(MINMINSCALE < scale && scale < MAXMAXSCALE
-    ){
-        maxScale += increment
-        minScale += increment
-        scale = minScale
-    }
-    console.log(increment, minScale, maxScale)
-})*/
 
 /******* DRAWING FUNCTION RIGHT HERE!! ************************************/
 function updateCanv(info, serverPlayerCount, leaderboard){
+    if(player.inventory[player.invSelected].cooldownTimer > 0){
+        canSwitchInventorySlots = false
+    } else{
+        canSwitchInventorySlots = true
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save();
 
@@ -414,16 +406,8 @@ socket.on("sendUpdateDataToClient", (info) => {
     // Don't update data if the player is dead
     if (canPlay && player && player.health > 0) {
         // Variables that should not be overriden by update
-        let savedInv = player.inventory;
         // Update player data
         player = info.player;
-        // Restore the saved inventory if needed
-        if (reorderInventory) player.inventory = savedInv;
-
-        // EXCLUDE updating "cooldownTimer" property in inventory
-        for(let s in player.inventory){
-            player.inventory[s].cooldownTimer = savedInv[s].cooldownTimer
-        };
 
         // Update walls list with provided structures
         wallsList = info.structures;
@@ -706,81 +690,151 @@ socket.on("SendCountdownInfo", function(data){
 /** *** @Inventory  *** */
 // "invSize" also updated in the canvas resize 
 var invSize = 75*5<window.innerWidth?75:window.innerWidth/5 //5 bc of slots
-var invY = 0
 var reorderInventory = false; 
+var canSwitchInventorySlots = true
 // contains inventory drawing as well as item name displayer
-function drawInventory(){
-    gctx.fillStyle = "#000000aa"
-    var inventoryX = 0
-    var inventoryY = 0
-    var inventoryW = invSize * player.inventory.length
-    var inventoryH = invSize
-    gctx.fillRect(inventoryX, inventoryY, inventoryW, inventoryH)
-    gctx.save()
-    for(let invSpot in player.inventory){
-        let each = player.inventory[invSpot]
-        let strokeWidth = invSize * 10/75 //how thick the inv slot is
-        //outline // invSelected
-        //PICTURE of icon (if any)
-        var x = invSpot * invSize
-        var y = invY
-        var w = invSize
-        var h = invSize
-        if(each.imgSrc){
-            if(!images[each.imgSrc]){
-                images[each.imgSrc] = new Image()
-                images[each.imgSrc].src = each.imgSrc
-            }
-            gctx.drawImage(images[each.imgSrc], x, y, w, h)
-        }
-        //DURABILITY bar
-        if(each.durability < each.maxDurability){
-            let durabilityW = w - strokeWidth * 2
-            let durabilityBarH = 5
-            let durabilityX = x + strokeWidth
-            let durabilityY = h - durabilityBarH*3
-            var tool = each
-            //background bar
-            gctx.fillStyle = "#353535"
-            gctx.fillRect(durabilityX, durabilityY, durabilityW, durabilityBarH)
-            //dur bar
-            gctx.fillStyle = getDurabilityColor(tool.durability, tool.maxDurability)
-            gctx.fillRect(durabilityX, durabilityY, durabilityW * (each.durability/each.maxDurability), durabilityBarH)
-        }  
-        //SHADED out if timer on
-        let timerPercentage = each.cooldownTimer/each.cooldownTime
-        gctx.fillStyle = "#ffffffaa"
-        gctx.fillRect(x - strokeWidth/2, y + invSize, w, -(h - strokeWidth) * timerPercentage)
+function drawInventory(){    
+    for(let ind in player.inventory){
+        let slot = player.inventory[ind]
+        let HTMLslotID = `slot${Number(ind) + 1}`
+        let HTMLslotDiv = document.getElementById(HTMLslotID)
 
-        //OUTLINE
-        gctx.lineWidth = strokeWidth;
-        gctx.strokeStyle = "gray"
-        gctx.strokeRect(x, y, w, h)        
-
-        //(if stackable) give it a NUMBER to show how many you have
-        if(each.maxStackSize > 1){
-            gctx.font = `15px ${defaultFontFamily}`;
-            gctx.fillStyle = "white";
-            //align on right
-            gctx.fillText(each.stackSize, invSpot * (invSize) + invSize - ctx.measureText(`${each.stackSize}`).width - strokeWidth - 5, invSize - 15); 
+        //Image Source
+        let HTMLslotImg = document.getElementById(`${HTMLslotID}ImgSrc`)
+        if(slot.imgSrc){
+            HTMLslotImg.src = slot.imgSrc
+            HTMLslotImg.style.display = "block"
+        } else HTMLslotImg.style.display = "none"
+        
+        //Durability
+        let HTMLslotDurabilityBar = document.getElementById(`${HTMLslotID}Durability`)
+        if(slot.name!="Hand" 
+        && slot.durability < slot.maxDurability){
+            HTMLslotDurabilityBar.style.display = "block"
+            HTMLslotDurabilityBar.style.backgroundColor = getDurabilityColor(slot.durability, slot.maxDurability)
+            HTMLslotDurabilityBar.style.width = (slot.durability/slot.maxDurability) * 100
+        } else{
+            HTMLslotDurabilityBar.style.display = "none"
         }
 
-        //update cooldown timer
-        if(each.cooldownTimer > 0){
-            player.inventory[invSpot].cooldownTimer -= 1
-        } else if(each.cooldownTimer < 0){
-            player.inventory[invSpot].cooldownTimer = 0
+        //Cooldown bar animation
+        let HTMLslotCooldown = document.getElementById(`${HTMLslotID}Cooldown`)
+        if(slot.cooldownTimer > 0){
+            HTMLslotCooldown.style.display = "block";
+            HTMLslotCooldown.style.height = `${slot.cooldownTimer/slot.cooldownTime * 100}%`
+        } else {
+            HTMLslotCooldown.style.display = "none";
+        }
+        
+        //Cooldown bar text
+        let HTMLslotCooldownText = document.getElementById(`${HTMLslotID}CooldownText`)
+        if(slot.cooldownTimer > 0){
+            HTMLslotCooldownText.style.display = "flex";
+            HTMLslotCooldownText.innerHTML = `<div>${slot.cooldownTimer}</div>`
+        } else {
+            HTMLslotCooldownText.style.display = "none";
+        }
+
+        //Stacksize/Quantity
+        let HTMLslotQuantity = document.getElementById(`${HTMLslotID}Quantity`)
+        if(slot.stackSize && slot.stackSize > 1){
+            HTMLslotQuantity.innerHTML = `x${slot.stackSize}`
+            HTMLslotQuantity.style.display = "block"
+        } else{
+            HTMLslotQuantity.style.display = "none"
+        }
+
+        //inv selected?
+        if(ind == player.invSelected){
+            HTMLslotDiv.style.border = "4px solid white"
+        } else{
+            HTMLslotDiv.style.border = "4px solid black"
         }
     }
-    gctx.restore()
-    //selected
-    gctx.lineWidth = invSize * 10/75;
-    gctx.strokeStyle = "white"
-    gctx.strokeRect(currInvSlot * invSize,y,w,h)
-
-    displayToolName()
-    displayToolDurabilityOnHover(inventoryX, inventoryY, inventoryW, inventoryH)
 }
+
+//floating div
+var durDiv = document.getElementById("floatingDurabilityDiv")
+document.getElementById("inventory").addEventListener("mousemove", (e) => {
+    let slot = e.target.closest("div[id^='slot']"); // Find the closest slot div
+    if (!slot) {
+        durDiv.style.display = "none"; // Hide tooltip if not over a slot
+        return;
+    }
+
+    let slotId = slot.id; // Get the slot ID (e.g., "slot1")
+    let i = parseInt(slotId.replace("slot", "")) - 1; // Convert to inventory index
+
+    let tool = player.inventory[i];
+    if (!tool) {
+        durDiv.style.display = "none"; // Hide tooltip if slot is empty
+        return;
+    }
+    if(tool.name == "Hand") return
+
+    var text = `
+    <!--Name-->
+    <span style="color:white">
+    <b>${tool.name}</b>
+    </span>
+
+    <br><br>
+
+    <!--Damage-->
+    <span style="color:#EC7E7E">
+    <b>+${tool.damage}</b>
+    </span> Damage
+
+    <br><br>
+    ${tool.durability?
+    `<!--Durability-->
+    <b><span style="color:${getDurabilityColor(tool.durability, tool.maxDurability)}">${tool.durability}</span>/${tool.maxDurability}</b> Durability`
+    :""}
+
+    ${tool.name=="Bow"?
+        `<br><br>
+        <!--Info-->
+        <b><span style="color:"white">To use, HOLD attack to load</span></b>`
+        :""
+    }
+
+    ${tool.cooldownTimer>0?
+        `<!--Info-->
+        <b><span style="color:#555">COOLDOWN</span></b>`:""
+    }
+    `;
+    if(tool.cooldownTimer>0){
+        durDiv.style.backgroundColor = "#d3d3d3aa"
+    } else{
+        durDiv.style.backgroundColor = "#000000aa"
+    }
+
+    durDiv.innerHTML = text;
+    durDiv.style.display = "block";
+    durDiv.style.left = e.pageX + 10 + "px"; // Offset tooltip slightly
+    durDiv.style.top = e.pageY + 10 + "px";
+});
+
+//switch inv slots on click
+document.getElementById("inventory").addEventListener("mousedown", (e) => {
+    let slot = e.target.closest("div[id^='slot']"); // Find the closest slot div
+    if (!slot || !canSwitchInventorySlots) {
+        return;
+    }
+
+    let slotId = slot.id; // Get the slot ID (e.g., "slot1")
+
+    let i = parseInt(slotId.replace("slot", "")) - 1; 
+    
+    currInvSlot = i
+});
+document.getElementById("inventory").addEventListener("mouseleave", () => {
+    durDiv.style.display = "none"; // Hide tooltip when leaving inventory
+});
+
+//for keys, see keys function
+
+
 // get the color for a given durability (for dur bar & text)
 function getDurabilityColor(dur, maxDur){
     if(dur < 0.1 * maxDur){
@@ -794,79 +848,22 @@ function getDurabilityColor(dur, maxDur){
     }
     return "#63CA43"
 }
-// display tool name on top of bar when holding
-function displayToolName(){
-    //ITEM NAME DISPLAYER
-    //draw item name
-    var item = player.inventory[player.invSelected]
-    var name = item.name
-    if(name !== "Hand"){
-        var fontSize = gBarHeight - 2.5
-        var charSpace = fontSize/2 //10 spaces for every character
-        gctx.font = `${fontSize}px ${defaultFontFamily}`;
-        var len = gctx.measureText(name).width 
-        var paddingW = fontSize/2
-        var paddingH = fontSize/2
-        var x = ginfo.width/2 - paddingW - len/2
-        var y = ginfo.height - gBarHeight - charSpace - paddingH
-        //box 
-        gctx.fillStyle = `#00000099`
-        //note, the box is drawn negated, so + = -
-        gctx.fillRect(x-paddingW/2, y+paddingH/2, len+paddingW, -(fontSize+paddingH))
-        //HEADING name
-        gctx.fillStyle = `#ffffff`;
-        gctx.fillText(name, x, y);  
-    }
-}
-function displayToolDurabilityOnHover(inventoryX, inventoryY, inventoryW, inventoryH){
-    // draw tool durability if mouse over
-    var durDiv = document.getElementById("floatingDurabilityDiv")
-    var tool = player.inventory[Math.floor(mouse.clientX/invSize)]
 
-    if(mouse.clientX > inventoryX && mouse.clientX < inventoryX + inventoryW
-    && mouse.clientY > inventoryY && mouse.clientY < inventoryY + inventoryH
-    && tool.durability){
-        // update the div
-        var text = `
-        <!--Name-->
-        <span style="color:white">
-        <b>${tool.name}</b>
-        </span>
-
-        <br><br>
-
-        <!--Damage-->
-        <span style="color:#EC7E7E">
-        <b>+${tool.damage}</b>
-        </span> Damage
-
-        <br><br>
-
-        <!--Durability-->
-        <b><span style="color:${getDurabilityColor(tool.durability, tool.maxDurability)}">${tool.durability}</span>/${tool.maxDurability}</b> Durability
-        `
-        durDiv.innerHTML = text
-        durDiv.style.display = "block"
-        durDiv.style.left = mouse.x+canvas.width/2
-        durDiv.style.top = mouse.y+canvas.height/2
-    } else if(durDiv.style.display == "block"){
-        durDiv.style.display = "none"
-    }
-}
-// // //
-socket.on("giveInventoryItemCooldownTime", function(data){
-    if(player.health > 0){
-        let selectedTool = player.inventory[data.id];
-        // Set attack cooldown status
-        player.inventory[data.id].cooldownTimer = selectedTool.cooldownTime // add cooldown time
+// Scroll adjust for inventory
+window.addEventListener("wheel", (e)=> {
+    var increment = -e.deltaY/100
+    if(player && !marketOpen) {
+        let num = currInvSlot
+        num -= increment
+        if(num < 0) num = 4
+        else if(num > 4) num = 0
+        currInvSlot = num
     }
 })
 
 /***********************************************/
 /** @MOVEMENT_CONTROLS */
 /************* KEYS *************************/
-var keyDown = false
-var pressedKeys = []
 var mouse = {
     x: 0, 
     y: 0, 
@@ -904,11 +901,14 @@ function performActions() {
     // Handle other keys first
     sprint = keySet["x"] && speedTime > 0;
 
-    if (keySet["1"]) currInvSlot = 1 - 1;
-    if (keySet["2"]) currInvSlot = 2 - 1;
-    if (keySet["3"]) currInvSlot = 3 - 1;
-    if (keySet["4"]) currInvSlot = 4 - 1;
-    if (keySet["5"]) currInvSlot = 5 - 1;
+    // switch inventory slots
+    if(canSwitchInventorySlots){
+        if (keySet["1"]) currInvSlot = 1 - 1;
+        if (keySet["2"]) currInvSlot = 2 - 1;
+        if (keySet["3"]) currInvSlot = 3 - 1;
+        if (keySet["4"]) currInvSlot = 4 - 1;
+        if (keySet["5"]) currInvSlot = 5 - 1;
+    }
 
     if (keySet["q"]) {
         let allDrop = "control" in keySet //+ ctrl to drop all
@@ -954,67 +954,17 @@ function performActions() {
 }
 
 /************* MOUSE ***********************/
-// Drag functions 
-var dragStartX = 0;
-var dragStartY = 0;
-var draggedItemIndex = -1;
-var lastEnteredSlot = -1; // Track the last inventory slot entered by the mouse
-
 function mousemove(e) {    
     // calculate the mouse position relative to the canvas center
     mouse.clientX = e.clientX
     mouse.clientY = e.clientY // raw forms 0,0 = top corner
     mouse.x = e.clientX - canvas.width / 2;
     mouse.y = e.clientY - canvas.height / 2;
-
-    //all others above this point ^^^
-    // reorder inventory
-
-    if (!reorderInventory || draggedItemIndex === -1) return;
-
-    let mouseX = e.clientX - canvas.getBoundingClientRect().left;
-    let mouseY = e.clientY - canvas.getBoundingClientRect().top;
-
-    // Calculate the index of the slot under the mouse cursor
-    let newIndex = Math.floor(mouseX / invSize);
-
-    // Check if the mouse cursor has entered a new slot
-    if (newIndex !== lastEnteredSlot && newIndex < player.inventory.length) {
-        if (player.inventory[newIndex].name === draggedItem.name) {
-            //is there enough room for all?
-            if(player.inventory[newIndex].maxStackSize < draggedItem.stackSize + player.inventory[newIndex].stackSize){
-                let increase = player.inventory[newIndex].maxStackSize - player.inventory[newIndex].stackSize
-                let increase2 = draggedItem.stackSize - increase
-                
-                draggedItem.stackSize = player.inventory[newIndex].stackSize + increase
-
-                player.inventory[newIndex].stackSize = increase2
-            }
-            else{
-                player.inventory[newIndex].stackSize += draggedItem.stackSize;
-                // Clear the dragged item from the inventory
-                player.inventory.splice(draggedItemIndex, 1, {...holdableItems["Hand"]});
-                // Reset draggedItemIndex
-                draggedItemIndex = -1;
-                // Redraw the inventory
-                drawInventory();
-                return;
-            }            
-        }
-
-        // Update the position of the dragged item in the inventory
-        let removedItem = player.inventory.splice(draggedItemIndex, 1)[0];
-        player.inventory.splice(newIndex, 0, removedItem);
-        draggedItemIndex = newIndex;
-        drawInventory();
-        lastEnteredSlot = newIndex; // Update the last entered slot
-    }
 }
 
 //is mouse down and still down?
 var holding = null
 var holdDuration = 1
-var draggedItem
 function mousedown(e) {
     //holding operations
     holding = setInterval(()=>{
@@ -1027,41 +977,15 @@ function mousedown(e) {
 
     // cannot switch inv while help open, cannot attack
     // also, cannot activate when pressing btns
-    if (e.target.tagName.toLowerCase() !== 'button') {
-        let clickedInv = false;
-        for (let i = 0; i < player.inventory.length; i++) {
-            let x = i * invSize;
-            let y = invY;
-            if (x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize) {
-                currInvSlot = i;
-                i += player.inventory.length;
-                clickedInv = true;
-            }
-        }
-        
+    if (e.target.tagName.toLowerCase() !== 'button') {       
         if (player.health > 0 
-            && !clickedInv 
-            && player.inventory[player.invSelected].cooldownTimer == 0
+            && player.inventory[player.invSelected].cooldownTimer <= 0
             && attackCursorOn
             && player.inventory[player.invSelected].name !== "Bow"
         ){// Check if not in cooldown
             //EMIT MOUSE DOWN EVENT (function performed in APP.Js (server-side))
             emitMousedownEvent()
         }
-    }
-
-    let mouseX = e.clientX - canvas.getBoundingClientRect().left;
-    let mouseY = e.clientY - canvas.getBoundingClientRect().top;
-
-    // Check if the mouse click is within an inventory slot
-    let clickedItemIndex = Math.floor(mouseX / invSize);
-    if (clickedItemIndex >= 0 && clickedItemIndex < player.inventory.length && mouseY <= invSize) {
-        reorderInventory = true
-        dragStartX = mouseX;
-        dragStartY = mouseY;
-        draggedItemIndex = clickedItemIndex;
-        draggedItem = player.inventory[clickedItemIndex]; // Store the dragged item
-        lastEnteredSlot = clickedItemIndex; // Update the last entered slot
     }
 }
 function emitMousedownEvent(){
@@ -1077,23 +1001,11 @@ function emitMousedownEvent(){
 }
 
 function mouseup(e) {
-    //check if clicked inv
-    let clickedInv = false;
-    for (let i = 0; i < player.inventory.length; i++) {
-        let x = i * invSize;
-        let y = invY;
-        if (x < e.clientX && e.clientX < x + invSize && y < e.clientY && e.clientY < y + invSize) {
-            currInvSlot = i;
-            i += player.inventory.length;
-            clickedInv = true;
-        }
-    }
     //reset holding vars
     if(holding){
-        if(e.target.tagName.toLowerCase() !== 'button' 
-        && !clickedInv
+        if(e.target.tagName.toLowerCase() !== 'button'
         && player.health > 0 
-        && player.inventory[player.invSelected].cooldownTimer == 0){
+        && player.inventory[player.invSelected].cooldownTimer <= 0){
             socket.emit("mouseup", {
                 holdDuration:holdDuration,
                 id:player.id,
@@ -1103,11 +1015,6 @@ function mouseup(e) {
         holdDuration = 0
         clearInterval(holding)
     }
-
-    //
-    if (!reorderInventory || draggedItemIndex === -1) return;
-    draggedItemIndex = -1;
-    reorderInventory = false;
 }
 
 /** @NOTE: 
@@ -1236,7 +1143,7 @@ function initiateGameLoop(){
                 let newCoords = possibleNewXY
                 tx = newCoords.tx
                 ty = newCoords.ty
-
+                
                 player.x += tx
                 player.y += ty
                 player.invSelected = currInvSlot

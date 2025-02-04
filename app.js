@@ -694,9 +694,9 @@ class Player extends Entity{
         this.kindOfEntity = "Player"
         this.inventory = inventory.length==0?[
             {...holdableItems[DEBUG?"Debug":"Hand"]},
-            {...holdableItems["Hand"]},
-            {...holdableItems["Hand"]},
-            {...holdableItems["Hand"]},
+            {...holdableItems["Vantacite Sword"]},
+            {...holdableItems["Plasma Sword"]},
+            {...holdableItems["Diamond Sword"]},
             {...holdableItems["Hand"]},
         ]:inventory
         this.invSelected = 0
@@ -1917,6 +1917,8 @@ setInterval(()=>{
     }
 }, FPS)
 
+var intervals = {}
+
 /*************************** @SOCKET *************/
 //what to do when a player connects
 
@@ -2302,7 +2304,23 @@ io.sockets.on("connection", (socket)=>{
                 usedItem = false // item was used...but destroyed
             }
 
-            if (usedItem) {socket.emit("giveInventoryItemCooldownTime", {id:data.invID})}
+            if (usedItem) { 
+                if(player.health > 0){
+                    // Set attack cooldown status
+                    player.inventory[player.invSelected].cooldownTimer = player.inventory[player.invSelected].cooldownTime // add cooldown time
+
+                    //cooldown time for players
+                    let intID = createRandomString(100)
+                    let oii = player.invSelected
+                    intervals[intID] = setInterval(()=>{
+                        player.inventory[oii].cooldownTimer -= 1
+                        if (player.inventory[oii].cooldownTimer <= 0){
+                            player.inventory[oii].cooldownTimer = 0
+                            clearInterval(intervals[intID])
+                        }
+                    }, 100)
+                }
+            }
         }
     })
     socket.on("mouseup", function(data){
