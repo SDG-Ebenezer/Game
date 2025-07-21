@@ -1,4 +1,4 @@
-import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, random, test } from "./client/functions.js"
+import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, random, entityImgSrcs, loadingStatuses, percentSpeedReduction } from "./client/functions.js"
 
 //const { spawn } = require("child_process")
 //const { log, Console } = require("console")
@@ -13,14 +13,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs'
 
+// Place this at the very top, after your imports:
+var allImgs = [];
 var folderPath = './client/imgs';
-var allImgs = []
 try {
     const files = fs.readdirSync(folderPath);
     files.forEach(file => {
-        allImgs.push(String(file))
+        allImgs.push(String(file));
     });
-    console.log("Successfully copied all IMG paths in ./client/imgs/")
+    console.log("Successfully copied all IMG paths in ./client/imgs/");
 } catch (err) {
     console.error('Unable to scan directory: ' + err);
 }
@@ -208,7 +209,7 @@ function findStairRotation(row, column, blueprint, indicator="S"){
     if (possibleRotations.length == 0 || possibleRotations.length == 4
     ) return -1
     // else return one possible rotation
-    else return possibleRotations[random(possibleRotations.length-1,0)] 
+    else return possibleRotations[random(possibleRotations.length-1, 0)] 
 }
 
 function toggleOpeningsToArena(escapesLocked, worldID="Main"){
@@ -543,6 +544,9 @@ function dropAll(id, worldID="Main"){
     console.log("Player left ID", from.id)
     if(from){
         from.inventory.forEach(slot=>{
+            if(slot.name == "Bow"){
+                slot = {...slot, imgSrc: "/imgs/Bow.png"} //change img src to Bow
+            }
             if(slot.name != "Hand"){
                 let scatterRange = entitySize * 2 // area of scattering items
                 let x = random(from.x + scatterRange, from.x - scatterRange)
@@ -556,67 +560,8 @@ function dropAll(id, worldID="Main"){
 }
 
 /**************************** @ENTITIES *************/
-const entityImgSrcs = {
-    "Player1":{
-        "Wandering":"/imgs/Player.png",
-        "Hitting1":"/imgs/Player_Hitting1.png",
-        "Hitting2":"/imgs/Player_Hitting2.png"
-    },
-    "Player2":{
-        "Wandering":"/imgs/Player2.png",
-        "Hitting1":"/imgs/Player2_Hitting1.png",
-        "Hitting2":"/imgs/Player2_Hitting2.png"
-    },
-    "Player3":{
-        "Wandering":"/imgs/Player3.png",
-        "Hitting1":"/imgs/Player3_Hitting1.png",
-        "Hitting2":"/imgs/Player3_Hitting2.png"
-    },
-    "Player4":{
-        "Wandering":"/imgs/Player4.png",
-        "Hitting1":"/imgs/Player4_Hitting1.png",
-        "Hitting2":"/imgs/Player4_Hitting2.png"
-    },
-    "Player5":{
-        "Wandering":"/imgs/Player5.png",
-        "Hitting1":"/imgs/Player_5_Hitting1.png",
-        "Hitting2":"/imgs/Player_5_Hitting2.png"
-    },
-    "Normal Enemy":{
-        "Wandering":"/imgs/Enemy.png",
-        "Attacking":null,
-        "Hitting":"/imgs/Enemy_Hitting.png",
-    },
-    "Lord":{
-        "Wandering":"/imgs/Enemy_Lord.png",
-        "Attacking":null,
-        "Hitting":"/imgs/Enemy_Lord_Hitting.png",
-    },
-    "Archer":{
-        "Wandering":"/imgs/Enemy_Archer.png",
-        "Attacking":null,
-        "Hitting":"/imgs/Enemy_Archer_Hitting.png",
-    },
-    "Summoned Lord":{
-        "Wandering":"/imgs/Enemy_Summoned_Lord.png",
-        "Attacking":null,
-        "Hitting":"/imgs/Enemy_Summoned_Lord_Hitting.png",
-    },
-    "Boss":{
-        "Wandering":"/imgs/Enemy_Elder.png",
-        "Attacking":null,
-        "Hitting":"/imgs/Enemy_Elder_Hitting.png",
-    },
-    //all small vantacite monsters part of this as well:
-    "Vantacite Monster":{
-        "Wandering":"/imgs/Enemy_Vantacite_Monster.png",
-        "Attacking":null,
-        "Hitting":"/imgs/Enemy_Vantacite_Monster_Hitting.png",
-    },
-
-}
 class Entity {
-    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, knockbackResistance=0, worldID="Main", rl="R") {
+    constructor(type, imgSrc, speed, w, h, x, y, health, xp=0, id=createID(), knockbackDist=5, knockbackResistance=0, worldID="Main", rl="R", socketId) {
         this.id = id;
         this.class = "Entity"
         this.status = ["Wandering"]
@@ -658,14 +603,25 @@ class Entity {
         this.worldID = worldID
 
         this.rl = rl // RIGHTY OR LEFTY
+
+        this.socketId = socketId //socket id
     }
 
-    giveStatus(status, addOrRemove = "ADD") {
+    giveStatus(status) {
+        if(status == "Wandering") {
+            this.status = ["Wandering"]; //reset status to Wandering
+            return //no need to give this status, it's default
+        }
+
+        /********** */
         var order = {
-            "Wandering": 2,
+            "Wandering": -100,
             "Attacking": 1,
             "Hitting": 0,
             "Shooting": 0,
+            "Spear1": 0,
+            "Spear2": 1,
+            "Spear3": 2,
             "Fleeing": 2,
         }; // Lower the value, higher the priority
     
@@ -676,10 +632,11 @@ class Entity {
         // Sort the status array to ensure prioritized ones come first
         this.status.sort((a, b) => (order[a] || Infinity) - (order[b] || Infinity));
         this.status.reverse()
-    
-        if (this.status.includes(status)) {
+
+        //remove automatically in 250ms
+        if (this.status.includes(status) && status !== "Spear3") {
             setTimeout(() => {
-                if (this.status.includes(status)) {
+                if (this.status.includes(status) && !status.startsWith("Wandering")) {
                     this.status.splice(this.status.indexOf(status), 1);
                 }
             }, 250);
@@ -688,13 +645,14 @@ class Entity {
 }
 
 class Player extends Entity{
-    constructor(x, y, username, imgSrc=entityImgSrcs["Player1"], worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100, id="PLAYER"+createID(), inventory=[], xp=5000){
+    constructor(x, y, username, imgSrc=entityImgSrcs["Player1"], worldID, type="player", speed=10, w=entitySize, h=entitySize, health = 100, id="PLAYER"+createID(), inventory=[], xp=5000, socketId=null){
         super(type, imgSrc, speed * 2, w, h, x, y, health, xp, id, 5, 0, worldID)
+        super.socketId = socketId //socket id of player DEFINED later
         this.username = (username == "")? "Player":username;
         this.kindOfEntity = "Player"
         this.inventory = inventory.length==0?[
             {...holdableItems[DEBUG?"Debug":"Hand"]},
-            {...holdableItems["Hand"]},
+            {...holdableItems["Spear"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
@@ -755,7 +713,7 @@ class Enemy extends Entity {
         this.targetData = {};
         let minDist = this.detectRange;
         const world = worlds[this.worldID];
-        const players = Object.values(world.entities).filter(entity => entity.isPlayer);
+        const players = Object.values(world.entities).filter(entity => entity.isPlayer && !entity.isDead);
         // KK    
         for(let g in this.grudges){
             let grudgeID = this.grudges[g]
@@ -902,6 +860,11 @@ class Enemy extends Entity {
     moveMove() {
         const world = worlds[this.worldID];
 
+        if (this.status.some(s => loadingStatuses.includes(s))) {
+            this.speed = this.maxSpeed * percentSpeedReduction; // 40% speed while loading
+        } else {
+            this.speed = this.maxSpeed;
+        }
         if(!this.freeze){ 
             this.dist = Math.hypot(this.dx, this.dy);
             if (this.dist > 0) {
@@ -984,11 +947,13 @@ class Archer extends Enemy {
     constructor(x, y, id, worldID) {
         let data = structuredClone(enemyObj["Archer"]);
         super("Archer", false, x, y, id, worldID, data.inventory, data.invSelected);
-        this.shootRange = data.shootRange; // To walk closer before shooting...
+        this.shootRange = data.shootRange;
         this.holdDuration = 0;
         this.holdNum = 0;
-        this.safeDistance = this.shootRange / 2; // Minimum distance to maintain from the target
-        this.isPaused = false; // To manage shooting pause
+        this.safeDistance = this.shootRange / 2;
+        this.isPaused = false;
+        this.fleeingFar = false; // NEW: track if archer is fleeing far
+        this.fleeTarget = null;  // NEW: where to flee to
     }
 
     move() {
@@ -999,15 +964,44 @@ class Archer extends Enemy {
             super.damageCoolDown();
 
             this.dx = this.dy = this.dist = 0;
-            let distanceToTarget;
+            let distanceToTarget = this.target
+                ? Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2)
+                : 10 ** 10;
 
-            if (this.target) {
-                distanceToTarget = Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2);
-            } else {
-                distanceToTarget = 10 ** 10;
+            // If target is too close, flee far away and do NOT load bow
+            if (distanceToTarget < this.safeDistance) {
+                // If not already fleeing far, pick a random far-away point
+                if (!this.fleeingFar) {
+                    let mp = world.mapSize;
+                    // Pick a point at least shootRange away from target
+                    let angle = Math.atan2(this.y - this.target.y, this.x - this.target.x);
+                    let dist = this.shootRange * 2 + random(200, 0);
+                    this.fleeTarget = {
+                        x: this.x + Math.cos(angle) * dist,
+                        y: this.y + Math.sin(angle) * dist
+                    };
+                    // Clamp to borders
+                    this.fleeTarget.x = Math.max(world.BORDERS.L + 50, Math.min(world.BORDERS.R - 50, this.fleeTarget.x));
+                    this.fleeTarget.y = Math.max(world.BORDERS.D + 50, Math.min(world.BORDERS.U - 50, this.fleeTarget.y));
+                    this.fleeingFar = true;
+                }
+                // Move toward fleeTarget
+                this.dx = this.fleeTarget.x - this.x;
+                this.dy = this.fleeTarget.y - this.y;
+                this.speed = this.maxSpeed;
+                // Don't load bow while fleeing far
+                this.holdNum = 0;
+                this.holdDuration = 0;
+                this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png";
+                // If reached fleeTarget, stop fleeing
+                if (Math.abs(this.dx) < 10 && Math.abs(this.dy) < 10) {
+                    this.fleeingFar = false;
+                }
+                super.moveMove();
             }
-
-            if (distanceToTarget <= this.detectRange) {
+            // If at a safe distance, load and shoot
+            else if (distanceToTarget <= this.detectRange) {
+                this.fleeingFar = false;
                 this.giveStatus("Attacking");
                 this.dx = this.target.x - this.x;
                 this.dy = this.target.y - this.y;
@@ -1016,75 +1010,41 @@ class Archer extends Enemy {
                 if (distanceToTarget > this.shootRange) {
                     // Get closer to shoot
                     this.speed = this.maxSpeed;
-                    this.holdNum += 1; // Start loading bow while moving
-                    this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
-                    // update bow phase
-                    this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
-                    super.moveMove();
-                } else if (distanceToTarget < this.safeDistance) {
-                    // Flee mode: Move away from the target
-                    this.giveStatus("Fleeing")
-                    if (!this.isPaused) {
-                        this.speed = this.maxSpeed;
-                        this.dx = this.x - this.target.x;
-                        this.dy = this.y - this.target.y;
-
-                        // Continue loading bow while fleeing
-                        this.holdNum += 1;
-                        this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
-                        // update bow phase
-                        this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
-
-                        // Stop to shoot if fully loaded
-                        if (this.holdDuration === 5 && !this.justAttacked) {
-                            this.isPaused = true; // Pause fleeing to shoot
-                            this.speed = 0; // Stop movement
-                            setTimeout(() => {
-                                if(this.health > 0){
-                                    this.shootArrow(this.holdDuration);
-                                    this.holdNum = 0; // Reset loading
-                                    this.isPaused = false; // Resume fleeing
-                                }
-                            }, 1000); // 1-second pause to aim and shoot
-                        }
-
-                        if (!this.isPaused) super.moveMove(); // Keep fleeing if not paused
-                    }
-                } else {
-                    // Stop and attack when at a safe distance
-                    this.speed = 0; // Stop movement
                     this.holdNum += 1;
                     this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
-                    // update bow phase
+                    this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
+                    super.moveMove();
+                } else {
+                    // Stop and attack when at a safe distance
+                    this.speed = 0;
+                    this.holdNum += 1;
+                    this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
                     this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
 
                     if (this.holdDuration === 5 && !this.justAttacked) {
                         this.shootArrow(this.holdDuration);
-                        this.holdNum = 0; // Reset loading
+                        this.holdNum = 0;
                     }
                 }
             } else {
                 // Wander if target is out of range
+                this.fleeingFar = false;
                 this.speed = this.maxSpeed;
                 if (!this.moving) {
                     let mp = world.mapSize;
-
                     this.targetX = random(mp / 2, -mp / 2);
                     this.targetY = random(mp / 2, -mp / 2);
                     this.dx = this.targetX - this.x;
                     this.dy = this.targetY - this.y;
                     this.moving = true;
-
                     setTimeout(() => {
                         this.moving = false;
-                    }, 10000); // Stay at the target location for 10 seconds
+                    }, 10000);
                 } else {
                     this.dx = this.targetX - this.x;
                     this.dy = this.targetY - this.y;
-
                     if (Math.abs(this.dx) < 1 && Math.abs(this.dy) < 1) {
                         let mp = world.mapSize;
-
                         this.targetX = random(mp / 2, -mp / 2);
                         this.targetY = random(mp / 2, -mp / 2);
                     }
@@ -1478,7 +1438,7 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
             from.xp += Math.floor(to.xp * 0.8 )// give player xp
             from.kills ++
         }
-        
+        to.isDead = true // mark as dead
     }
     //guess not! Knockback!!
     else{
@@ -1516,8 +1476,25 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
             }
         }
     }
-}
 
+    // emit particle to players in this world
+    if (from && to && from.id !== to.id && damage > 0 && typeof io !== "undefined") {
+        // Broadcast to all players in the same world
+        for (const entityId in worlds[worldID].entities) {
+            const entity = worlds[worldID].entities[entityId];
+            if (entity.isPlayer 
+            && entity.socketId 
+            && io.sockets.sockets.has(entity.socketId)) {
+                io.to(entity.socketId).emit("showDamage", {
+                    x: to.x,
+                    y: to.y,
+                    value: Math.round(damage),
+                    color: "#ff4444"
+                });
+            }
+        }
+    }
+}
 /****** CREATE WORLDS *******/
 function createWorld(
     id, 
@@ -1673,7 +1650,7 @@ createWorld("World1", 1500, 0, 10, 1, 2, 0, 1)
 var startedCountdown = false
 var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
-const FPS = 50 //
+const FPS = 20 //
 setInterval(()=>{
     for(let worldID in worlds){
         let world = worlds[worldID]
@@ -1702,7 +1679,7 @@ setInterval(()=>{
             if(random(100, 1) < enemyObj[randomKey].generationProbability){
                 var nC = findSpawn(entitySize, worldID)
                 if(nC.x && nC.y){
-                    let id = createRandomString(20)
+                    let id = createID()
                     if(randomKey === "Archer"){
                         world.entities[id] = new Archer(nC.x, nC.y, id, worldID)
                     } else{
@@ -1723,6 +1700,8 @@ setInterval(()=>{
                 }
                 world.entities[e].move()
                 if(world.entities[e].health <= 0) {
+                    world.entities[e].isDead = true
+
                     let pick = random(world.entities[e].lootTable.length-1, 0) 
                     let enemy = world.entities[e]
                     //find if percentage beats
@@ -1760,9 +1739,10 @@ setInterval(()=>{
             else{
                 if(entity.health < entity.maxHealth){
                     world.entities[e].health += 0.01
+               
                 }
                 if(entity.health <= 0){
-                    world.entities[e].isDead = true // This player is NOW dead!!
+                    entity.isDead = true // This player is NOW dead!!
                     Object.values(world.entities[e]).filter(i => !i.isDead)
                 }
                 if(entity.immuneDuration > 0){
@@ -1785,8 +1765,9 @@ setInterval(()=>{
                 }
                 var pid = createRandomString(20)
                 world.pickables[pid] = new Pickable(pid, spawnLocation.x, spawnLocation.y, coins[kind])
-            } else console.log(worldID, "Abandon generation --> eatable")
+            } else if (DEBUG) console.log(worldID, "Abandon generation --> eatable")
         }
+        
         //add loot 0.1% chance (swords, etc.)
         if (random(1000, 1) == 1) {
             let spawnLocation = findSpawn(pickableSize, worldID)
@@ -1806,12 +1787,17 @@ setInterval(()=>{
             } else console.log(worldID, "Abandon generation --> loot")
         }
         //update world.pickables (despawn?)
-        for(let key in world.pickables){
-            let pickable = world.pickables[key]
-            pickable.despawnIn -= 1
-            if(pickable.despawnIn <= 0){
-                delete world.pickables[key]
+        const pickablesToDelete = [];
+        const pickableArr = Object.values(world.pickables);
+        for (let i = 0; i < pickableArr.length; i++) {
+            let pickable = pickableArr[i];
+            pickable.despawnIn -= 1;
+            if (pickable.despawnIn <= 0) {
+                pickablesToDelete.push(pickable.id);
             }
+        }
+        for (let i = 0; i < pickablesToDelete.length; i++) {
+            delete world.pickables[pickablesToDelete[i]];
         }
 
         // Update particles
@@ -1915,7 +1901,7 @@ setInterval(()=>{
             }
         } 
     }
-}, FPS)
+}, 1000/FPS)
 
 var intervals = {}
 
@@ -1933,6 +1919,8 @@ io.sockets.on("connection", (socket)=>{
     console.log("New Socket Connection")
 
     var global_player //global var of player, when defined
+    let bowHoldData = {};    // { [playerId]: { holdStart: timestamp, invSelected: number } }
+    let spearHoldData = {};  // { [playerId]: { holdStart: timestamp, invSelected: number } }
 
     socket.emit("allowUpdate") // allow to start
     
@@ -1970,6 +1958,7 @@ io.sockets.on("connection", (socket)=>{
         let nC = findSpawn(entitySize, data.worldID)
         console.log("Spawned in type", data.img)
         let player = new Player(nC.x, nC.y, data.username, entityImgSrcs[data.img], data.worldID)
+        player.socketId = socket.id //assign socket id to player
 
         //var worldID = "Main"
         if(data.worldID in worlds){
@@ -2017,7 +2006,7 @@ io.sockets.on("connection", (socket)=>{
                 }
             } else if(!player.isDead){
                 console.log("ID", data.id, "was added to pool")
-                world.entities[data.id] = new Player(player.x, player.y, player.username, player.imgSrc, player.worldID, player.type, player.speed, player.w, player.h, player.health, data.id, player.inventory, player.xp)
+                world.entities[data.id] = new Player(player.x, player.y, player.username, player.imgSrc, player.worldID, player.type, player.speed, player.w, player.h, player.health, data.id, player.inventory, player.xp, player.socketId)
                 // automatically make this true, so if you spawn on a tree, you good
                 world.entities[data.id].onWall = true
                 //
@@ -2210,34 +2199,42 @@ io.sockets.on("connection", (socket)=>{
         let entities = world.entities
         let id = data.id
         let player = entities[data.id]
+        let usedItem = false // item was used?
         if(player){
-            var usedItem = false
             let tool = player.inventory[player.invSelected]
-            //ranged attack
-            if (tool.name === "Bow") {
-                // Shoot arrow
-                if (player.inventory.some(invSlot => invSlot.name === "Arrow")){
-                    let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
-                    player.inventory[player.invSelected].imgSrc = `/imgs/Bow${holdDuration}.png`
-                }
-            } else if(tool.name === "Spear"){
-                let spearDirection = player.rotation + player.defaultRotation + Math.PI;
-                
-                player.giveStatus("Shooting")
-                
-                tool.durability -= 1
 
-                let projectileID = createID()
-                world.projectiles[projectileID] = new Projectile(
-                    data.worldID,
-                    projectileID,
-                    "Spear", 
-                    player.x + Math.cos(spearDirection) * entitySize, 
-                    player.y + Math.sin(spearDirection) * entitySize, 
-                    50, 50, spearDirection, player, tool.durability);
-                player.inventory[player.invSelected] = {...holdableItems["Hand"]}
-                usedItem = true // item was used!
-            } 
+            // Bow hold logic
+            let hasArrows = player.inventory.some(item => item.name === "Arrow")
+            if (tool.name === "Bow" && hasArrows) {
+                let phase = Math.min(5, Math.max(1, Math.floor(data.holdDuration/3)));
+                bowHoldData[player.id] = {
+                    holdStart: bowHoldData[player.id]?.holdStart || Date.now(),
+                    invSelected: player.invSelected
+                };
+                player.inventory[player.invSelected].imgSrc = `/imgs/Bow${phase}.png`;
+                player.giveStatus(`Bow${phase}`);
+            }
+            // Spear hold logic
+            else if (tool.name === "Spear") {
+                let phase = Math.min(3, Math.max(1, Math.floor(data.holdDuration/3)));
+                spearHoldData[player.id] = {
+                    holdStart: spearHoldData[player.id]?.holdStart || Date.now(),
+                    invSelected: player.invSelected,
+                    lastPhase: phase
+                };
+                // Only set status, don't set imgSrc directly
+                // Spear release animation: 1 -> 2 -> 3 -> normal
+                let phases = [1, 2, 3];
+                let phaseIndex = 0;
+                function playSpearReleaseAnim() {
+                    if (phaseIndex < phases.length) {
+                        player.giveStatus(`Spear${phases[phaseIndex]}`);
+                        phaseIndex++;
+                        setTimeout(playSpearReleaseAnim, 500 / phases.length); // ~0.166s per frame for 0.5s total
+                    } else {player.giveStatus(`Spear3`)}
+                }
+                playSpearReleaseAnim();
+            }
             //melee attack         
             else {
                 let didDamage = false
@@ -2248,9 +2245,9 @@ io.sockets.on("connection", (socket)=>{
                 let mouseX = data.x
                 let mouseY = data.y
                 let world = worlds[data.worldID]
-
-                for(let e in world.entities){    
-                    let entity = world.entities[e]            
+                let entities = Object.values(world.entities).filter(entity => !entity.isDead);
+                for(let e in entities){    
+                    let entity = entities[e]            
                     if(//Math.sqrt(Math.pow(entity.x - player.x, 2) + Math.pow(entity.y - player.y, 2)) < hitRange
                     //&& 
                     entity.id != id
@@ -2331,20 +2328,17 @@ io.sockets.on("connection", (socket)=>{
 
             if(player){
                 let tool = player.inventory[player.invSelected]
-                let holdDuration = (data.holdDuration>=5)?5:data.holdDuration //max = Bow5.png
-                if (tool.name === "Bow"
-                && holdDuration > 0
-                ) {
-                    // Check for arrow in inventory
+                // Bow release logic
+                if (tool.name === "Bow" && bowHoldData[player.id] && bowHoldData[player.id].invSelected === player.invSelected) {
+                    let holdTime = Math.min(Date.now() - bowHoldData[player.id].holdStart, 5000);
+                    let posHoldDuration = Math.max(1, Math.round((holdTime / 1000) * 5)) // 1-5 FIVE BOW PHASES
+                    // Calculate hold duration (1-5 seconds)
+                    let holdDuration = posHoldDuration<5?posHoldDuration:5; 
                     let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
-                    // Shoot arrow
                     if (canShoot) {
                         player.inventory[player.invSelected].imgSrc = `/imgs/Bow.png`
                         let arrowDirection = player.rotation + player.defaultRotation + Math.PI;
-                        
-                        //make da arrow
                         createArrow(player, arrowDirection, holdDuration, player.worldID)
-
                         // Decrease arrow stack or remove from inventory
                         for (let slot = 0; slot < player.inventory.length; slot++) {
                             let invSlot = player.inventory[slot];
@@ -2352,20 +2346,82 @@ io.sockets.on("connection", (socket)=>{
                                 if (invSlot.stackSize > 1) {
                                     invSlot.stackSize -= 1;
                                 } else {
-                                    player.inventory[slot] = { ...holdableItems["Hand"]};
+                                    player.inventory[slot] = { ...holdableItems["Hand"] };
                                 }
                                 break;
                             }
                         }
-
                         //damage bow
                         tool.durability -= 1
                     }
+                    delete bowHoldData[player.id];
+                }
+                // Spear release logic
+                else if (tool.name === "Spear" && spearHoldData[player.id] && spearHoldData[player.id].invSelected === player.invSelected) {
+                    let holdTime = Math.min(Date.now() - spearHoldData[player.id].holdStart, 5000);
+                    let posHoldDuration = Math.max(1, Math.round((holdTime / 1000) * 5)); // 1-5
+                    let holdDuration = posHoldDuration < 3 ? posHoldDuration : 3;
+                    let spearDirection = player.rotation + player.defaultRotation + Math.PI;
+                    tool.durability -= 1;
+                    
+
+                    // Spear release animation: 3 -> 2 -> 1 -> normal
+                    let phases = [3, 2, 1];
+                    let phaseIndex = 0;
+                    function playSpearReleaseAnim() {
+                        if (phaseIndex < phases.length) {
+                            player.giveStatus(`Spear${phases[phaseIndex]}`);
+                            phaseIndex++;
+                            setTimeout(playSpearReleaseAnim, 50 / phases.length);
+                        } else {
+                            player.giveStatus("Wandering");
+
+                            let projectileID = createID();
+                            world.projectiles[projectileID] = new Projectile(
+                                data.worldID,
+                                projectileID,
+                                "Spear",
+                                player.x + Math.cos(spearDirection) * entitySize,
+                                player.y + Math.sin(spearDirection) * entitySize,
+                                50, 50, spearDirection, player, tool.durability,
+                                projectilesObj["Spear"].speed + 2.5 * (holdDuration-1),
+                                projectilesObj["Spear"].flightDuration + 10 * (holdDuration-1),
+                                projectilesObj["Spear"].damage + 5 * (holdDuration-1)
+                            );
+
+                            player.inventory[player.invSelected] = {...holdableItems["Hand"]};
+                            delete spearHoldData[player.id];
+                        }
+                    }
+                    playSpearReleaseAnim();                    
                 }
             } 
         } catch(err){
             console.log(err)
             socket.emit("noWorld")
+        }
+    })
+    //reset on inventory switch
+    socket.on("switchInventorySlot", function(data){
+        let world = worlds[data.worldID]
+        let entities = world.entities
+        let player = entities[data.id]
+        if(player.inventory){
+            if(player.inventory[data.prevSlot].name == "Bow"){
+                //reset bow
+                player.inventory[data.prevSlot].imgSrc = "/imgs/Bow.png"
+                if(bowHoldData[player.id]){
+                    delete bowHoldData[player.id]
+                }
+            } else if(player.inventory[data.prevSlot].name == "Spear"){
+                //reset spear
+                if(spearHoldData[player.id]){
+                    delete spearHoldData[player.id]
+                }
+            }
+        }
+        if(player && player.status){
+            player.status = ["Wandering"]
         }
     })
     //buy
@@ -2377,7 +2433,7 @@ io.sockets.on("connection", (socket)=>{
 
         player.xp -= boughtItem.cost
         var pid = createRandomString(20)
-        world.pickables[pid] = new Pickable(pid, player.x, player.y, boughtItem, 0, boughtItem.durability, boughtItem.stackSize)
+        world.pickables[pid] = new Pickable(pid, player.x, player.y, boughtItem, 0, boughtItem.durability)
 
         //emit bought!
         socket.emit("bought!", {newXp:player.xp})

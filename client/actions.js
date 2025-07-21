@@ -4,7 +4,7 @@
  * 
  */
 
-import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, random, test } from "/client/functions.js"
+import { MAX_LOAD, MAX_IMMUNE_DURATION, entitySize, holdableItems, checkCollision, getOnWallStatus, random, test, loadingStatuses, percentSpeedReduction } from "/client/functions.js"
 console.log(test())
 
 //canvas with the actual game elements
@@ -56,6 +56,22 @@ var marketOpen = false //
 var obstacles = {}
 var entities = {}
 
+let floatingDamages = []; // {x, y, value, color, alpha, vy, life}
+
+function showFloatingDamage(x, y, value, color = "#ff4444") {
+    floatingDamages.push({
+        x, y,
+        value,
+        color,
+        alpha: 1,
+        vy: -0.7 - Math.random() * 0.5, // upward speed
+        life: 40 + Math.floor(Math.random() * 10) // frames
+    });
+}
+socket.on("showDamage", function(data) {
+    // data: {x, y, value, color}
+    showFloatingDamage(data.x, data.y, data.value, data.color || "#ff4444");
+});
 
 //var speedFactor = 1 //updated later, 1 as default
 
@@ -261,7 +277,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 let x = -item.width/2
                 let y = item.height/2
                 let extraRot = 0
-                if(item.status[0].slice(0, 7) == "Hitting"){
+                if(item.status && item.status[0] == "Hitting"){
                     x += item.width/10
                     y += item.height/10
                     extraRot = -Math.PI/8
@@ -271,7 +287,27 @@ function updateCanv(info, serverPlayerCount, leaderboard){
                 ctx.rotate(Math.PI + heldItem.rotation + extraRot)
                 //ctx.fillStyle="red"
                 //ctx.fillRect(-5,-5,10,10)
-                ctx.drawImage(images[p],-holdingIconSize/2,-holdingIconSize/2,holdingIconSize,holdingIconSize)
+                
+                // if holding a spear
+                if (item.status && item.status.some(s => s.startsWith("Spear"))) {
+                    let spearSize = holdingIconSize;
+                    let xoffset = -2; // base offset
+                    let yoffset = 5; // base offset
+                    if (item.status.some(s => s === "Spear3")) {
+                        ctx.drawImage(images[p], -spearSize / 2 + xoffset * 3, -spearSize / 2 + yoffset * 3, spearSize, spearSize);
+                    } else if (item.status.some(s => s === "Spear2")) {
+                        ctx.drawImage(images[p], -spearSize / 2 + xoffset * 2, -spearSize / 2 + yoffset * 2, spearSize, spearSize);
+                    } else if (item.status.some(s => s === "Spear1")) {
+                        ctx.drawImage(images[p], -spearSize / 2 - xoffset/2, -spearSize / 2 - yoffset/2, spearSize, spearSize);
+                    } 
+                    // all other inventory items
+                    else {
+                        ctx.drawImage(images[p], -holdingIconSize / 2, -holdingIconSize / 2, holdingIconSize, holdingIconSize);
+                    }
+                }
+                else{
+                    ctx.drawImage(images[p],-holdingIconSize/2,-holdingIconSize/2,holdingIconSize,holdingIconSize)
+                }
                 
             }
         }
@@ -377,6 +413,30 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         
     })
     ctx.restore();
+
+    // Draw floating damage numbers
+    for (let i = floatingDamages.length - 1; i >= 0; i--) {
+        let fd = floatingDamages[i];
+
+        // Convert world coordinates to screen coordinates
+        let screenX = (fd.x + centerX) * scale + canvas.width / 2 * (1 - scale);
+        let screenY = (fd.y + centerY) * scale + canvas.height / 2 * (1 - scale);
+
+        ctx.save();
+        ctx.globalAlpha = fd.alpha;
+        ctx.font = "bold 32px " + defaultFontFamily;
+        ctx.fillStyle = fd.color;
+        ctx.textAlign = "center";
+        ctx.fillText("-" + fd.value, screenX, screenY);
+        ctx.restore();
+
+        fd.y += fd.vy;
+        fd.alpha -= 0.025;
+        fd.life--;
+        if (fd.life <= 0 || fd.alpha <= 0) {
+            floatingDamages.splice(i, 1);
+        }
+    }
 
     //game data
     gctx.clearRect(0, 0, ginfo.width, ginfo.height)
@@ -903,11 +963,41 @@ function performActions() {
 
     // switch inventory slots
     if(canSwitchInventorySlots){
-        if (keySet["1"]) currInvSlot = 1 - 1;
-        if (keySet["2"]) currInvSlot = 2 - 1;
-        if (keySet["3"]) currInvSlot = 3 - 1;
-        if (keySet["4"]) currInvSlot = 4 - 1;
-        if (keySet["5"]) currInvSlot = 5 - 1;
+        if (keySet["1"]) {
+            socket.emit("switchInventorySlot", {
+                worldID: player.worldID, 
+                id: player.id,
+                prevSlot: currInvSlot}); //emit to server to switch inv slot
+            currInvSlot = 0;
+        }
+        if (keySet["2"]) {
+            socket.emit("switchInventorySlot", {
+                worldID: player.worldID, 
+                id: player.id,
+                prevSlot: currInvSlot}); //emit to server to switch inv slot
+            currInvSlot = 1;
+        }
+        if (keySet["3"]) {
+            socket.emit("switchInventorySlot", {
+                worldID: player.worldID, 
+                id: player.id,
+                prevSlot: currInvSlot}); //emit to server to switch inv slot
+            currInvSlot = 2;
+        }
+        if (keySet["4"]) {
+            socket.emit("switchInventorySlot", {
+                worldID: player.worldID, 
+                id: player.id,
+                prevSlot: currInvSlot}); //emit to server to switch inv slot
+            currInvSlot = 3;
+        }
+        if (keySet["5"]) {
+            socket.emit("switchInventorySlot", {
+                worldID: player.worldID, 
+                id: player.id,
+                prevSlot: currInvSlot}); //emit to server to switch inv slot
+            currInvSlot = 4;
+        }
     }
 
     if (keySet["q"]) {
@@ -939,6 +1029,12 @@ function performActions() {
 
     // Check if any movement key is currently pressed
     let movementKeyPressed = movementKeys.some(key => keySet[key]);
+
+    // Reduce speed if loading
+    if (player.status.some(s => loadingStatuses.includes(s))) {
+        player.speed = player.maxSpeed * percentSpeedReduction;
+        sprint = false
+    }
 
     // If no movement key is pressed and the spacebar is not pressed, reset the corresponding movement component
     if (!movementKeyPressed && !keySet[" "]) {
@@ -1089,18 +1185,26 @@ function startGame(worldID = "Main", createWorld=false, username=null, worldSize
     //Actual stuff called when server responds.
 }
 // Starts the game loop
-function initiateGameLoop(){
-    gameLoopInt = setInterval(()=>{
-        //player update
-        if(player && updateAgain && canPlay) {
-            //update worldIDDiv
-            if(player.worldID){
-                document.getElementById("worldIDDiv").style.display = "block"
-                document.getElementById("worldIDSpan").innerHTML = player.worldID
-            }
+function initiateGameLoop() {
+    requestAnimationFrame(gameLoopRAF);
+}
 
-            if(player.health > 0){ 
-                performActions() //get tx,ty from keys
+// REMOVE or comment out the old gameLoopInt interval setup
+// function initiateGameLoop(){
+//     gameLoopInt = setInterval(()=>{ ... }, 0.01)
+// }
+
+// --- NEW GAME LOOP USING requestAnimationFrame ---
+
+let lastServerUpdate = 0;
+const SERVER_UPDATE_INTERVAL = 50; // ms (20 times per second)
+
+function gameLoopRAF(timestamp) {
+    if (player && canPlay) {
+        // Only send player update to server at fixed interval
+        if (timestamp - lastServerUpdate > SERVER_UPDATE_INTERVAL) {
+            if (player.health > 0) {
+                performActions();
                 //close market if attacked
                 if(lastHealthBeforeMarket > player.health) toggleMarket()
                 
@@ -1197,8 +1301,10 @@ function initiateGameLoop(){
             }) //gives data to draw  
             updateAgain = false  
         }
-    }, 0.01) //0.01
+    }
+    requestAnimationFrame(gameLoopRAF);
 }
+
 // Function that turns things off/on as needed when game begins
 function setupGame(){
     gameOn = true
@@ -1439,6 +1545,7 @@ function addDot() {
 }
 
 /********************************************************/
+/*
 // Detect when the user is leaving the page
 window.addEventListener('beforeunload', function(event) {
     if(gameOn) {
@@ -1453,6 +1560,7 @@ window.addEventListener('beforeunload', function(event) {
     }
 })
 
+
 window.leaveGame = function leaveGame(){
     let goOrNot = confirm("Are you sure you want to leave? Your inventory, xp, and progress will not be saved.")
     if(goOrNot){
@@ -1462,4 +1570,4 @@ window.leaveGame = function leaveGame(){
         })
         exitGame()
     }
-}
+}*/
