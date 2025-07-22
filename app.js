@@ -46,7 +46,7 @@ console.log("RUNNING Online @ " + PORT)
 
 const DEBUG = false
 
-/************ CONSTS/VARS *********************/
+/************ FUNCTIONS *********************/
 
 function createRandomString(l=10, specialCharacters=true){
     var pool = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' 
@@ -66,7 +66,119 @@ function createID(){
     return id
 }
 
+function removeID(id) {
+    const idx = ids.indexOf(id);
+    if (idx !== -1) ids.splice(idx, 1);
+}
+
 var ids = [] //player ids list
+
+// KillEntity: Handles all entity death logic and cleanup
+function KillEntity(entityID, worldID, from, projectileKey=null) {
+    if (!entityID || !worlds[worldID].entities[entityID] || !worlds[worldID]) return;
+    let entity = worlds[worldID].entities[entityID];
+    let world = worlds[worldID];
+
+    let to = entity
+    var key = projectileKey
+    // from projectiles...player + bot
+    if(projectileKey){
+        // death by arrow
+        if(!world.projectiles[key] || !world.projectiles[key].whoShot){
+            to.deathMessage = "You were shot by an archer..."
+        } else if (world.entities.hasOwnProperty(world.projectiles[key].whoShot.id)) {
+            /** IMPORTANT NOTE:
+             * In this case, the "to" is who died because of
+             * the "from", in this case, the projectile.
+             * "whoShotIt" is defined as the archer/thrower
+             */
+            // If entity is killed, update player's stats
+            let whoShotIt = world.projectiles[key].whoShot.username;
+            //spear
+            let messages = (from.name=="Spear")?[
+                `${to.username} was impaled by a spear`,
+                `${to.username} was impaled by ${whoShotIt}'s spear`,
+            ]:[ //arrow...
+                `${whoShotIt} killed ${to.username} with a ${from.name}.`,
+                `${whoShotIt} shot ${to.username}.`,
+                `The ${from.name} from ${whoShotIt} found its mark on ${to.username}.`,
+                `${to.username} was sniped from afar by ${whoShotIt} with an ${from.name}.`
+            ]
+            let p = world.entities[world.projectiles[key].whoShot.id];
+            p.xp += to.xp;
+            p.kills++;
+            let name = p.username
+            if(to.username && to.username == p.username) name = "yourself."
+            to.deathMessage = messages[Math.floor(Math.random() * messages.length)]
+        } 
+        //archer!
+        else{
+            let data = enemyObj["Archer"]
+            to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
+        }
+    } 
+    // from player melee
+    else {
+        if(from.kindOfEntity == "Bot") {
+            let data = enemyObj[from.type]
+            to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
+        } else {
+            to.deathMessage = `${to.username} was slain by ${from.username}`
+        }
+        from.xp += Math.floor(to.xp * 0.8 )// give player xp
+        from.kills ++
+    }
+    // Drop inventory if it has one (player or bot)
+    if (entity.inventory && Array.isArray(entity.inventory)) {
+        dropAll(entity.id, worldID);
+    }
+
+    // Drop loot for enemies
+    if (entity.lootTable && Array.isArray(entity.lootTable)) {
+        let pick = random(entity.lootTable.length - 1, 0);
+        let loot = entity.lootTable[pick];
+        if (random(100, 1) <= (loot.generationProbability ?? 100)) {
+            var id = createID();
+            world.pickables[id] = new Pickable(
+                id,
+                entity.x,
+                entity.y,
+                loot,
+                0,
+                loot.durability,
+                loot.stackSize
+            );
+        }
+    }
+
+    // Special splitting logic for Vantacite Monsters
+    if (entity.type == "Vantacite Monster") {
+        let spread = enemyObj["Small Vantacite Monster"].w * 3;
+        summon("Small Vantacite Monster", entity.x, entity.y, spread, 2, worldID);
+    } else if (entity.type == "Small Vantacite Monster") {
+        let spread = enemyObj["Tiny Vantacite Monster"].w * 3;
+        summon("Tiny Vantacite Monster", entity.x, entity.y, spread, 4, worldID);
+    } else if (entity.type == "Tiny Vantacite Monster") {
+        let spread = enemyObj["Very Tiny Vantacite Monster"].w * 3;
+        summon("Very Tiny Vantacite Monster", entity.x, entity.y, spread, 4, worldID);
+    }
+
+    // Mark as dead and remove ID
+    entity.isDead = true;
+    entity.health = 0;
+
+    if(entity.isPlayer && entity.socketId && io.sockets.sockets.has(entity.socketId)) {
+        removeID(entity.id);
+    } else{
+        delete world.entities[entity.id];
+    }
+
+    // Emit gameOver to the player if this is a player entity
+    if (entity.isPlayer && entity.socketId && io.sockets.sockets.has(entity.socketId)) {
+        io.to(entity.socketId).emit("gameOver");
+    }
+}
+
 /************ MAP SIZE *********************/
 const defaultMapSize = 4000 //px
 
@@ -386,27 +498,26 @@ function findSpawn(size=0, worldID="Main") {
     let doNotPass = true
     let mp = worlds[worldID].mapSize
     let tries = 0
+    const MAX_TRIES = 100; // Lowered from 1000 to 100 for performance
     while (doNotPass) {
-        if(tries > 1000) break
+        if(tries > MAX_TRIES) break
         tries++
-        doNotPass = false; // be optimistic, you know?
+        doNotPass = false;
         x = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
         y = random((mp / 2) - (s / 2), -(mp / 2) + (s / 2));
-        //cannot spawn on structures or markets 
         let thisWorld = worlds[worldID]
         let li1 = [thisWorld.structures, thisWorld.markets, thisWorld.entities]
         li1.forEach(obj=>{
             for (let sKey in obj) {
                 let st = obj[sKey];
-                let p = 3; // padding
-                // Check for overlap
+                let p = 3;
                 if (
                     x + s > st.x - p &&
                     x - s < st.x + st.width + p &&
                     y + s > st.y - p &&
                     y - s < st.y + st.height + p
                 ) {
-                    doNotPass = true; // aww
+                    doNotPass = true;
                     break
                 }
             }
@@ -414,7 +525,7 @@ function findSpawn(size=0, worldID="Main") {
         for(let t in thisWorld.trees){
             let tree = thisWorld.trees[t]
             if(Math.sqrt(Math.pow(x-tree.x,2) + Math.pow(y-tree.y,2)) < tree.obstructionRadius + entitySize){
-                doNotPass = true; // aww
+                doNotPass = true;
                 break
             }
         }
@@ -422,61 +533,44 @@ function findSpawn(size=0, worldID="Main") {
             let lake = thisWorld.lakes[l]
             let distance = Math.sqrt(Math.pow(x - lake.x, 2) + Math.pow(y - lake.y, 2));
             if(distance <= lake.radius){
-                doNotPass = true; // aww
+                doNotPass = true;
                 break
             }
         }
     }
     return { x, y };
 }
+
 function findSpawnAround(x, y, size, spread=entitySize*4, worldID="Main"){
-    let tries = 100 //100 tries to spawn in, else terminate
+    const MAX_TRIES = 20; // Lowered from 100 to 20 for performance
     let world = worlds[worldID]
-    for(let i = 0; i < tries; i++){
+    for(let i = 0; i < MAX_TRIES; i++){
         let rad = random(Math.round(Math.PI * 100 * 2), 0)/100
         let xx = x + Math.cos(rad) * random(spread, 0)
         let yy = y + Math.sin(rad) * random(spread, 0)
-        
-        //ENTITIES
         for(let i in world.entities){
             let entity = world.entities[i]
             let distFromEntity = Math.sqrt(Math.pow(entity.x - xx, 2) + Math.pow(entity.y - yy, 2))
             if(size > distFromEntity){
-                return {
-                    x:null, 
-                    y:null
-                }
+                return { x:null, y:null }
             }
-        }        
-        //OBSTACLE
+        }
         for(let i in world.obstacles){
             let obstacle = world.obstacles[i]
             let distFromObstacle = Math.sqrt(Math.pow(obstacle.x - xx, 2) + Math.pow(obstacle.y - yy, 2))
             if(size > distFromObstacle){
-                return {
-                    x:null, 
-                    y:null
-                }
+                return { x:null, y:null }
             }
         }
-        //BORDER
         var borders = world.BORDERS
         if(xx - size < borders.L
         || xx + size > borders.R
         || yy - size < borders.D
         || yy + size > borders.U){
-            return {
-                x:null, 
-                y:null
-            }
+            return { x:null, y:null }
         }
-        
-        return {
-            x:xx, 
-            y:yy
-        }
+        return { x:xx, y:yy }
     }
-    
 }
 
 function borderInPoints(x, y, worldID){
@@ -651,8 +745,8 @@ class Player extends Entity{
         this.username = (username == "")? "Player":username;
         this.kindOfEntity = "Player"
         this.inventory = inventory.length==0?[
-            {...holdableItems[DEBUG?"Debug":"Hand"]},
-            {...holdableItems["Spear"]},
+            {...holdableItems[DEBUG?"Debug":"Spear"]},
+            {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
             {...holdableItems["Hand"]},
@@ -968,7 +1062,7 @@ class Archer extends Enemy {
                 ? Math.sqrt((this.target.x - this.x) ** 2 + (this.target.y - this.y) ** 2)
                 : 10 ** 10;
 
-            // If target is too close, flee far away and do NOT load bow
+            // If target is too close, flee far away and KEEP loading bow
             if (distanceToTarget < this.safeDistance) {
                 // If not already fleeing far, pick a random far-away point
                 if (!this.fleeingFar) {
@@ -989,10 +1083,13 @@ class Archer extends Enemy {
                 this.dx = this.fleeTarget.x - this.x;
                 this.dy = this.fleeTarget.y - this.y;
                 this.speed = this.maxSpeed;
-                // Don't load bow while fleeing far
-                this.holdNum = 0;
-                this.holdDuration = 0;
-                this.inventory[this.invSelected].imgSrc = "/imgs/Bow.png";
+                // --- DO NOT reset holdNum/holdDuration while fleeing ---
+                // this.holdNum = 0;
+                // this.holdDuration = 0;
+                // Instead, keep loading bow as normal:
+                this.holdNum += 1;
+                this.holdDuration = Math.min(5, Math.floor(this.holdNum / (30 * this.cooldownSF)) + 1);
+                this.inventory[this.invSelected].imgSrc = `/imgs/Bow${this.holdDuration}.png`;
                 // If reached fleeTarget, stop fleeing
                 if (Math.abs(this.dx) < 10 && Math.abs(this.dy) < 10) {
                     this.fleeingFar = false;
@@ -1390,55 +1487,8 @@ function dealDamageTo(damage, from, to, projectileKey=null, worldID="Main"){
     
     // dead...?
     if(to.health <= 0){
-        var key = projectileKey
-        // from projectiles...player + bot
-        if(projectileKey){
-            // death by arrow
-            if(!world.projectiles[key] || !world.projectiles[key].whoShot){
-                to.deathMessage = "You were shot by an archer..."
-            } else if (world.entities.hasOwnProperty(world.projectiles[key].whoShot.id)) {
-                /** IMPORTANT NOTE:
-                 * In this case, the "to" is who died because of
-                 * the "from", in this case, the projectile.
-                 * "whoShotIt" is defined as the archer/thrower
-                 */
-                // If entity is killed, update player's stats
-                let whoShotIt = world.projectiles[key].whoShot.username;
-                //spear
-                let messages = (from.name=="Spear")?[
-                    `${to.username} was impaled by a spear`,
-                    `${to.username} was impaled by ${whoShotIt}'s spear`,
-                ]:[ //arrow...
-                    `${whoShotIt} killed ${to.username} with a ${from.name}.`,
-                    `${whoShotIt} shot ${to.username}.`,
-                    `The ${from.name} from ${whoShotIt} found its mark on ${to.username}.`,
-                    `${to.username} was sniped from afar by ${whoShotIt} with an ${from.name}.`
-                ]
-                let p = world.entities[world.projectiles[key].whoShot.id];
-                p.xp += to.xp;
-                p.kills++;
-                let name = p.username
-                if(to.username && to.username == p.username) name = "yourself."
-                to.deathMessage = messages[Math.floor(Math.random() * messages.length)]
-            } 
-            //archer!
-            else{
-                let data = enemyObj["Archer"]
-                to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
-            }
-        } 
-        // from player melee
-        else {
-            if(from.kindOfEntity == "Bot") {
-                let data = enemyObj[from.type]
-                to.deathMessage = data.deathMessages[random(data.deathMessages.length-1, 0)]
-            } else {
-                to.deathMessage = `${to.username} was slain by ${from.username}`
-            }
-            from.xp += Math.floor(to.xp * 0.8 )// give player xp
-            from.kills ++
-        }
-        to.isDead = true // mark as dead
+        console.log("Killing entity", to.id, "in world", worldID)
+        KillEntity(to.id, worldID, from, projectileKey) // mark as dead
     }
     //guess not! Knockback!!
     else{
@@ -1651,6 +1701,7 @@ var startedCountdown = false
 var bossCountDownTime = 0; //BOSS COUNTDOWN TIMER ... already spawned in?
 var bossCountDownTimeMax = 120 //s
 const FPS = 20 //
+const ACTIVE_RADIUS = 1500; // Only process entities within this distance of any player
 setInterval(()=>{
     for(let worldID in worlds){
         let world = worlds[worldID]
@@ -1690,63 +1741,48 @@ setInterval(()=>{
         }
         //the boss has no immune!...
         if(world.entities[bossID]) world.entities[bossID].immuneDuration = 0
-        //Move and update entities' health
-        for(let e in world.entities){
-            let entity = world.entities[e]
-            if(!entity.isPlayer){
-                //...unless there is a lord...
-                if(worldID == "Main" && world.entities[e].type == "Summoned Lord"){
-                    world.entities[bossID].immuneDuration = MAX_IMMUNE_DURATION
-                }
-                world.entities[e].move()
-                if(world.entities[e].health <= 0) {
-                    world.entities[e].isDead = true
+        //Move and update entities' health        
 
-                    let pick = random(world.entities[e].lootTable.length-1, 0) 
-                    let enemy = world.entities[e]
-                    //find if percentage beats
-                    //drop one thing...only one......
-                    let loot = enemy.lootTable[pick]
-                    if(random(100, 1) <= loot.generationProbability){
-                        var id = createID()
-                        world.pickables[id] = new Pickable(
-                            id, 
-                            world.entities[e].x, 
-                            world.entities[e].y, 
-                            loot, 
-                            0, loot.durability, loot.stackSize)
-                    }
-                    dropAll(enemy.id, worldID)
-
-                    //if special...
-                    // VANTACITE MONSTER
-                    if(enemy.type == "Vantacite Monster"){
-                        //one splits to 2 small
-                        let spread = enemyObj["Small Vantacite Monster"].w * 3
-                        summon("Small Vantacite Monster", enemy.x, enemy.y, spread, 2, worldID)
-                    } else if(enemy.type == "Small Vantacite Monster"){
-                        //small splits to 4 tiny
-                        let spread = enemyObj["Tiny Vantacite Monster"].w * 3
-                        summon("Tiny Vantacite Monster", enemy.x, enemy.y, spread, 4, worldID)
-                    } else if(enemy.type == "Tiny Vantacite Monster"){
-                        //small splits to 4 very small ones
-                        let spread = enemyObj["Very Tiny Vantacite Monster"].w * 3
-                        summon("Very Tiny Vantacite Monster", enemy.x, enemy.y, spread, 4, worldID)
-                    }
-                    delete world.entities[e]
+        function isNearAnyPlayer(entity, world) {
+            for (let id in world.entities) {
+                let player = world.entities[id];
+                if (player.isPlayer) {
+                    let dx = player.x - entity.x;
+                    let dy = player.y - entity.y;
+                    if (dx*dx + dy*dy < ACTIVE_RADIUS*ACTIVE_RADIUS) return true;
                 }
             }
-            else{
-                if(entity.health < entity.maxHealth){
-                    world.entities[e].health += 0.01
-               
+            return false;
+        }
+
+        // When looping through entities:
+        for (let e in world.entities) {
+            let entity = world.entities[e];
+            if(isNearAnyPlayer(entity, world)){
+                if (!entity.isPlayer) {
+                    // Skip entities that are not players and not near any player
+                    
+                    if(worldID == "Main" && world.entities[e].type == "Summoned Lord"){
+                        world.entities[bossID].immuneDuration = MAX_IMMUNE_DURATION
+                    }
+                    world.entities[e].move()
+                    /*
+                    if(world.entities[e].health <= 0) {
+                        KillEntity(world.entities[e], worldID) // mark as dead
+                    }*/
                 }
-                if(entity.health <= 0){
-                    entity.isDead = true // This player is NOW dead!!
-                    Object.values(world.entities[e]).filter(i => !i.isDead)
-                }
-                if(entity.immuneDuration > 0){
-                    world.entities[e].immuneDuration -= 1 
+                else{
+                    if(entity.health < entity.maxHealth){
+                        world.entities[e].health += 0.01
+                
+                    }/*
+                    if(entity.health <= 0){
+                        entity.isDead = true // This player is NOW dead!!
+                        Object.values(world.entities[e]).filter(i => !i.isDead)
+                    }*/
+                    if(entity.immuneDuration > 0){
+                        world.entities[e].immuneDuration -= 1 
+                    }
                 }
             }
         }
@@ -1883,20 +1919,24 @@ setInterval(()=>{
                     // Decrease entity health by projectile damage
                     dealDamageTo(projectile.damage, projectile, entity, key, projectile.worldID)
                     
-                    if(projectile.durability != Infinity 
-                    && projectile.durability > 0){
-                        var pid = createRandomString(20)
-                        world.pickables[pid] = new Pickable(
-                            pid, 
-                            projectile.x, 
-                            projectile.y, 
-                            projectile,
-                            projectile.rotation, 
-                            projectile.durability
-                        );
-                    }
-                    delete world.projectiles[key];
-                    break;
+                    // Only drop if it's a thrown spear (not arrows, not infinite durability)
+                if (
+                    projectile.name === "Spear" &&
+                    projectile.durability !== Infinity &&
+                    projectile.durability > 0
+                ) {
+                    var pid = createRandomString(20)
+                    world.pickables[pid] = new Pickable(
+                        pid, 
+                        projectile.x, 
+                        projectile.y, 
+                        projectile,
+                        projectile.rotation, 
+                        projectile.durability
+                    );
+                }
+                delete world.projectiles[key];
+                break;
                 }
             }
         } 
@@ -1956,11 +1996,20 @@ io.sockets.on("connection", (socket)=>{
         }
 
         let nC = findSpawn(entitySize, data.worldID)
-        console.log("Spawned in type", data.img)
         let player = new Player(nC.x, nC.y, data.username, entityImgSrcs[data.img], data.worldID)
         player.socketId = socket.id //assign socket id to player
 
-        //var worldID = "Main"
+        // Remove any old player with this socketId
+        for (let eid in worlds[data.worldID].entities) {
+            let ent = worlds[data.worldID].entities[eid];
+            if (ent.socketId === socket.id) {
+                delete worlds[data.worldID].entities[eid];
+            }
+        }
+
+        // Add new player to pool
+        worlds[data.worldID].entities[player.id] = player;
+        // ...rest of your code...
         if(data.worldID in worlds){
             var world = worlds[data.worldID]
             let entities = world.entities //identify entities
@@ -2074,13 +2123,14 @@ io.sockets.on("connection", (socket)=>{
                         }
                     }
                 });
-                
+                /*
                 //ONLY dies if send death message!!
-                if(player && player.isDead){// player.health <= 0
+                if(player && player.health <= 0){// player.health <= 0
                     dropAll(id, data.worldID)
-                    delete worlds[data.worldID].entities[id]
+                    KillEntity(player.id, data.worldID, player, null, true) //kill entity
+                    console.log("KILL HIM")
                     socket.emit("gameOver")
-                }
+                }*/
 
                 //if in range
                 socket.emit("sendUpdateDataToClient", {
@@ -2227,6 +2277,7 @@ io.sockets.on("connection", (socket)=>{
                 let phases = [1, 2, 3];
                 let phaseIndex = 0;
                 function playSpearReleaseAnim() {
+                    if(player.inventory[player.invSelected].name !== "Spear") return; // Stop if the item is no longer a spear
                     if (phaseIndex < phases.length) {
                         player.giveStatus(`Spear${phases[phaseIndex]}`);
                         phaseIndex++;
@@ -2370,6 +2421,7 @@ io.sockets.on("connection", (socket)=>{
                     let phaseIndex = 0;
                     function playSpearReleaseAnim() {
                         if (phaseIndex < phases.length) {
+                            console.log(phaseIndex)
                             player.giveStatus(`Spear${phases[phaseIndex]}`);
                             phaseIndex++;
                             setTimeout(playSpearReleaseAnim, 50 / phases.length);
@@ -2381,8 +2433,8 @@ io.sockets.on("connection", (socket)=>{
                                 data.worldID,
                                 projectileID,
                                 "Spear",
-                                player.x + Math.cos(spearDirection) * entitySize,
-                                player.y + Math.sin(spearDirection) * entitySize,
+                                player.x + Math.cos(spearDirection) * player.size/2,
+                                player.y + Math.sin(spearDirection) * player.size/2,
                                 50, 50, spearDirection, player, tool.durability,
                                 projectilesObj["Spear"].speed + 2.5 * (holdDuration-1),
                                 projectilesObj["Spear"].flightDuration + 10 * (holdDuration-1),
@@ -2478,6 +2530,7 @@ io.sockets.on("connection", (socket)=>{
     socket.on('disconnect', function() {
         try{
             console.log(`${global_player.username} ${id} disconnected`)
+            removeID(global_player.id) //remove ID
             delete worlds[global_player.worldID].entities[global_player.id]
         }
         catch(err){

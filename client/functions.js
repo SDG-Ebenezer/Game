@@ -360,7 +360,7 @@ export function checkCollision(playerID, obstacles, lakes, playerX, playerY, tx,
     //MAKE THIS CIRCULAR
     for (let e in entities) {
         let obstacle = entities[e];
-        if (obstacle.id != playerID) {
+        if (obstacle.id != playerID && !obstacle.isDead) {
             //can't be yourself!
             let factor = 0.6
             let pw = width * factor

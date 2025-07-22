@@ -441,7 +441,7 @@ function updateCanv(info, serverPlayerCount, leaderboard){
     //game data
     gctx.clearRect(0, 0, ginfo.width, ginfo.height)
     //dont show if player dead
-    if(player && player.health > 0){
+    if(player && !player.isDead){
         //d... is a div data
         dHealth()
         dLeaderboardData(serverPlayerCount, leaderboard)
@@ -594,6 +594,7 @@ document.addEventListener("mousemove", function(event) {
 
 var attackCursorOn = false
 function gAttackCursor(){
+    //if attack cursor is on, draw it
     var tool = player.inventory[player.invSelected]
     var hitRange = (tool.hitRange? tool.hitRange:entitySize) * scale
     
@@ -1024,6 +1025,8 @@ function performActions() {
         delete keySet["y"] //drop 1 only!
     }
 
+    if (keySet["l"]) console.log(player.status)
+
     //MOVEMENT
     let movementKeys = ["w", "a", "s", "d", "arrowup", "arrowleft", "arrowdown", "arrowright"];
 
@@ -1375,6 +1378,7 @@ socket.on("noWorld", ()=>{
     exitGame()
 })
 socket.on("gameOver", ()=>{
+    if(player) player.isDead = true //set player to dead
     // DEATH MESSAGE update found in the game loop search: [A4dh3dfDM9]
     console.log("Game over :(")
 
