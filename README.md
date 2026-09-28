@@ -17,3 +17,8 @@ The server controls damaging**, enemy decisions, generation, and spawning. The u
 Each player is stored in the server by a custom ID in an "entities" object. This is the players database. Once a user presses the "Play" button, a new Player() is added to the database with an ID.
 
 **Damage is dealt by 1) a click -- all player/entities in the "clicked" region receive damage, 2) projectiles -- the server controls a projectile's path until it reaches a player where it collides and is deleted or it is dropped, 3) enemy damages by checking if a player is in front of/over an enemy (based on x,y)
+
+
+## Current bugs 
+- On the online server website, the movement is sometimes rather jerky and inconsistent. Potential reasons for this include: 1) The online server has significantly less RAM and CPU than local servers, 2) inconsistent server-client communication.
+- Player off-tab ("unload") can lead to some problems, including "ghost" players.
