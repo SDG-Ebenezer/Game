@@ -169,8 +169,10 @@ function KillEntity(entityID, worldID, from, projectileKey=null) {
 
     if(entity.isPlayer && entity.socketId && io.sockets.sockets.has(entity.socketId)) {
         removeID(entity.id);
+        console.log(`Player ${entity.username} (ID: ${entity.id}) has been removed from the game.`);
     } else{
         delete world.entities[entity.id];
+        console.log(`Entity ${entity.id} has been removed from the game.`);
     }
 
     // Emit gameOver to the player if this is a player entity
@@ -2255,11 +2257,15 @@ io.sockets.on("connection", (socket)=>{
         let player = entities[data.id]
         let usedItem = false // item was used?
         if(player){
-            let tool = player.inventory[player.invSelected]
+            let requestedSlot = Number.isInteger(data.invID) ? data.invID : player.invSelected;
+            if (requestedSlot < 0 || requestedSlot >= player.inventory.length) return;
+            player.invSelected = requestedSlot;
+            let tool = player.inventory[requestedSlot]
 
             // Bow hold logic
             let hasArrows = player.inventory.some(item => item.name === "Arrow")
-            if (tool.name === "Bow" && hasArrows) {
+            if (tool.name === "Bow") {
+                if (!hasArrows) return;
                 let phase = Math.min(5, Math.max(1, Math.floor(data.holdDuration/3)));
                 bowHoldData[player.id] = {
                     holdStart: bowHoldData[player.id]?.holdStart || Date.now(),
@@ -2382,16 +2388,19 @@ io.sockets.on("connection", (socket)=>{
             let player = entities[data.id]
 
             if(player){
-                let tool = player.inventory[player.invSelected]
+                let requestedSlot = Number.isInteger(data.slot) ? data.slot : player.invSelected;
+                if (requestedSlot < 0 || requestedSlot >= player.inventory.length) return;
+                let tool = player.inventory[requestedSlot]
                 // Bow release logic
-                if (tool.name === "Bow" && bowHoldData[player.id] && bowHoldData[player.id].invSelected === player.invSelected) {
+                if (tool.name === "Bow" && bowHoldData[player.id] && bowHoldData[player.id].invSelected === requestedSlot) {
                     let holdTime = Math.min(Date.now() - bowHoldData[player.id].holdStart, 5000);
                     let posHoldDuration = Math.max(1, Math.round((holdTime / 1000) * 5)) // 1-5 FIVE BOW PHASES
                     // Calculate hold duration (1-5 seconds)
                     let holdDuration = posHoldDuration<5?posHoldDuration:5; 
+                    tool.imgSrc = "/imgs/Bow.png";
+                    player.giveStatus("Wandering");
                     let canShoot = player.inventory.some(invSlot => invSlot.name === "Arrow");
                     if (canShoot) {
-                        player.inventory[player.invSelected].imgSrc = `/imgs/Bow.png`
                         let arrowDirection = player.rotation + player.defaultRotation + Math.PI;
                         createArrow(player, arrowDirection, holdDuration, player.worldID)
                         // Decrease arrow stack or remove from inventory
@@ -2408,11 +2417,14 @@ io.sockets.on("connection", (socket)=>{
                         }
                         //damage bow
                         tool.durability -= 1
+                        if (tool.durability <= 0) {
+                            player.inventory[requestedSlot] = { ...holdableItems["Hand"] };
+                        }
                     }
                     delete bowHoldData[player.id];
                 }
                 // Spear release logic
-                else if (tool.name === "Spear" && spearHoldData[player.id] && spearHoldData[player.id].invSelected === player.invSelected) {
+                else if (tool.name === "Spear" && spearHoldData[player.id] && spearHoldData[player.id].invSelected === requestedSlot) {
                     let holdTime = Math.min(Date.now() - spearHoldData[player.id].holdStart, 5000);
                     let posHoldDuration = Math.max(1, Math.round((holdTime / 1000) * 5)); // 1-5
                     let holdDuration = posHoldDuration < 3 ? posHoldDuration : 3;
@@ -2445,7 +2457,7 @@ io.sockets.on("connection", (socket)=>{
                                 projectilesObj["Spear"].damage + 5 * (holdDuration-1)
                             );
 
-                            player.inventory[player.invSelected] = {...holdableItems["Hand"]};
+                            player.inventory[requestedSlot] = {...holdableItems["Hand"]};
                             delete spearHoldData[player.id];
                         }
                     }
@@ -2457,19 +2469,36 @@ io.sockets.on("connection", (socket)=>{
             socket.emit("noWorld")
         }
     })
+    socket.on("cancelHeldItem", function(data){
+        let world = worlds[data.worldID];
+        let player = world && world.entities[data.id];
+        if (!player) return;
+
+        let item = player.inventory[data.slot];
+        if (item && item.name === "Bow") item.imgSrc = "/imgs/Bow.png";
+        if (bowHoldData[player.id]?.invSelected === data.slot) {
+            delete bowHoldData[player.id];
+        }
+        if (spearHoldData[player.id]?.invSelected === data.slot) {
+            delete spearHoldData[player.id];
+        }
+        if (player.status) player.status = ["Wandering"];
+    });
+
     //reset on inventory switch
     socket.on("switchInventorySlot", function(data){
         let world = worlds[data.worldID]
         let entities = world.entities
         let player = entities[data.id]
+        if (!player) return;
         if(player.inventory){
-            if(player.inventory[data.prevSlot].name == "Bow"){
+            if(player.inventory[data.prevSlot]?.name == "Bow"){
                 //reset bow
                 player.inventory[data.prevSlot].imgSrc = "/imgs/Bow.png"
-                if(bowHoldData[player.id]){
+                if(bowHoldData[player.id]?.invSelected === data.prevSlot){
                     delete bowHoldData[player.id]
                 }
-            } else if(player.inventory[data.prevSlot].name == "Spear"){
+            } else if(player.inventory[data.prevSlot]?.name == "Spear"){
                 //reset spear
                 if(spearHoldData[player.id]){
                     delete spearHoldData[player.id]
@@ -2535,12 +2564,14 @@ io.sockets.on("connection", (socket)=>{
         try{
             console.log(`${global_player.username} ${id} disconnected`)
             removeID(global_player.id) //remove ID
-            delete worlds[global_player.worldID].entities[global_player.id]
+            KillEntity(global_player.id, global_player.worldID, global_player, null, true) //kill entity
+            //delete worlds[global_player.worldID].entities[global_player.id]
         }
         catch(err){
             if(global_player){
                 console.log("A player left the server and closed the tab...", global_player.id)
-                delete worlds[global_player.worldID].entities[global_player.id]
+                KillEntity(global_player.id, global_player.worldID, global_player, null, true) //kill entity
+                //delete worlds[global_player.worldID].entities[global_player.id]
             } else console.log("The player just left...")
         }
     })
@@ -2555,7 +2586,8 @@ io.sockets.on("connection", (socket)=>{
             if(data.player && !data.player.isDead){
                 dropAll(data.player.id, data.worldID)
             }
-            delete worlds[data.worldID].entities[data.player.id]
+            KillEntity(data.player.id, data.worldID, data.player, null, true) //kill entity
+            //delete worlds[data.worldID].entities[data.player.id]
         }
     })    
 })
