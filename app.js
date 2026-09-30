@@ -2136,7 +2136,11 @@ io.sockets.on("connection", (socket)=>{
                 socket.emit("sendUpdateDataToClient", {
                     updateContent: updateContent,
                     player: player,
-                    entities: activeEntities,
+                    mapEntities: activeEntities.map(entity => ({
+                        x: entity.x,
+                        y: entity.y,
+                        enemyKey: entity.enemyKey
+                    })),
                     serverEntityCount: Object.keys(activeEntities).length,
                     serverPlayerCount: Object.keys(players).length,
                     leaderboard: Object.values(players)

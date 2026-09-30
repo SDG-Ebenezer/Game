@@ -50,6 +50,7 @@ var mapSize //defined soon!
 var wallsList = [] //only the values
 var lakesList = []
 var marketsList = []
+var mapEntities = []
 
 var marketOpen = false //
 
@@ -57,6 +58,7 @@ var obstacles = {}
 var entities = {}
 
 let floatingDamages = []; // {x, y, value, color, alpha, vy, life}
+const lastPickupRequest = new Map();
 
 function showFloatingDamage(x, y, value, color = "#ff4444") {
     floatingDamages.push({
@@ -380,12 +382,16 @@ function updateCanv(info, serverPlayerCount, leaderboard){
         if(player && item.type=="pickable" 
         && Math.abs(item.x - player.x) < entitySize/2
         && Math.abs(item.y - player.y) < entitySize/2){
-            socket.emit("eat", {
-                who:player,
-                what:item,
-                id:player.id,
-                worldID:player.worldID,
-            })
+            const lastRequest = lastPickupRequest.get(item.id) ?? 0;
+            const now = Date.now();
+            if (now - lastRequest >= 1000) {
+                lastPickupRequest.set(item.id, now);
+                socket.emit("eat", {
+                    what:item,
+                    id:player.id,
+                    worldID:player.worldID,
+                });
+            }
         }
 
         // this guy is immune!
@@ -463,6 +469,13 @@ function updateCanv(info, serverPlayerCount, leaderboard){
 // UPDATECANV DRAWING FUNCTION RUN WHEN INFO SENT FROM SERVER 
 //(REGULAR UPDATE)
 socket.on("sendUpdateDataToClient", (info) => {
+    const visiblePickableIds = new Set(
+        info.updateContent.filter(item => item.type === "pickable").map(item => item.id)
+    );
+    for (const id of lastPickupRequest.keys()) {
+        if (!visiblePickableIds.has(id)) lastPickupRequest.delete(id);
+    }
+
     // Don't update data if the player is dead
     if (canPlay && player && player.health > 0) {
         // Variables that should not be overriden by update
@@ -479,7 +492,8 @@ socket.on("sendUpdateDataToClient", (info) => {
      * death.
      */
     updateCanv(info.updateContent, info.serverPlayerCount, info.leaderboard);
-    entities = info.entities
+    entities = info.updateContent.filter(item => item.class === "Entity");
+    mapEntities = info.mapEntities;
 });
 
 /** @GAME_DETAILS */
@@ -705,8 +719,8 @@ function gMap(showBots=true){
     gctx.translate(x+size/2,y+size/2)
     //draw important entities
     if(showBots){
-        for(let key in entities){
-            let e = entities[key]
+        for(let key in mapEntities){
+            let e = mapEntities[key]
             if(e.enemyKey == "Boss"){
                 gctx.fillStyle = "#810000" // maroon red
             } else if (e.enemyKey == "Summoned Lord"){
@@ -724,11 +738,16 @@ function gMap(showBots=true){
 }
 
 var respawnTime = null
+var lastCountdownRequest = 0
 function gShowCountdown() {
-    socket.emit("GetCountdownInfo", {
-        id:player.id,
-        worldID:player.worldID
-    })
+    const now = Date.now();
+    if (now - lastCountdownRequest >= 1000) {
+        lastCountdownRequest = now;
+        socket.emit("GetCountdownInfo", {
+            id:player.id,
+            worldID:player.worldID
+        });
+    }
     if (respawnTime) {
         let fontSize = 20
         gctx.font = `bold ${fontSize}px ${defaultFontFamily}`;
@@ -1205,7 +1224,8 @@ const SERVER_UPDATE_INTERVAL = 50; // ms (20 times per second)
 function gameLoopRAF(timestamp) {
     if (player && canPlay) {
         // Only send player update to server at fixed interval
-        if (timestamp - lastServerUpdate > SERVER_UPDATE_INTERVAL) {
+        if (timestamp - lastServerUpdate >= SERVER_UPDATE_INTERVAL) {
+            lastServerUpdate = timestamp;
             if (player.health > 0) {
                 performActions();
                 //close market if attacked
@@ -1562,7 +1582,7 @@ window.addEventListener('beforeunload', function(event) {
             return null;
         } 
     }
-})
+})*/
 
 
 window.leaveGame = function leaveGame(){
@@ -1574,4 +1594,4 @@ window.leaveGame = function leaveGame(){
         })
         exitGame()
     }
-}*/
+}
